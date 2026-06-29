@@ -135,8 +135,8 @@ export default function GradientGlow({
 
   // If absolute, apply horizontal centering defaults similar to mymind-bg-glow
   if (isAbsolute) {
-    wrapperStyle.left = style.left !== undefined ? style.left : "50%";
-    wrapperStyle.top = style.top !== undefined ? style.top : "-12%";
+    // wrapperStyle.left = style.left !== undefined ? style.left : "50%";
+    // wrapperStyle.top = style.top !== undefined ? style.top : "-12%";
     wrapperStyle.transform =
       style.transform !== undefined ? style.transform : "translateX(-50%)";
     wrapperStyle.maxWidth =

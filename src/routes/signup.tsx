@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
+import GradientGlow from "../components/GradientGlow";
+import { MymindNav } from "@/components/mymind/MymindNav";
 
 export const Route = createFileRoute("/signup")({
   head: () => ({
@@ -16,6 +18,16 @@ function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,25 +35,29 @@ function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-[#FAF8FA] py-12 px-4 font-sans">
-      <div className="w-full max-w-[860px] bg-white rounded-[24px] shadow-[0_24px_70px_rgba(0,0,0,0.06)] flex flex-col md:flex-row overflow-hidden border border-mm-border">
+    <div className="min-h-screen w-full flex items-center justify-center bg-[var(--color-mm-subtle)]/30 py-12 px-4 font-sans">
+      <MymindNav/>
+      <div className="w-full max-w-[860px] bg-white rounded-[24px] shadow-2xl shadow-mm-dark/5 flex flex-col md:flex-row overflow-hidden border border-mm-border">
         {/* Left Side: Brand Hero Background Gradient */}
-        <div
-          className="w-full md:w-[45%] min-h-[200px] md:min-h-full relative overflow-hidden flex items-center justify-center p-8"
-          style={{
-            background: `
-              radial-gradient(ellipse 55% 80% at 8% 50%, rgba(255, 110, 40, 0.82) 0%, transparent 60%),
-              radial-gradient(ellipse 55% 80% at 92% 50%, rgba(255, 155, 125, 0.72) 0%, transparent 60%),
-              radial-gradient(ellipse 52% 62% at 50% 48%, #ffffff 0%, rgba(255, 242, 236, 0.96) 42%, transparent 72%),
-              linear-gradient(155deg, #ffd4b8 0%, #ffe8d8 35%, #ffc8b4 100%)
-            `,
-          }}
-        >
-          {/* Subtle Dotted Pattern Overlay */}
-          <div className="absolute inset-0 bg-[radial-gradient(#E2E6EE_1.5px,transparent_1.5px)] [background-size:16px_16px] opacity-70 pointer-events-none" />
-          
-          {/* Glowing Filled Orange Circle */}
-          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 md:bottom-auto md:left-auto md:right-0 md:top-1/2 md:translate-x-1/2 md:-translate-y-1/2 w-[240px] h-[240px] md:w-[280px] md:h-[280px] rounded-full border-[6px] border-white bg-[#FF5924] shadow-[0_0_35px_rgba(255,89,36,0.45)] z-10 pointer-events-none" />
+        <div className="w-full md:w-[45%] min-h-[200px] md:min-h-full relative overflow-hidden flex items-center justify-center p-8">
+          {/* Glowing Filled Orange Circle using GradientGlow */}
+          <GradientGlow
+            position="absolute"
+            size="380px"
+            color1="var(--color-mm-orange)"
+            color2="var(--color-mm-pink)"
+            color3="var(--color-mm-yellow)"
+            speed="12s"
+            blur="10px"
+            inset="-20%"
+            maskCenter={true}
+            glowOpacity={0.85} // Make the colors shine and glow brightly
+            style={
+              isMobile
+                ? { left: "50%", top: "100%", transform: "translate(-50%, -50%)" }
+                : { left: "100%", top: "50%", transform: "translate(-50%, -50%)" }
+            }
+          />
         </div>
 
         {/* Right Side: Form */}
@@ -62,7 +78,7 @@ function SignupPage() {
                 <label className="block text-[10px] font-semibold tracking-wider text-mm-gray uppercase mb-1.5">
                   Email Address
                 </label>
-                <div className="flex items-center gap-3 px-4 py-3.5 border border-mm-border rounded-[14px] bg-[#FCFBFE] focus-within:border-mm-gray focus-within:bg-white focus-within:ring-1 focus-within:ring-mm-gray transition-all">
+                <div className="flex items-center gap-3 px-4 py-3.5 border border-mm-border rounded-[14px] bg-mm-subtle/10 focus-within:border-mm-gray focus-within:bg-white focus-within:ring-1 focus-within:ring-mm-gray transition-all">
                   <Mail className="w-5 h-5 text-mm-gray/50" strokeWidth={1.5} />
                   <input
                     type="email"
@@ -80,7 +96,7 @@ function SignupPage() {
                 <label className="block text-[10px] font-semibold tracking-wider text-mm-gray uppercase mb-1.5">
                   Password
                 </label>
-                <div className="flex items-center gap-3 px-4 py-3.5 border border-mm-border rounded-[14px] bg-[#FCFBFE] focus-within:border-mm-gray focus-within:bg-white focus-within:ring-1 focus-within:ring-mm-gray transition-all">
+                <div className="flex items-center gap-3 px-4 py-3.5 border border-mm-border rounded-[14px] bg-mm-subtle/10 focus-within:border-mm-gray focus-within:bg-white focus-within:ring-1 focus-within:ring-mm-gray transition-all">
                   <Lock className="w-5 h-5 text-mm-gray/50" strokeWidth={1.5} />
                   <input
                     type={showPassword ? "text" : "password"}
@@ -107,7 +123,7 @@ function SignupPage() {
               {/* Submit Button */}
               <button
                 type="submit"
-                className="w-full py-4 bg-[#FF5924] text-white font-semibold text-sm rounded-[14px] shadow-[0_8px_20px_rgba(255,89,36,0.3)] hover:bg-[#e04513] active:scale-[0.98] transition-all mt-6 cursor-pointer"
+                className="w-full py-4 bg-mm-orange text-white font-semibold text-sm rounded-[14px] shadow-lg shadow-mm-orange/20 hover:bg-mm-orange/90 active:scale-[0.98] transition-all mt-6 cursor-pointer"
               >
                 Sign Up
               </button>
@@ -118,7 +134,7 @@ function SignupPage() {
           <div className="text-center mt-8">
             <p className="text-xs text-mm-gray">
               Already have an account?{" "}
-              <Link to="/login" className="text-[#FF5924] font-semibold hover:underline">
+              <Link to="/login" className="text-mm-orange font-semibold hover:underline">
                 Sign in here.
               </Link>
             </p>

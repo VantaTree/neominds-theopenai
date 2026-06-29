@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { X, Menu } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 
 const NAV_LINKS = [
   { label: "Product", dot: "#FF5924", href: "#" },
@@ -107,22 +108,22 @@ export function MymindNav() {
 
           {/* Right */}
           <div className="flex items-center gap-3">
-            <a
-              href="#"
+            <Link
+              to="/login"
               className="hidden text-sm transition-colors duration-200 md:block"
               style={{ color: "#748297" }}
               onMouseEnter={(e) => (e.currentTarget.style.color = "#24272D")}
               onMouseLeave={(e) => (e.currentTarget.style.color = "#748297")}
             >
               Log in
-            </a>
-            <a
-              href="#"
+            </Link>
+            <Link
+              to="/signup"
               className="rounded-full px-5 py-2 text-sm font-semibold text-white transition-all duration-200 hover:opacity-90"
               style={{ background: "#FF5924", minHeight: 44, display: "flex", alignItems: "center" }}
             >
               Get Free Draft
-            </a>
+            </Link>
             <button
               onClick={() => setMenuOpen((v) => !v)}
               aria-label={menuOpen ? "Close menu" : "Open menu"}
@@ -168,22 +169,22 @@ export function MymindNav() {
                 transition={{ delay: NAV_LINKS.length * 0.06 + 0.05, duration: 0.3 }}
                 className="mt-8 flex w-full flex-col gap-3"
               >
-                <a
-                  href="#"
+                <Link
+                  to="/login"
                   onClick={() => setMenuOpen(false)}
                   className="flex w-full items-center justify-center rounded-full border py-3 text-sm font-medium"
                   style={{ color: "#24272D", borderColor: "#E2E6EE", minHeight: 44 }}
                 >
                   Log in
-                </a>
-                <a
-                  href="#"
+                </Link>
+                <Link
+                  to="/signup"
                   onClick={() => setMenuOpen(false)}
                   className="flex w-full items-center justify-center rounded-full py-3 text-sm font-medium text-white"
                   style={{ background: "#FF5924", minHeight: 44 }}
                 >
                   Get Free Draft
-                </a>
+                </Link>
               </motion.div>
             </nav>
           </motion.div>
