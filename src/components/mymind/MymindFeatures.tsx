@@ -152,7 +152,7 @@ export function MymindFeatures() {
               fontWeight: 400,
             }}
           >
-            Save time and money with all tools in one place
+            AI Business Ecosystem
           </motion.h2>
         </div>
 

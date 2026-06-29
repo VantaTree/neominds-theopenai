@@ -1,12 +1,13 @@
 import { motion } from "framer-motion";
+import { Link } from "@tanstack/react-router";
 
 const NO_LIST = [
-  "agencies",
-  "DIY builders",
-  "plugin hell",
-  "surprise fees",
-  "ghost developers",
-  "template sites",
+  "overpriced websites",
+  "manual analysis",
+  "growth barriers",
+  "unclear priorities",
+  "technical headaches",
+  "expensive trial & error",
 ];
 
 export function MymindManifesto() {
@@ -24,7 +25,7 @@ export function MymindManifesto() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-60px" }}
             transition={{ duration: 0.5 }}
-            className="mb-12 text-center text-xs font-semibold uppercase tracking-[0.22em]"
+            className="mb-12 text-center text-lg font-semibold uppercase tracking-[0.22em]"
             style={{ color: "#748297" }}
           >
             WHY WE BUILT THIS
@@ -67,18 +68,15 @@ export function MymindManifesto() {
             <p className="mb-5 ">Some need stronger marketing.</p>
             <p className="mb-5 ">Some need automation.</p>
             <p className="mb-5 ">Others simply need the right strategy before investing another rupee.</p>
-            <p className="mb-10 ">Instead of receiving guidance, most businesses receive sales pitches.</p>
+            <p className="mb-5 ">Instead of receiving guidance, most businesses receive sales pitches.</p>
             <p className="mb-5 ">We built <span className="font-bold">The Open AI</span> to change that.</p>
-
             <p className="mb-10">
-              without a computer science degree, without a $1,000 monthly retainer, without
-              spending your Sunday nights on Wix. Your business deserves a real website,
-              real SEO, and real results. Not a template. Not a ticket queue.
+              Our AI first understands your business, identifies growth bottlenecks, prioritizes what matters most, and creates a practical roadmap. Once the strategy is ready, our expert teams execute it from websites and branding to SEO, marketing, automation, CRM, and business consulting.
             </p>
+            <p className="mb-5 ">Just clear recommendations backed by AI and delivered by experts.</p>
 
             <p>
-              What should have never been this hard is now simple.{" "}
-              <em>We promise:</em>
+              Because every business deserves the confidence to know what to do next before spending money on the wrong solution.
             </p>
           </motion.div>
         </div>
@@ -135,7 +133,7 @@ export function MymindManifesto() {
             ))}
           </div>
 
-          {/* Mascot at bottom */}
+          {/* Mascot at bottom
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -155,7 +153,7 @@ export function MymindManifesto() {
                 draggable={false}
               />
             </motion.div>
-          </motion.div>
+          </motion.div> */}
         </div>
       </section>
 
@@ -172,7 +170,7 @@ export function MymindManifesto() {
         }}
       >
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center">
-          <motion.div
+          {/* <motion.div
             initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-80px" }}
@@ -190,7 +188,7 @@ export function MymindManifesto() {
                 draggable={false}
               />
             </motion.div>
-          </motion.div>
+          </motion.div> */}
 
           <motion.div
             initial={{ opacity: 0, scale: 0.92 }}
@@ -210,7 +208,7 @@ export function MymindManifesto() {
                 lineHeight: 1.05,
               }}
             >
-              Welcome to <em>theopenai</em>
+              Welcome to <em>theOpenAI</em>
             </h2>
             <p
               className="mb-8"
@@ -222,7 +220,7 @@ export function MymindManifesto() {
                 letterSpacing: "-0.02em",
               }}
             >
-              Your website, managed.
+              Analyze, Execute, Grow
             </p>
           </motion.div>
 
@@ -233,16 +231,16 @@ export function MymindManifesto() {
             transition={{ duration: 0.6, delay: 0.25 }}
             className="mt-6 flex justify-center"
           >
-            <a
-              href="#"
-              className="inline-flex items-center gap-3 rounded-full px-8 py-3.5 text-xs font-bold uppercase tracking-widest text-white transition-all duration-300 hover:scale-105 hover:shadow-xl"
-              style={{ background: "#FF5924", border: "1.5px solid rgba(255,255,255,0.3)", minHeight: 44 }}
-            >
-              GET MY FREE DRAFT
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-              </svg>
-            </a>
+          <Link
+            to="/assessment"
+            className="inline-flex items-center gap-3 rounded-full px-8 py-3.5 text-xs font-bold uppercase tracking-widest text-white transition-all duration-300 hover:scale-105 hover:shadow-xl"
+            style={{ background: "#FF5924", border: "1.5px solid rgba(255,255,255,0.3)", minHeight: 44 }}
+          >
+            Start Free Business Audit
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+            </svg>
+          </Link>
           </motion.div>
         </div>
       </section>

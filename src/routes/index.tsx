@@ -59,14 +59,14 @@ function MymindPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-white text-[#24272D]">
+    <div className="min-h-screen bg-white]">
       <MymindNav />
       <MymindHero />
       <MymindIntroVideo />
       <MymindManifesto />
       <MymindSmartBookmarking />
-      <MymindAI />
-      <MymindSearch />
+      {/* <MymindAI /> */}
+      {/* <MymindSearch /> */}
       <MymindFeatures />
       <MymindInteractiveFeatures />
       <MymindTestimonials />
