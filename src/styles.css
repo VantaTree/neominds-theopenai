@@ -64,12 +64,10 @@ img { max-width: 100%; height: auto; }
   --color-mm-gray: #748297;
   --color-mm-border: #E2E6EE;
   --color-mm-subtle: #F0F2F5;
-  --color-primary: var(--primary);
 }
 
 :root {
   --radius: 0.75rem;
-  --primary: #FF5924;
 }
 
 @layer base {
