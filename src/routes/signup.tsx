@@ -1,6 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
 import GradientGlow from "../components/GradientGlow";
 import { MymindNav } from "@/components/mymind/MymindNav";
 
@@ -15,10 +15,13 @@ export const Route = createFileRoute("/signup")({
 });
 
 function SignupPage() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     const handleResize = () => {
@@ -31,7 +34,20 @@ function SignupPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Signup submitted:", { email, password });
+    if (!email || !password) {
+      setError("Please fill in all fields.");
+      return;
+    }
+    setIsLoading(true);
+    setError("");
+
+    // Simulate API request
+    setTimeout(() => {
+      setIsLoading(false);
+      localStorage.setItem("audit_unlocked", "true");
+      alert(`Signed up successfully with: ${email}`);
+      navigate({ to: "/assessment" });
+    }, 1500);
   };
 
   return (
@@ -73,6 +89,12 @@ function SignupPage() {
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-4">
+              {error && (
+                <div className="p-3 text-xs rounded-xl bg-mm-red/10 border border-mm-red/20 text-mm-red text-center font-semibold animate-fadeIn">
+                  {error}
+                </div>
+              )}
+
               {/* Email Input */}
               <div>
                 <label className="block text-[10px] font-semibold tracking-wider text-mm-gray uppercase mb-1.5">
@@ -123,9 +145,17 @@ function SignupPage() {
               {/* Submit Button */}
               <button
                 type="submit"
-                className="w-full py-4 bg-mm-orange text-white font-semibold text-sm rounded-[14px] shadow-lg shadow-mm-orange/20 hover:bg-mm-orange/90 active:scale-[0.98] transition-all mt-6 cursor-pointer"
+                disabled={isLoading}
+                className="w-full py-4 bg-mm-orange text-white font-semibold text-sm rounded-[14px] shadow-lg shadow-mm-orange/20 hover:bg-mm-orange/90 active:scale-[0.98] transition-all mt-6 cursor-pointer flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Sign Up
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4.5 w-4.5 animate-spin mr-2" />
+                    Signing Up...
+                  </>
+                ) : (
+                  "Sign Up"
+                )}
               </button>
             </form>
           </div>
