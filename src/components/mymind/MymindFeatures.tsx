@@ -76,8 +76,12 @@ function FeatureCard({
       viewport={{ once: true, margin: "-40px" }}
       transition={{ duration: 0.55, delay }}
       whileHover={{ y: -6, boxShadow: "0 20px 60px rgba(0,0,0,0.12)" }}
-      className={`group overflow-hidden rounded-2xl ${narrow ? "flex-[5]" : "flex-[7]"}`}
-      style={{ background: "#F0F2F5", minWidth: 0, willChange: "transform, opacity" }}
+      className={`group overflow-hidden rounded-2xl ${narrow ? "flex-5" : "flex-7"}`}
+      style={{
+        background: "#F0F2F5",
+        minWidth: 0,
+        willChange: "transform, opacity",
+      }}
     >
       <div className="overflow-hidden">
         <img
@@ -122,7 +126,6 @@ export function MymindFeatures() {
       style={{ background: "#fff" }}
     >
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-
         {/* Header */}
         <div className="mb-12 sm:mb-16 text-center">
           <motion.p
@@ -149,8 +152,7 @@ export function MymindFeatures() {
               fontWeight: 400,
             }}
           >
-            Save time and money with
-            all tools in one place
+            AI Business Ecosystem
           </motion.h2>
         </div>
 
@@ -185,12 +187,17 @@ export function MymindFeatures() {
                 (e.currentTarget as HTMLImageElement).style.display = "none";
               }}
             />
-            <div className="relative z-10 flex flex-col justify-center p-8 sm:p-10" style={{ maxWidth: 480 }}>
+            <div
+              className="relative z-10 flex flex-col justify-center p-8 sm:p-10"
+              style={{ maxWidth: 480 }}
+            >
               <div
                 className="mb-6 inline-flex items-center gap-2 rounded-full px-4 py-1.5 w-max"
                 style={{ background: "#FF5924" }}
               >
-                <span className="text-xs font-bold text-white uppercase tracking-widest">24hr turnaround</span>
+                <span className="text-xs font-bold text-white uppercase tracking-widest">
+                  24hr turnaround
+                </span>
               </div>
               <h3
                 className="mb-3 leading-tight"
@@ -206,10 +213,14 @@ export function MymindFeatures() {
               </h3>
               <p
                 className="text-sm leading-relaxed"
-                style={{ color: "rgba(255,255,255,0.6)", fontFamily: "'Inter', sans-serif" }}
+                style={{
+                  color: "rgba(255,255,255,0.6)",
+                  fontFamily: "'Inter', sans-serif",
+                }}
               >
-                New promo, holiday redesign, photo update, business hours change —
-                just message us. We handle it within 24 hours. No extra charge. Ever.
+                New promo, holiday redesign, photo update, business hours change
+                — just message us. We handle it within 24 hours. No extra
+                charge. Ever.
               </p>
             </div>
           </div>

@@ -4,8 +4,9 @@ const KEYWORD_PILLS = [
   { label: "website", color: "#FF5924", textColor: "#FF5924" },
   { label: "CRM", color: "#a78bfa", textColor: "#7c3aed" },
   { label: "SEO", color: "#FF7DD3", textColor: "#d946a8" },
-  { label: "reviews", color: "#fb923c", textColor: "#ea580c" },
-  { label: "leads", color: "#FFE926", textColor: "#ca8a04" },
+  { label: "Analytics", color: "#a78bfa", textColor: "#7c3aed" },
+  { label: "AI Automation", color: "#fb923c", textColor: "#ea580c" },
+  { label: "Marketing", color: "#FFE926", textColor: "#ca8a04" },
 ];
 
 const DASHBOARD_ROWS = [
@@ -54,7 +55,7 @@ export function MymindHero() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.1 }}
             >
-              Website + CRM + SEO.
+              AI finds the problem
             </motion.span>
           </div>
           <div style={{ overflow: "hidden" }}>
@@ -64,7 +65,7 @@ export function MymindHero() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.25 }}
             >
-              Done for you.
+              Experts deliver the solution
             </motion.span>
           </div>
         </h1>
@@ -81,7 +82,7 @@ export function MymindHero() {
         >
           <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
             <span>Your</span>
-            {KEYWORD_PILLS.slice(0, 3).map((pill, i) => (
+            {KEYWORD_PILLS.slice(0, 4).map((pill, i) => (
               <motion.span
                 key={pill.label}
                 initial={{ opacity: 0, y: 16 }}
@@ -102,7 +103,7 @@ export function MymindHero() {
               className="inline-flex items-center rounded-full border px-3 py-0.5 text-sm font-medium"
               style={{ borderColor: KEYWORD_PILLS[3].color, color: KEYWORD_PILLS[3].textColor, background: "rgba(255,255,255,0.7)" }}
             >
-              {KEYWORD_PILLS[3].label}
+              {KEYWORD_PILLS[4].label}
             </motion.span>
             <span>and</span>
             <motion.span
@@ -112,20 +113,20 @@ export function MymindHero() {
               className="inline-flex items-center rounded-full border px-3 py-0.5 text-sm font-medium"
               style={{ borderColor: KEYWORD_PILLS[4].color, color: KEYWORD_PILLS[4].textColor, background: "rgba(255,255,255,0.7)" }}
             >
-              {KEYWORD_PILLS[4].label}
+              {KEYWORD_PILLS[5].label}
             </motion.span>
             <motion.span
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5, delay: 0.6 }}
             >
-              — managed by us. $9.99/month.
+              managed by us $29.99/month.
             </motion.span>
           </div>
         </div>
 
         {/* CTA row */}
-        <motion.div
+        {/* <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.7 }}
@@ -155,7 +156,7 @@ export function MymindHero() {
               {item.label}
             </motion.span>
           ))}
-        </motion.div>
+        </motion.div> */}
       </div>
 
       {/* Browser chrome mockup preview */}

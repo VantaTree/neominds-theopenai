@@ -1,4 +1,15 @@
 import { motion } from "framer-motion";
+import {
+  Mail,
+  Phone,
+  MapPin,
+  ShieldCheck,
+  Linkedin,
+  Instagram,
+  Facebook,
+  Youtube,
+  Twitter,
+} from "lucide-react";
 
 const BLOG_POSTS = [
   {
@@ -24,7 +35,6 @@ const BLOG_POSTS = [
 export function MymindFooter() {
   return (
     <footer className="w-full overflow-x-hidden" style={{ background: "#fff" }}>
-
       {/* Blog posts */}
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-6 pt-12 sm:pt-16">
         <motion.div
@@ -50,14 +60,22 @@ export function MymindFooter() {
                     alt={post.title}
                     loading="lazy"
                     className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).style.display = "none";
+                    }}
                   />
                 </div>
                 <div className="px-1 pb-3">
-                  <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest" style={{ color: "#748297" }}>
+                  <p
+                    className="mb-1 text-[10px] font-semibold uppercase tracking-widest"
+                    style={{ color: "#748297" }}
+                  >
                     {post.category}
                   </p>
-                  <p className="text-sm font-medium leading-snug" style={{ color: "#24272D" }}>
+                  <p
+                    className="text-sm font-medium leading-snug"
+                    style={{ color: "#24272D" }}
+                  >
                     {post.title}
                   </p>
                 </div>
@@ -66,65 +84,114 @@ export function MymindFooter() {
           </div>
         </motion.div>
 
-        {/* Top footer row: logo + tagline | CTA card */}
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-60px" }}
-          transition={{ duration: 0.6, delay: 0.1 }}
-          className="mb-10 sm:mb-16 flex flex-col items-start justify-between gap-6 md:flex-row md:items-center"
-        >
-          {/* Logo + tagline */}
-          <div className="flex items-center gap-3.5 flex-wrap">
-            <span style={{ fontFamily: "'Inter', sans-serif", fontWeight: 700, fontSize: "1.4rem", color: "#111418", letterSpacing: "-0.04em" }}>
-              the<span style={{ color: "#FF5924" }}>openai</span>
-            </span>
-            <span style={{ color: "#a3a1f8", fontSize: 24, lineHeight: 1 }}>•</span>
-            <span style={{ fontFamily: "'Louize', Georgia, serif", fontStyle: "italic", color: "#a3a1f8", fontSize: 22, fontWeight: 400 }}>
-              Your website, managed.
-            </span>
-          </div>
-
-          {/* CTA card */}
-          <a
-            href="#"
-            className="flex flex-col items-center justify-center rounded-[2rem] px-12 py-8 text-center transition-all duration-300 hover:opacity-90 w-full md:w-[48%] lg:w-[44%]"
-            style={{ background: "#F0F2F5", minWidth: 280 }}
-          >
-            <h3
-              className="mb-1 text-2xl sm:text-3xl font-medium tracking-tight"
-              style={{ fontFamily: "'Louize', Georgia, serif", color: "#24272D" }}
-            >
-              Get your free draft
-            </h3>
-            <p className="text-sm font-normal" style={{ color: "#748297", fontFamily: "'Inter', sans-serif" }}>
-              Live in 24 hours. No credit card.
-            </p>
-          </a>
-        </motion.div>
-
-        {/* Footer columns */}
+        {/* Footer Main Content Grid */}
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-60px" }}
           transition={{ duration: 0.6, delay: 0.15 }}
-          className="grid grid-cols-2 gap-8 sm:gap-10 sm:grid-cols-4"
+          className="grid grid-cols-1 md:grid-cols-12 gap-8 py-12 border-t border-mm-border"
         >
-          {/* Col 1 */}
-          <div className="col-span-2 sm:col-span-1">
-            <div className="flex flex-col gap-2.5">
+          {/* Logo & Tagline column */}
+          <div className="col-span-1 md:col-span-4 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-mm-orange text-white text-lg font-bold">
+                ∅
+              </div>
+              <span className="font-extrabold text-xl text-mm-dark font-sans tracking-tight">
+                The Open AI
+              </span>
+            </div>
+            <div className="space-y-1 pt-2">
+              <p className="text-lg font-bold text-mm-dark leading-tight font-sans">
+                AI Finds the <span className="text-mm-orange">Problem</span>.
+              </p>
+              <p className="text-lg font-bold text-mm-dark leading-tight font-sans">
+                Experts Deliver the <span className="text-mm-orange">Solution</span>.
+              </p>
+            </div>
+            <p className="text-sm text-mm-dark/60 leading-relaxed max-w-sm font-sans pt-2">
+              We help businesses identify growth bottlenecks, prioritize opportunities,
+              and execute the right solutions for sustainable growth.
+            </p>
+          </div>
+
+          {/* Contact details column */}
+          <div className="col-span-1 md:col-span-3 space-y-4 pt-4 md:pt-14">
+            <div className="flex flex-col gap-4 font-sans text-sm text-mm-dark/80">
+              <div className="flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-mm-orange/10 text-mm-orange">
+                  <Mail className="h-4 w-4" />
+                </div>
+                <a
+                  href="mailto:hello@theopenai.org"
+                  className="hover:text-mm-orange transition-colors"
+                >
+                  hello@theopenai.org
+                </a>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-mm-orange/10 text-mm-orange">
+                  <Phone className="h-4 w-4" />
+                </div>
+                <a
+                  href="tel:+919876543210"
+                  className="hover:text-mm-orange transition-colors"
+                >
+                  +91 98765 43210
+                </a>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-mm-orange/10 text-mm-orange">
+                  <MapPin className="h-4 w-4" />
+                </div>
+                <span>Hyderabad, India</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Solutions column */}
+          <div className="col-span-1 md:col-span-2">
+            <p className="mb-4 text-xs font-bold uppercase tracking-widest text-mm-orange border-b-2 border-mm-orange/20 pb-1 w-max">
+              Solutions
+            </p>
+            <div className="flex flex-col gap-2.5 font-sans">
               {[
-                { label: "Why people choose theopenai", href: "#" },
-                { label: "Our pricing", href: "#" },
-                { label: "See how it works", href: "#" },
-                { label: "Compare alternatives", href: "#" },
+                "Business Audit",
+                "Website Development",
+                "SEO Optimization",
+                "Digital Marketing",
+                "Google Ads",
+                "Social Media Marketing",
+                "Business Consulting",
+              ].map((item) => (
+                <a
+                  key={item}
+                  href="#"
+                  className="text-sm text-mm-dark/70 hover:text-mm-orange transition-colors"
+                >
+                  {item}
+                </a>
+              ))}
+            </div>
+          </div>
+
+          {/* Company column */}
+          <div className="col-span-1 md:col-span-2">
+            <p className="mb-4 text-xs font-bold uppercase tracking-widest text-mm-orange border-b-2 border-mm-orange/20 pb-1 w-max">
+              Company
+            </p>
+            <div className="flex flex-col gap-2.5 font-sans">
+              {[
+                { label: "About Us", href: "#" },
+                { label: "How It Works", href: "#" },
+                { label: "Pricing", href: "#" },
+                { label: "Contact Us", href: "#" },
               ].map((link) => (
                 <a
                   key={link.label}
                   href={link.href}
-                  className="text-sm transition-opacity hover:opacity-60"
-                  style={{ color: "#24272D" }}
+                  className="text-sm text-mm-dark/70 hover:text-mm-orange transition-colors"
                 >
                   {link.label}
                 </a>
@@ -132,73 +199,25 @@ export function MymindFooter() {
             </div>
           </div>
 
-          {/* Col 2 */}
-          <div>
-            <p className="mb-4 text-xs font-semibold uppercase tracking-widest" style={{ color: "#748297" }}>
-              Services
+          {/* Follow Us column */}
+          <div className="col-span-1 md:col-span-1">
+            <p className="mb-4 text-xs font-bold uppercase tracking-widest text-mm-orange border-b-2 border-mm-orange/20 pb-1 w-max">
+              Follow Us
             </p>
-            <div className="flex flex-col gap-2.5">
+            <div className="flex flex-row md:flex-col lg:flex-row flex-wrap gap-2">
               {[
-                { label: "Web design for small business", href: "#" },
-                { label: "Website management", href: "#" },
-                { label: "SEO management", href: "#" },
-                { label: "CRM & lead routing", href: "#" },
-              ].map((link) => (
+                { Icon: Linkedin, href: "#" },
+                { Icon: Instagram, href: "#" },
+                { Icon: Facebook, href: "#" },
+                { Icon: Youtube, href: "#" },
+                { Icon: Twitter, href: "#" },
+              ].map((social, i) => (
                 <a
-                  key={link.label}
-                  href={link.href}
-                  className="text-sm transition-opacity hover:opacity-60"
-                  style={{ color: "#748297" }}
+                  key={i}
+                  href={social.href}
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-mm-border text-mm-dark hover:border-mm-orange hover:text-mm-orange hover:bg-mm-orange/5 transition-all duration-300"
                 >
-                  {link.label}
-                </a>
-              ))}
-            </div>
-          </div>
-
-          {/* Col 3 */}
-          <div>
-            <p className="mb-4 text-xs font-semibold uppercase tracking-widest" style={{ color: "#748297" }}>
-              Compare
-            </p>
-            <div className="flex flex-col gap-2.5">
-              {[
-                { label: "GoDaddy alternative", href: "#" },
-                { label: "Wix alternative", href: "#" },
-                { label: "Squarespace alternative", href: "#" },
-                { label: "Agency alternative", href: "#" },
-              ].map((link) => (
-                <a
-                  key={link.label}
-                  href={link.href}
-                  className="text-sm transition-opacity hover:opacity-60"
-                  style={{ color: "#748297" }}
-                >
-                  {link.label}
-                </a>
-              ))}
-            </div>
-          </div>
-
-          {/* Col 4 */}
-          <div>
-            <p className="mb-4 text-xs font-semibold uppercase tracking-widest" style={{ color: "#748297" }}>
-              Contact
-            </p>
-            <div className="flex flex-col gap-2.5">
-              {[
-                { label: "hey@theopenai.org", href: "mailto:hey@theopenai.org" },
-                { label: "Blog", href: "#" },
-                { label: "FAQ", href: "#" },
-                { label: "Get a free draft", href: "#" },
-              ].map((link) => (
-                <a
-                  key={link.label}
-                  href={link.href}
-                  className="text-sm transition-opacity hover:opacity-60"
-                  style={{ color: "#748297" }}
-                >
-                  {link.label}
+                  <social.Icon className="h-4 w-4" />
                 </a>
               ))}
             </div>
@@ -206,25 +225,12 @@ export function MymindFooter() {
         </motion.div>
 
         {/* Bottom bar */}
-        <div className="mt-10 sm:mt-12 h-px w-full" style={{ background: "#E2E6EE" }} />
-        <div className="mt-5 mb-8 flex flex-col items-center justify-between gap-3 text-xs sm:flex-row">
-          <p style={{ color: "#748297" }}>© theopenai 2026</p>
-          <p style={{ color: "#748297" }}>Built by Ali Asgar, Mohd Abdul Khadar &amp; Syeda Sidra Fatima</p>
-          <div className="flex items-center gap-3 sm:gap-4 flex-wrap justify-center">
-            {[
-              { label: "Terms & Conditions", href: "#" },
-              { label: "Privacy Policy", href: "#" },
-              { label: "FAQ", href: "#" },
-            ].map((link) => (
-              <a
-                key={link.label}
-                href={link.href}
-                className="transition-opacity hover:opacity-60"
-                style={{ color: "#748297" }}
-              >
-                {link.label}
-              </a>
-            ))}
+        <div className="mt-6 h-px w-full bg-mm-border" />
+        <div className="mt-6 mb-8 flex flex-col items-center justify-between gap-4 text-xs sm:flex-row text-mm-gray font-sans">
+          <p>© 2026 The Open AI. All rights reserved.</p>
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4 text-mm-orange shrink-0" />
+            <span>Secure. Trusted. Committed to Your Growth.</span>
           </div>
         </div>
       </div>

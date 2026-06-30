@@ -15,6 +15,7 @@ import { MymindUseCases } from "@/components/mymind/MymindUseCases";
 import { MymindPhilosophy } from "@/components/mymind/MymindPhilosophy";
 import { MymindDownloads } from "@/components/mymind/MymindDownloads";
 import { MymindFooter } from "@/components/mymind/MymindFooter";
+import AddOnsSection from "@/components/AddOnsSection";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -58,20 +59,21 @@ function MymindPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-white text-[#24272D]">
+    <div className="min-h-screen bg-white]">
       <MymindNav />
       <MymindHero />
       <MymindIntroVideo />
       <MymindManifesto />
       <MymindSmartBookmarking />
-      <MymindAI />
-      <MymindSearch />
+      {/* <MymindAI /> */}
+      {/* <MymindSearch /> */}
       <MymindFeatures />
       <MymindInteractiveFeatures />
       <MymindTestimonials />
       <MymindUseCases />
       <MymindPhilosophy />
       <MymindDownloads />
+      <AddOnsSection/>
       <MymindFooter />
     </div>
   );

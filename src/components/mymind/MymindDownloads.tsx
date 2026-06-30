@@ -1,109 +1,155 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import PriceCard from "../PriceCard";
 
 const PLANS = [
   {
-    name: "Starter",
-    price: "$9.99",
-    period: "/mo",
-    action: "GET STARTED",
+    name: "Basic Plan",
+    description: "Essential assets to kickstart your business presence.",
+    monthlyPrice: 29.99,
+    annualPrice: 23.99, // 20% discount
     features: [
-      "Custom website",
-      "Hosting & SSL",
-      "SEO built-in",
-      "Unlimited edits",
-      "24hr turnaround",
+      "Website (Template)",
+      "3 Posts + 1 Reel per month",
+      "AI Chatbot Agent",
+      "Basic SEO optimization",
+      "Google Business Profile setup",
     ],
-    highlight: false,
+    isPopular: false,
+    buttonText: "Get started",
   },
   {
-    name: "Growth",
-    price: "$19.99",
-    period: "/mo",
-    action: "GET STARTED",
+    name: "Plus Plan",
+    description: "Designed for expanding businesses seeking growth.",
+    monthlyPrice: 59.99,
+    annualPrice: 47.99, // 20% discount
     features: [
-      "Everything in Starter",
-      "Automated review requests",
-      "Lead routing & CRM",
-      "Monthly SEO optimization",
-      "Priority support",
+      "Website (Customized layout)",
+      "5 Posts + 2 Reels per month",
+      "AI Voicebot integration",
+      "Advanced SEO optimization",
+      "Email marketing campaigns",
+      "Includes all Basic features",
     ],
-    highlight: true,
+    isPopular: true,
+    buttonText: "Get started",
   },
   {
-    name: "Enterprise",
-    price: "Custom",
-    period: "",
-    action: "CONTACT US",
+    name: "Pro Plan",
+    description: "Ultimate features for scaling market leaders.",
+    monthlyPrice: 89.99,
+    annualPrice: 71.99, // 20% discount
     features: [
-      "Multi-location sites",
-      "Custom integrations",
-      "Dedicated account manager",
-      "White-glove onboarding",
-      "SLA guarantee",
+      "Modern 3D Website design",
+      "7 Posts + 3 Reels per month",
+      "AI Voice + Chatbot agents",
+      "Deep performance analytics",
+      "Paid Ads (Google & Meta)",
+      "All Social Media Optimization",
+      "SEO + GEO + AEO optimization",
+      "Includes all Plus features",
     ],
-    highlight: false,
+    isPopular: false,
+    buttonText: "Get started",
   },
 ];
 
 export function MymindDownloads() {
+  const [isAnnual, setIsAnnual] = useState(false);
+
   return (
     <section
-      className="w-full overflow-x-hidden py-16 md:py-20"
+      className="w-full overflow-x-hidden py-20 md:py-28"
       style={{ background: "#fff0ec" }}
       id="downloads"
     >
-      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-        <motion.p
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        
+        {/* Header Text */}
+        <div className="text-center space-y-4 max-w-3xl mx-auto mb-10">
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="inline-flex items-center rounded-full px-3.5 py-1.5 text-[10px] font-extrabold uppercase tracking-widest text-mm-orange bg-mm-orange/10"
+          >
+            Pricing plans
+          </motion.div>
+          <motion.h2
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.08 }}
+            className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-mm-dark"
+            style={{
+              fontFamily: "'Louize', Georgia, serif",
+              fontSize: "clamp(2rem, 5vw, 3.5rem)",
+              letterSpacing: "-0.03em",
+              fontWeight: 400,
+            }}
+          >
+            Plans for all sizes
+          </motion.h2>
+          <motion.p
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.12 }}
+            className="text-mm-gray text-sm sm:text-base leading-relaxed max-w-lg mx-auto"
+            style={{ fontFamily: "'Inter', sans-serif" }}
+          >
+            Simple, transparent pricing that grows with you.
+          </motion.p>
+        </div>
+
+        {/* Annual Toggle Switch */}
+        <motion.div
           initial={{ opacity: 0, y: 12 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-          className="mb-3 text-center text-xs font-semibold uppercase tracking-[0.22em]"
-          style={{ color: "#FF5924" }}
+          transition={{ duration: 0.5, delay: 0.15 }}
+          className="flex items-center justify-center gap-3.5 mb-14"
         >
-          PRICING
-        </motion.p>
-        <motion.h2
-          initial={{ opacity: 0, y: 16 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.08 }}
-          className="mb-10 text-center leading-tight"
-          style={{
-            fontFamily: "'Louize', Georgia, serif",
-            fontSize: "clamp(1.8rem, 4vw, 3rem)",
-            letterSpacing: "-0.03em",
-            color: "#111418",
-            fontWeight: 400,
-          }}
-        >
-          Agency quality. DIY speed.
-          <br />
-          <em>Cheaper than both.</em>
-        </motion.h2>
+          <span
+            className={`text-sm font-bold tracking-tight transition-colors duration-300 ${
+              !isAnnual ? "text-mm-dark" : "text-mm-gray"
+            }`}
+            style={{ fontFamily: "'Inter', sans-serif" }}
+          >
+            Monthly
+          </span>
+          <button
+            onClick={() => setIsAnnual(!isAnnual)}
+            className="relative flex h-7 w-13 items-center rounded-full bg-mm-dark/10 p-1 cursor-pointer transition-colors duration-200 focus:outline-none"
+            aria-label="Toggle annual billing"
+          >
+            <motion.div
+              layout
+              className="h-5 w-5 rounded-full bg-mm-orange shadow-sm"
+              animate={{ x: isAnnual ? "24px" : "0px" }}
+              transition={{ type: "spring", stiffness: 500, damping: 30 }}
+            />
+          </button>
+          <span
+            className={`text-sm font-bold tracking-tight transition-colors duration-300 flex items-center gap-2 ${
+              isAnnual ? "text-mm-dark" : "text-mm-gray"
+            }`}
+            style={{ fontFamily: "'Inter', sans-serif" }}
+          >
+            Annual pricing
+            <span className="text-[10px] font-extrabold text-mm-orange bg-mm-orange/10 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+              save 20%
+            </span>
+          </span>
+        </motion.div>
 
-        {/* Pricing cards */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {/* Pricing Cards Grid */}
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-3 max-w-6xl mx-auto items-stretch">
           {PLANS.map((plan, i) => (
-            <PriceCard key={plan.name} plan={plan} i={i} />
+            <PriceCard key={plan.name} plan={plan} isAnnual={isAnnual} i={i} />
           ))}
         </div>
-
-        {/* Note */}
-        <motion.p
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          className="mt-6 text-center text-sm"
-          style={{ color: "#748297", fontFamily: "'Inter', sans-serif" }}
-        >
-          No setup fee. No contracts. No surprise renewals.{" "}
-          <a href="mailto:hey@theopenai.org" style={{ color: "#FF5924" }}>
-            Questions? hey@theopenai.org
-          </a>
-        </motion.p>
       </div>
     </section>
   );
