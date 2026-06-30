@@ -43,13 +43,13 @@ export default function ClientAside() {
   return (
     <>
       {/* Mobile Header Bar */}
-      <header className="md:hidden flex items-center justify-between px-6 border-b border-mm-border bg-white select-none shrink-0 font-sans">
+      <header className="md:hidden flex items-center justify-between px-6 py-4 border-b border-mm-border bg-white select-none shrink-0 font-sans">
         {/* Logo */}
         <a href="/" className="flex items-center gap-2">
           <img
             src="/logos/logo.PNG"
             alt="theopenai logo"
-            style={{ height: "65px", width: "auto", display: "block" }}
+            style={{ height: "35px", width: "auto", display: "block" }}
           />
         </a>
         <div className="flex items-center gap-2">
@@ -79,13 +79,13 @@ export default function ClientAside() {
         }`}
       >
         {/* Brand Logo Header */}
-        <div className="px-6 border-b border-mm-border flex items-center justify-between">
+        <div className="px-6 py-4 border-b border-mm-border flex items-center justify-between">
           {/* Logo */}
           <a href="/" className="flex items-center gap-2">
             <img
               src="/logos/logo.PNG"
               alt="theopenai logo"
-              style={{ height: "65px", width: "auto", display: "block" }}
+              style={{ height: "35px", width: "auto", display: "block" }}
             />
           </a>
           <div className="flex items-center gap-1.5">
