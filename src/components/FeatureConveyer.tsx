@@ -360,11 +360,10 @@ export default function FeatureConveyer({
               >
                 {/* Pinpoint shape base - Highlighting when active */}
                 <div
-                  className={`relative w-11 h-11 rounded-full flex items-center justify-center shadow-md border-2 transition-all duration-300 ${
-                    isActive
-                      ? "bg-white border-mm-orange text-mm-orange shadow-[0_0_15px_rgba(255,107,38,0.75)]"
-                      : "bg-mm-orange border-white text-white"
-                  }`}
+                  className={`relative w-11 h-11 rounded-full flex items-center justify-center shadow-md border-2 transition-all duration-300 ${isActive
+                    ? "bg-mm-orange border-white text-white shadow-[0_0_15px_rgba(255,107,38,0.75)]"
+                    : "bg-white border-mm-orange text-mm-orange"
+                    }`}
                 >
                   <div className="flex items-center justify-center">
                     <Icon className="w-5 h-5" />
