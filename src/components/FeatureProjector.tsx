@@ -9,9 +9,9 @@ const itemImages: Record<string, string> = {
   chatbot: "/images/basic_chatbot.png",
   seo: "/images/basic_seo.png",
   email: "/images/email_marketing.png",
-  shoots: "/images/modern3d.png",
-  collabs: "/images/COL.webp",
-  expos: "/images/SEREN.webp",
+  shoots: "/images/pro_3d.png",
+  collabs: "/images/pro_social.png",
+  expos: "/images/pro_voice.png",
   paid_ads: "/images/pro_ads.png",
 };
 
