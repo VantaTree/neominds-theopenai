@@ -203,6 +203,14 @@ function AuditReportDashboard({ report, onReset }: AuditReportDashboardProps) {
   const [slideDirection, setSlideDirection] = useState<"left" | "right">("left");
   const [cooldown, setCooldown] = useState(false);
   const dashboardRef = useRef<HTMLDivElement>(null);
+  
+  const [bottomProgress, setBottomProgress] = useState(0);
+  const bottomProgressRef = useRef(0);
+  const updateBottomProgress = (newVal: number) => {
+    const val = Math.max(0, Math.min(100, newVal));
+    bottomProgressRef.current = val;
+    setBottomProgress(val);
+  };
 
   const slides = isUnlocked
     ? ["overview", "status", "market", "roadmap"]
@@ -225,25 +233,126 @@ function AuditReportDashboard({ report, onReset }: AuditReportDashboardProps) {
   };
 
   useEffect(() => {
-    if (cooldown || isTransitioning) return;
+    if (cooldown || isTransitioning) {
+      updateBottomProgress(0);
+      return;
+    }
 
     const handleScroll = () => {
-      const isAtBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 10;
+      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+      const currentScroll = window.scrollY;
+      const isAtBottom = maxScroll - currentScroll <= 20;
+
+      if (!isAtBottom) {
+        updateBottomProgress(0);
+      }
+    };
+
+    const handleWheel = (e: WheelEvent) => {
+      if (cooldown || isTransitioning) return;
+
+      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+      const currentScroll = window.scrollY;
+      const isAtBottom = maxScroll - currentScroll <= 20;
 
       if (isAtBottom) {
         const currentIndex = slides.indexOf(activeTab);
-        if (currentIndex !== -1 && currentIndex < slides.length - 1) {
-          const nextTab = slides[currentIndex + 1] as any;
-          setCooldown(true);
-          triggerSlideTransition(nextTab, "left");
-          setTimeout(() => setCooldown(false), 1200);
+        const hasNext = currentIndex !== -1 && currentIndex < slides.length - 1;
+
+        if (hasNext) {
+          if (e.deltaY > 0) {
+            // Fill bar dynamically proportional to scroll speed
+            const increment = Math.min(25, Math.abs(e.deltaY) * 0.15);
+            const nextProgress = bottomProgressRef.current + increment;
+            updateBottomProgress(nextProgress);
+
+            if (nextProgress >= 100) {
+              const nextTab = slides[currentIndex + 1] as any;
+              setCooldown(true);
+              triggerSlideTransition(nextTab, "left");
+              setTimeout(() => {
+                setCooldown(false);
+                updateBottomProgress(0);
+              }, 1200);
+            }
+          } else if (e.deltaY < 0) {
+            updateBottomProgress(0);
+          }
         }
+      } else {
+        updateBottomProgress(0);
+      }
+    };
+
+    let touchStartY = 0;
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 1) {
+        touchStartY = e.touches[0].clientY;
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (cooldown || isTransitioning) return;
+
+      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+      const currentScroll = window.scrollY;
+      const isAtBottom = maxScroll - currentScroll <= 20;
+
+      if (isAtBottom) {
+        const currentIndex = slides.indexOf(activeTab);
+        const hasNext = currentIndex !== -1 && currentIndex < slides.length - 1;
+
+        if (hasNext && e.touches.length === 1) {
+          const touchY = e.touches[0].clientY;
+          const deltaY = touchStartY - touchY; // positive means swiping up/scrolling down
+
+          if (deltaY > 0) {
+            const increment = deltaY * 0.45;
+            const nextProgress = bottomProgressRef.current + increment;
+            touchStartY = touchY; // reset for continuous drag tracking
+            updateBottomProgress(nextProgress);
+
+            if (nextProgress >= 100) {
+              const nextTab = slides[currentIndex + 1] as any;
+              setCooldown(true);
+              triggerSlideTransition(nextTab, "left");
+              setTimeout(() => {
+                setCooldown(false);
+                updateBottomProgress(0);
+              }, 1200);
+            }
+          } else if (deltaY < -10) {
+            updateBottomProgress(0);
+          }
+        }
+      } else {
+        updateBottomProgress(0);
       }
     };
 
     window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    window.addEventListener("wheel", handleWheel, { passive: true });
+    window.addEventListener("touchstart", handleTouchStart, { passive: true });
+    window.addEventListener("touchmove", handleTouchMove, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("wheel", handleWheel);
+      window.removeEventListener("touchstart", handleTouchStart);
+      window.removeEventListener("touchmove", handleTouchMove);
+    };
   }, [activeTab, isUnlocked, isTransitioning, cooldown, slides]);
+
+  // Slow decay back to 0% if scrolling stops
+  useEffect(() => {
+    if (bottomProgress === 0 || cooldown || isTransitioning) return;
+
+    const timer = setInterval(() => {
+      updateBottomProgress(bottomProgressRef.current - 1.5);
+    }, 30);
+
+    return () => clearInterval(timer);
+  }, [bottomProgress, cooldown, isTransitioning]);
 
   const overview = report?.business_overview || {};
 
@@ -408,6 +517,14 @@ function AuditReportDashboard({ report, onReset }: AuditReportDashboardProps) {
           )}
         </div>
       </div>
+      {bottomProgress > 0 && (
+        <div className="fixed bottom-0 left-0 w-full h-1 bg-transparent z-[9999] pointer-events-none no-print">
+          <div 
+            className="h-full bg-mm-orange transition-all duration-75 ease-out shadow-[0_0_8px_#FF5924]"
+            style={{ width: `${bottomProgress}%` }}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -540,7 +657,7 @@ function TeaserGatePanel({ slideDirection, triggerSlideTransition }: TeaserGateP
         </h2>
         <div className="bg-mm-pink/5 border border-mm-pink/20 py-4 px-6 rounded-2xl max-w-xl mx-auto">
           <p className="text-sm sm:text-base font-bold text-mm-dark leading-relaxed">
-            What you unlock: the complete view of the report and download free
+            Unlock the complete report to see what's holding your business back and exactly what to do next.
           </p>
         </div>
       </div>
@@ -548,16 +665,16 @@ function TeaserGatePanel({ slideDirection, triggerSlideTransition }: TeaserGateP
       {/* Benefits 3-Card Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full text-left font-sans">
         <div className="p-5 rounded-2xl bg-white border border-mm-border space-y-1.5 shadow-sm">
-          <span className="text-mm-red font-bold text-xs sm:text-sm block">1. Capabilities</span>
-          <span className="text-mm-gray text-xs leading-relaxed block">Analyze current UX obstacles & digital maturity scoring.</span>
+          <span className="text-mm-red font-bold text-xs sm:text-sm block">Business Health Score</span>
+          <span className="text-mm-gray text-xs leading-relaxed block">See your overall business performance and discover the biggest opportunities for growth.</span>
         </div>
         <div className="p-5 rounded-2xl bg-white border border-mm-border space-y-1.5 shadow-sm">
-          <span className="text-mm-red font-bold text-xs sm:text-sm block">2. Competitor</span>
-          <span className="text-mm-gray text-xs leading-relaxed block">Benchmarking against core industry peers & risk analysis.</span>
+          <span className="text-mm-red font-bold text-xs sm:text-sm block">Competitor Analysis</span>
+          <span className="text-mm-gray text-xs leading-relaxed block">See how your business performs against others in your industry.</span>
         </div>
         <div className="p-5 rounded-2xl bg-white border border-mm-border space-y-1.5 shadow-sm">
-          <span className="text-mm-red font-bold text-xs sm:text-sm block">3. Roadmap</span>
-          <span className="text-mm-gray text-xs leading-relaxed block">Get prioritized 30-60-90 days growth plans & technical services.</span>
+          <span className="text-mm-red font-bold text-xs sm:text-sm block">AI Recommendations</span>
+          <span className="text-mm-gray text-xs leading-relaxed block">Know exactly which services your business actually needs from website and SEO to CRM, chatbots, automation, and marketing.</span>
         </div>
       </div>
 
@@ -1025,24 +1142,24 @@ function AssessmentPage() {
         <div className="lg:col-span-5 space-y-8">
           <div className="inline-flex items-center gap-2 rounded-full border border-mm-orange/30 bg-mm-orange/10 px-3.5 py-1.5 text-xs font-bold tracking-wider text-mm-orange uppercase select-none w-fit">
             <Zap className="h-3.5 w-3.5 text-mm-orange animate-bounce" />
-            Audit Engine v1.1
+            AI BUSINESS ANALYZER
           </div>
 
           <div className="space-y-4">
             <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-mm-dark leading-[1.15]">
-              Optimize Your Website with
+              Before You Invest
               <br />
               <span className="relative inline-block text-transparent bg-clip-text bg-gradient-to-r from-mm-orange to-mm-pink">
-                Automated Insights.
+                Know What You Actually Need.
                 <span className="absolute bottom-1 left-0 h-[6px] w-full bg-mm-orange/25 -z-10 rounded-full"></span>
               </span>
             </h1>
             <p className="text-base text-mm-gray leading-relaxed">
-              Our analyzer evaluates search visibility, conversions, user experience bottlenecks, and current modern stack alignment. Get a clean, developers-ready payload.
+              Answer a few simple questions about your business, and our AI will analyze your current position, identify growth opportunities, and recommend exactly what your business should focus on next.
             </p>
           </div>
 
-          {/* Benefits Bullet Points */}
+          {/* Benefits Bullet Points
           <div className="space-y-4 pt-2">
             {[
               {
@@ -1071,7 +1188,7 @@ function AssessmentPage() {
                 </div>
               </div>
             ))}
-          </div>
+          </div> */}
         </div>
 
         {/* Right Side: Glassmorphism Card Form */}
@@ -1148,7 +1265,7 @@ function AssessmentPage() {
                 disabled={isSubmitting}
                 className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-mm-orange to-mm-pink text-white font-bold hover:opacity-95 shadow-md shadow-mm-orange/15 hover:shadow-lg transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? "Generating..." : "Generate Audit"}
+                {isSubmitting ? "Generating..." : "Analyze My Business"}
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </button>
             </form>

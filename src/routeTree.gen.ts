@@ -12,7 +12,10 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AssessmentRouteImport } from './routes/assessment'
+import { Route as ClientRouteRouteImport } from './routes/_client/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ClientProjectsRouteImport } from './routes/_client/projects'
+import { Route as ClientDashboardRouteImport } from './routes/_client/dashboard'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -29,10 +32,24 @@ const AssessmentRoute = AssessmentRouteImport.update({
   path: '/assessment',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ClientRouteRoute = ClientRouteRouteImport.update({
+  id: '/_client',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ClientProjectsRoute = ClientProjectsRouteImport.update({
+  id: '/projects',
+  path: '/projects',
+  getParentRoute: () => ClientRouteRoute,
+} as any)
+const ClientDashboardRoute = ClientDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => ClientRouteRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -40,30 +57,47 @@ export interface FileRoutesByFullPath {
   '/assessment': typeof AssessmentRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/dashboard': typeof ClientDashboardRoute
+  '/projects': typeof ClientProjectsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/assessment': typeof AssessmentRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/dashboard': typeof ClientDashboardRoute
+  '/projects': typeof ClientProjectsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_client': typeof ClientRouteRouteWithChildren
   '/assessment': typeof AssessmentRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/_client/dashboard': typeof ClientDashboardRoute
+  '/_client/projects': typeof ClientProjectsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/assessment' | '/login' | '/signup'
+  fullPaths:
+    '/' | '/assessment' | '/login' | '/signup' | '/dashboard' | '/projects'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/assessment' | '/login' | '/signup'
-  id: '__root__' | '/' | '/assessment' | '/login' | '/signup'
+  to: '/' | '/assessment' | '/login' | '/signup' | '/dashboard' | '/projects'
+  id:
+    | '__root__'
+    | '/'
+    | '/_client'
+    | '/assessment'
+    | '/login'
+    | '/signup'
+    | '/_client/dashboard'
+    | '/_client/projects'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ClientRouteRoute: typeof ClientRouteRouteWithChildren
   AssessmentRoute: typeof AssessmentRoute
   LoginRoute: typeof LoginRoute
   SignupRoute: typeof SignupRoute
@@ -92,6 +126,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AssessmentRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_client': {
+      id: '/_client'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof ClientRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -99,11 +140,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_client/projects': {
+      id: '/_client/projects'
+      path: '/projects'
+      fullPath: '/projects'
+      preLoaderRoute: typeof ClientProjectsRouteImport
+      parentRoute: typeof ClientRouteRoute
+    }
+    '/_client/dashboard': {
+      id: '/_client/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof ClientDashboardRouteImport
+      parentRoute: typeof ClientRouteRoute
+    }
   }
 }
 
+interface ClientRouteRouteChildren {
+  ClientDashboardRoute: typeof ClientDashboardRoute
+  ClientProjectsRoute: typeof ClientProjectsRoute
+}
+
+const ClientRouteRouteChildren: ClientRouteRouteChildren = {
+  ClientDashboardRoute: ClientDashboardRoute,
+  ClientProjectsRoute: ClientProjectsRoute,
+}
+
+const ClientRouteRouteWithChildren = ClientRouteRoute._addFileChildren(
+  ClientRouteRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ClientRouteRoute: ClientRouteRouteWithChildren,
   AssessmentRoute: AssessmentRoute,
   LoginRoute: LoginRoute,
   SignupRoute: SignupRoute,

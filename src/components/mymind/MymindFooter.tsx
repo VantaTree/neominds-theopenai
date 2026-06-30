@@ -13,79 +13,11 @@ import {
   Twitter,
 } from "lucide-react";
 
-const BLOG_POSTS = [
-  {
-    category: "SEO TIPS",
-    title: "How small businesses rank on Page 1 without an agency",
-    href: "#",
-    image: "/images/blog-newquicknote.jpg",
-  },
-  {
-    category: "CASE STUDY",
-    title: "From Thumbtack to 2 bookings a day: Maria's story",
-    href: "#",
-    image: "/images/blog-human-endeavor.jpg",
-  },
-  {
-    category: "PRODUCT",
-    title: "How theopenai gets your business found on ChatGPT",
-    href: "#",
-    image: "/images/blog-on-posters.jpg",
-  },
-];
-
 export function MymindFooter() {
   return (
     <footer className="w-full overflow-x-hidden" style={{ background: "#fff" }}>
       {/* Blog posts */}
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-6 pt-12 sm:pt-16">
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-60px" }}
-          transition={{ duration: 0.6 }}
-          className="mb-10 sm:mb-12"
-        >
-          <div className="grid grid-cols-1 gap-4 sm:gap-5 sm:grid-cols-3">
-            {BLOG_POSTS.map((post) => (
-              <motion.a
-                key={post.href + post.title}
-                href={post.href}
-                whileHover={{ y: -6, boxShadow: "0 16px 40px rgba(0,0,0,0.10)" }}
-                transition={{ duration: 0.25 }}
-                className="group flex flex-col gap-3 overflow-hidden rounded-2xl"
-                style={{ background: "#F0F2F5" }}
-              >
-                <div className="overflow-hidden rounded-2xl" style={{ aspectRatio: "16/10" }}>
-                  <img
-                    src={post.image}
-                    alt={post.title}
-                    loading="lazy"
-                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).style.display = "none";
-                    }}
-                  />
-                </div>
-                <div className="px-1 pb-3">
-                  <p
-                    className="mb-1 text-[10px] font-semibold uppercase tracking-widest"
-                    style={{ color: "#748297" }}
-                  >
-                    {post.category}
-                  </p>
-                  <p
-                    className="text-sm font-medium leading-snug"
-                    style={{ color: "#24272D" }}
-                  >
-                    {post.title}
-                  </p>
-                </div>
-              </motion.a>
-            ))}
-          </div>
-        </motion.div>
-
         {/* Footer Main Content Grid */}
         <motion.div
           initial={{ opacity: 0, y: 24 }}

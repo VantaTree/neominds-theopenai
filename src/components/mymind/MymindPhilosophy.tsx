@@ -8,15 +8,13 @@ export function MymindPhilosophy() {
     >
       <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
 
-        {/* Mascot + arch */}
-        <motion.div
+        {/* <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-80px" }}
           transition={{ duration: 0.8 }}
           className="relative mb-8 flex flex-col items-center"
         >
-          {/* Arch shape */}
           <div
             className="absolute left-1/2 -translate-x-1/2"
             style={{
@@ -29,7 +27,6 @@ export function MymindPhilosophy() {
               top: 40,
             }}
           />
-          {/* Mascot */}
           <motion.div
             animate={{ y: [0, -8, 0] }}
             transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
@@ -44,7 +41,7 @@ export function MymindPhilosophy() {
               draggable={false}
             />
           </motion.div>
-        </motion.div>
+        </motion.div> */}
 
         {/* Founder text */}
         <div

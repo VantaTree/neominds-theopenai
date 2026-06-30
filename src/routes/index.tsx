@@ -70,7 +70,7 @@ function MymindPage() {
       {/* <MymindAI /> */}
       {/* <MymindSearch /> */}
       <MymindFeatures />
-      <MymindInteractiveFeatures />
+      {/* <MymindInteractiveFeatures /> */}
       <MymindTestimonials />
       <MymindUseCases />
       <MymindPhilosophy />

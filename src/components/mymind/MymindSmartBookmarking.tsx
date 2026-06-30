@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import FeatureConveyer from "../FeatureConveyer";
+import FeatureProjector from "../FeatureProjector";
 
 export function MymindSmartBookmarking() {
   return (
@@ -39,8 +39,8 @@ export function MymindSmartBookmarking() {
         </motion.p>
       </div>
 
-      <div className="mx-auto max-w-xl px-4 overflow-visible">
-        <FeatureConveyer />
+      <div className="mx-auto max-w-4xl px-4 overflow-visible">
+        <FeatureProjector />
       </div>
     </section>
   );

@@ -1,116 +1,86 @@
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { Check } from "lucide-react";
 
 interface Plan {
   name: string;
-  description: string;
-  monthlyPrice: number;
-  annualPrice: number;
+  price: string;
+  period: string;
+  action: string;
   features: string[];
-  isPopular: boolean;
-  buttonText: string;
+  highlight: boolean;
 }
 
-interface PriceCardProps {
+type Props = {
   plan: Plan;
-  isAnnual: boolean;
   i: number;
-}
+};
 
 const simWidth = 96;
 const simHeight = 144;
 const size = simWidth * simHeight;
 
-export default function PriceCard({ plan, isAnnual, i }: PriceCardProps) {
-  const currentPrice = isAnnual ? plan.annualPrice : plan.monthlyPrice;
+export default function PriceCard({ plan, i }: Props) {
   const [isWarping, setIsWarping] = useState(false);
-  
+
   const cardRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const displacementMapRef = useRef<SVGFEDisplacementMapElement | null>(null);
   const turbulenceRef = useRef<SVGFETurbulenceElement | null>(null);
-  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const buttonRef = useRef<HTMLAnchorElement | null>(null);
   const buttonCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  
+
   const buffer1Ref = useRef(new Float32Array(size));
   const buffer2Ref = useRef(new Float32Array(size));
-  
+
   const isRunningRef = useRef(false);
   const texCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const texDataRef = useRef<Uint8ClampedArray | null>(null);
-  
+
+  // Set colors statically based on plan.highlight (does not change in real-time)
   const colorsRef = useRef({
-    background: { r: 255, g: 255, b: 255, a: 255 }, // White
-    foreground: { r: 36, g: 39, b: 45, a: 255 }, // mm-dark: #24272D
-    accent: { r: 255, g: 89, b: 36, a: 255 }, // mm-orange: #FF5924
-    accent2: { r: 224, g: 78, b: 29, a: 255 }, // mm-orange slightly darker: #e04e1d
+    background: plan.highlight ? { r: 255, g: 89, b: 36 } : { r: 255, g: 255, b: 255 },
+    accent: plan.highlight ? { r: 255, g: 255, b: 255 } : { r: 255, g: 89, b: 36 },
+    buttonRipple: plan.highlight ? { r: 255, g: 89, b: 36 } : { r: 255, g: 255, b: 255 }
   });
+
+  useEffect(() => {
+    generateTexture();
+    renderWater();
+  }, []);
 
   // Track previous mouse position/time for velocity
   const lastMousePos = useRef({ x: 0, y: 0, time: 0 });
 
   // Unique filter ID for cloth warping
-  const filterId = useRef(`cloth-warp-${plan.name.toLowerCase().replace(/[^a-z0-9]/g, "-")}`).current;
+  const filterId = useRef(
+    `cloth-warp-${plan.name.toLowerCase().replace(/[^a-z0-9]/g, "-")}`,
+  ).current;
 
   // Warp animation states
   const warpScaleRef = useRef(0);
   const warpTargetRef = useRef(0);
 
-  // Parse CSS variable into RGBA using temporary 1x1 canvas context fill
-  const loadColors = () => {
-    if (!canvasRef.current) return;
-    const styles = window.getComputedStyle(canvasRef.current);
-    
-    const bg = '#ffffff';
-    const fg = styles.getPropertyValue('--color-mm-dark').trim() || '#24272D';
-    const acc = styles.getPropertyValue('--color-mm-orange').trim() || '#FF5924';
-    const acc2 = '#e04e1d';
-
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = 1;
-    tempCanvas.height = 1;
-    const tempCtx = tempCanvas.getContext('2d');
-    if (tempCtx) {
-      const parseColor = (colStr: string, fallback: { r: number; g: number; b: number; a: number }) => {
-        tempCtx.fillStyle = colStr;
-        tempCtx.clearRect(0, 0, 1, 1);
-        tempCtx.fillRect(0, 0, 1, 1);
-        const data = tempCtx.getImageData(0, 0, 1, 1).data;
-        if (data[3] === 0) return fallback;
-        return { r: data[0], g: data[1], b: data[2], a: data[3] };
-      };
-      
-      colorsRef.current = {
-        background: parseColor(bg, colorsRef.current.background),
-        foreground: parseColor(fg, colorsRef.current.foreground),
-        accent: parseColor(acc, colorsRef.current.accent),
-        accent2: parseColor(acc2, colorsRef.current.accent2),
-      };
-    }
-  };
-
   // Generate plain offscreen background texture matching page background
   const generateTexture = () => {
     let texCanvas = texCanvasRef.current;
     if (!texCanvas) {
-      texCanvas = document.createElement('canvas');
+      texCanvas = document.createElement("canvas");
       texCanvas.width = simWidth;
       texCanvas.height = simHeight;
       texCanvasRef.current = texCanvas;
     }
-    
-    const texCtx = texCanvas.getContext('2d');
+
+    const texCtx = texCanvas.getContext("2d");
     if (!texCtx) return;
-    
+
     const bg = colorsRef.current.background;
-    
+
     texCtx.clearRect(0, 0, simWidth, simHeight);
-    
-    // Plain solid background to match the card background perfectly (no grid, no gradient)
+
+    // Plain solid background to match the card background perfectly
     texCtx.fillStyle = `rgb(${bg.r}, ${bg.g}, ${bg.b})`;
     texCtx.fillRect(0, 0, simWidth, simHeight);
-    
+
     const texImgData = texCtx.getImageData(0, 0, simWidth, simHeight);
     texDataRef.current = texImgData.data;
   };
@@ -120,20 +90,21 @@ export default function PriceCard({ plan, isAnnual, i }: PriceCardProps) {
     const b1 = buffer1Ref.current;
     const b2 = buffer2Ref.current;
     const damping = 0.955; // wave energy decay
-    
+
     for (let y = 1; y < simHeight - 1; y++) {
       for (let x = 1; x < simWidth - 1; x++) {
         const idx = y * simWidth + x;
-        b2[idx] = (
-          b1[idx - 1] +
-          b1[idx + 1] +
-          b1[idx - simWidth] +
-          b1[idx + simWidth]
-        ) / 2 - b2[idx];
+        b2[idx] =
+          (b1[idx - 1] +
+            b1[idx + 1] +
+            b1[idx - simWidth] +
+            b1[idx + simWidth]) /
+            2 -
+          b2[idx];
         b2[idx] *= damping;
       }
     }
-    
+
     // Swap height buffers
     buffer1Ref.current = b2;
     buffer2Ref.current = b1;
@@ -153,52 +124,67 @@ export default function PriceCard({ plan, isAnnual, i }: PriceCardProps) {
   const renderWater = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    
+
     const texData = texDataRef.current;
     if (!texData) return;
-    
+
     const outImgData = ctx.createImageData(simWidth, simHeight);
     const outData = outImgData.data;
-    
+
     const acc = colorsRef.current.accent;
     const b1 = buffer1Ref.current;
-    
+
     for (let y = 0; y < simHeight; y++) {
       for (let x = 0; x < simWidth; x++) {
         const idx = y * simWidth + x;
-        
+
         const xPrev = x > 0 ? b1[idx - 1] : 0;
         const xNext = x < simWidth - 1 ? b1[idx + 1] : 0;
         const yPrev = y > 0 ? b1[idx - simWidth] : 0;
         const yNext = y < simHeight - 1 ? b1[idx + simWidth] : 0;
-        
+
         // Gradient slope
         const dx = xNext - xPrev;
         const dy = yNext - yPrev;
-        
+
         // Refraction displacement (looks up neighboring pixels based on wave slope)
         const refractionScale = 1.8;
-        const rx = Math.min(simWidth - 1, Math.max(0, x + Math.round(dx * refractionScale)));
-        const ry = Math.min(simHeight - 1, Math.max(0, y + Math.round(dy * refractionScale)));
-        
+        const rx = Math.min(
+          simWidth - 1,
+          Math.max(0, x + Math.round(dx * refractionScale)),
+        );
+        const ry = Math.min(
+          simHeight - 1,
+          Math.max(0, y + Math.round(dy * refractionScale)),
+        );
+
         const srcIdx = (ry * simWidth + rx) * 4;
         const destIdx = idx * 4;
-        
+
         // Shading slope (specular highlight or shadow)
         const slope = -dx - dy;
         let r = texData[srcIdx];
         let g = texData[srcIdx + 1];
         let b = texData[srcIdx + 2];
         let a = texData[srcIdx + 3];
-        
+
         if (slope > 0) {
           const highlight = slope * 2.8;
           // Specular wave highlight tinted slightly with the accent color
-          r = Math.min(255, r + highlight * 0.72 + (highlight * 0.28 * acc.r / 255));
-          g = Math.min(255, g + highlight * 0.72 + (highlight * 0.28 * acc.g / 255));
-          b = Math.min(255, b + highlight * 0.72 + (highlight * 0.28 * acc.b / 255));
+          r = Math.min(
+            255,
+            r + highlight * 0.72 + (highlight * 0.28 * acc.r) / 255,
+          );
+          g = Math.min(
+            255,
+            g + highlight * 0.72 + (highlight * 0.28 * acc.g) / 255,
+          );
+          b = Math.min(
+            255,
+            b + highlight * 0.72 + (highlight * 0.28 * acc.b) / 255,
+          );
         } else if (slope < 0) {
           // Shadow valley in waves
           const shadow = -slope * 1.2;
@@ -206,14 +192,14 @@ export default function PriceCard({ plan, isAnnual, i }: PriceCardProps) {
           g = Math.max(0, g - shadow * 0.45);
           b = Math.max(0, b - shadow * 0.45);
         }
-        
+
         outData[destIdx] = r;
         outData[destIdx + 1] = g;
         outData[destIdx + 2] = b;
         outData[destIdx + 3] = a;
       }
     }
-    
+
     ctx.putImageData(outImgData, 0, 0);
   };
 
@@ -221,13 +207,19 @@ export default function PriceCard({ plan, isAnnual, i }: PriceCardProps) {
   const renderButtonRipple = () => {
     const btnCanvas = buttonCanvasRef.current;
     if (!btnCanvas || !cardRef.current || !buttonRef.current) return;
-    const btnCtx = btnCanvas.getContext('2d');
+    const btnCtx = btnCanvas.getContext("2d");
     if (!btnCtx) return;
 
     const cardRect = cardRef.current.getBoundingClientRect();
     const btnRect = buttonRef.current.getBoundingClientRect();
 
-    if (cardRect.width === 0 || cardRect.height === 0 || btnRect.width === 0 || btnRect.height === 0) return;
+    if (
+      cardRect.width === 0 ||
+      cardRect.height === 0 ||
+      btnRect.width === 0 ||
+      btnRect.height === 0
+    )
+      return;
 
     // Calculate button coordinates relative to the card container
     const x = btnRect.left - cardRect.left;
@@ -237,7 +229,9 @@ export default function PriceCard({ plan, isAnnual, i }: PriceCardProps) {
     const simX1 = Math.round((x / cardRect.width) * simWidth);
     const simY1 = Math.round((y / cardRect.height) * simHeight);
     const simX2 = Math.round(((x + btnRect.width) / cardRect.width) * simWidth);
-    const simY2 = Math.round(((y + btnRect.height) / cardRect.height) * simHeight);
+    const simY2 = Math.round(
+      ((y + btnRect.height) / cardRect.height) * simHeight,
+    );
 
     const btnW = simX2 - simX1;
     const btnH = simY2 - simY1;
@@ -253,10 +247,7 @@ export default function PriceCard({ plan, isAnnual, i }: PriceCardProps) {
     const btnImgData = btnCtx.createImageData(btnW, btnH);
     const btnData = btnImgData.data;
 
-    // Button ripple uses white if the button background is orange, or orange if the button background is transparent/white
-    const rippleColor = plan.isPopular 
-      ? { r: 255, g: 255, b: 255 } 
-      : colorsRef.current.accent;
+    const rippleColor = colorsRef.current.buttonRipple;
     const b1 = buffer1Ref.current;
 
     for (let by = 0; by < btnH; by++) {
@@ -274,7 +265,7 @@ export default function PriceCard({ plan, isAnnual, i }: PriceCardProps) {
 
         // Draw color on button only where the ripple peak is located
         if (h > 0.8) {
-          const maxOpacity = plan.isPopular ? 0.75 : 0.55;
+          const maxOpacity = plan.highlight ? 0.75 : 0.55;
           const opacity = Math.min(maxOpacity, (h - 0.8) * 0.08);
 
           btnData[destIdx] = rippleColor.r;
@@ -316,7 +307,10 @@ export default function PriceCard({ plan, isAnnual, i }: PriceCardProps) {
     }
 
     if (activeWarp && displacementMapRef.current) {
-      displacementMapRef.current.setAttribute("scale", warpScaleRef.current.toFixed(2));
+      displacementMapRef.current.setAttribute(
+        "scale",
+        warpScaleRef.current.toFixed(2),
+      );
     }
 
     // Measure active wave energy
@@ -367,6 +361,7 @@ export default function PriceCard({ plan, isAnnual, i }: PriceCardProps) {
 
   const splash = (x: number, y: number, velocity: number) => {
     const baseStrength = 15;
+    // Strength scales with mouse movement speed (velocity)
     const strength = Math.min(125, baseStrength + velocity * 40);
     const radius = Math.min(4, 1 + Math.floor(velocity * 0.8));
 
@@ -409,9 +404,10 @@ export default function PriceCard({ plan, isAnnual, i }: PriceCardProps) {
         splash(simX, simY, velocity);
 
         // Warp cloth effect: disable on mobile width (< 768px)
-        const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+        const isMobile =
+          typeof window !== "undefined" && window.innerWidth < 768;
         if (!isMobile) {
-          const warpLimit = 22;
+          const warpLimit = 22; // max warp displacement in pixels
           const targetWarp = Math.min(warpLimit, velocity * 7.5);
           if (targetWarp > warpTargetRef.current) {
             warpTargetRef.current = targetWarp;
@@ -452,8 +448,9 @@ export default function PriceCard({ plan, isAnnual, i }: PriceCardProps) {
         const dx = x - prev.x;
         const dy = y - prev.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        const velocity = dist / dt;
+        const velocity = dist / dt; // speed in px/ms
 
+        // Map to simulation grid coordinates
         const simX = Math.round((x / rect.width) * simWidth);
         const simY = Math.round((y / rect.height) * simHeight);
 
@@ -468,13 +465,6 @@ export default function PriceCard({ plan, isAnnual, i }: PriceCardProps) {
     lastMousePos.current = { x: 0, y: 0, time: 0 };
   };
 
-  // Set up initial colors and texture rendering
-  useEffect(() => {
-    loadColors();
-    generateTexture();
-    renderWater();
-  }, []);
-
   return (
     <motion.div
       ref={cardRef}
@@ -487,12 +477,14 @@ export default function PriceCard({ plan, isAnnual, i }: PriceCardProps) {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-40px" }}
       transition={{ duration: 0.4, delay: i * 0.08 }}
-      style={{ filter: isWarping ? `url(#${filterId})` : "none" }}
-      className={`relative rounded-3xl border p-8 flex flex-col justify-between transition-all duration-300 bg-white/90 backdrop-blur-md shadow-sm will-change-[filter] ${
-        plan.isPopular
-          ? "border-mm-orange/40 shadow-xl shadow-mm-orange/5 ring-1 ring-mm-orange/30 scale-102 z-10 md:-translate-y-2"
-          : "border-mm-dark/5 shadow-lg shadow-mm-dark/5 hover:border-mm-orange/30"
-      }`}
+      whileHover={{ y: -5, scale: 1.03 }}
+      className="flex flex-col rounded-2xl overflow-hidden relative will-change-[filter]"
+      style={{
+        background: plan.highlight ? "#FF5924" : "#fff",
+        border: plan.highlight ? "none" : "1px solid #E2E6EE",
+        boxShadow: plan.highlight ? "0 20px 60px rgba(255,89,36,0.25)" : "none",
+        filter: isWarping ? `url(#${filterId})` : "none",
+      }}
     >
       {/* Water Ripple Simulation Canvas */}
       <canvas
@@ -502,76 +494,88 @@ export default function PriceCard({ plan, isAnnual, i }: PriceCardProps) {
         className="absolute inset-0 w-full h-full -z-10 rounded-[inherit] pointer-events-none opacity-85 transition-opacity duration-300"
       />
 
-      {plan.isPopular && (
-        <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 rounded-full bg-mm-orange px-4 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow-sm">
-          Most Popular
-        </span>
-      )}
-
-      <div className="space-y-6">
-        <div>
-          <h3 className="text-xl font-extrabold text-mm-dark tracking-tight">
-            {plan.name}
-          </h3>
-          <p className="text-xs text-mm-gray mt-1 leading-relaxed">
-            {plan.description}
-          </p>
-        </div>
-
-        {/* Price Display */}
-        <div className="pt-2 border-t border-mm-dark/5">
-          <div className="flex items-baseline text-mm-dark">
-            <span
-              style={{ fontFamily: "'Louize', Georgia, serif" }}
-              className="text-4xl sm:text-5xl font-bold tracking-tight"
-            >
-              ${currentPrice}
-            </span>
-            <span className="text-sm font-semibold text-mm-gray ml-1">
-              /mth
-            </span>
-          </div>
-          <span className="text-[10px] font-bold text-mm-gray block mt-1 uppercase tracking-wider">
-            {isAnnual ? "Billed annually" : "Billed monthly"}
+      <div className="p-6 sm:p-7 flex flex-col flex-1 relative z-10">
+        <p
+          className="mb-1 text-xs font-bold uppercase tracking-widest"
+          style={{
+            color: plan.highlight ? "rgba(255,255,255,0.7)" : "#748297",
+          }}
+        >
+          {plan.name}
+        </p>
+        <div className="mb-6 flex items-end gap-1">
+          <span
+            style={{
+              fontFamily: "'Louize', Georgia, serif",
+              fontSize: "clamp(2rem, 5vw, 2.8rem)",
+              fontWeight: 400,
+              letterSpacing: "-0.04em",
+              color: plan.highlight ? "#fff" : "#111418",
+            }}
+          >
+            {plan.price}
           </span>
+          {plan.period && (
+            <span
+              className="mb-1 text-sm"
+              style={{
+                color: plan.highlight ? "rgba(255,255,255,0.7)" : "#748297",
+              }}
+            >
+              {plan.period}
+            </span>
+          )}
         </div>
-
-        {/* Features List */}
-        <ul className="space-y-3.5 pt-4 border-t border-mm-dark/5 text-sm">
-          {plan.features.map((feature, idx) => (
-            <li key={idx} className="flex items-start gap-2.5">
-              <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-mm-orange/10 text-mm-orange mt-0.5">
-                <Check className="h-3.5 w-3.5 stroke-[3]" />
-              </div>
-              <span className="text-mm-dark/85 leading-tight font-medium">
-                {feature}
+        <ul className="flex flex-col gap-2.5 mb-8 flex-1">
+          {plan.features.map((f) => (
+            <li
+              key={f}
+              className="flex items-center gap-2 text-sm"
+              style={{
+                color: plan.highlight ? "rgba(255,255,255,0.9)" : "#748297",
+                fontFamily: "'Inter', sans-serif",
+              }}
+            >
+              <span
+                style={{
+                  color: plan.highlight ? "#fff" : "#FF5924",
+                  fontWeight: 700,
+                }}
+              >
+                ✓
               </span>
+              {f}
             </li>
           ))}
         </ul>
-      </div>
-
-      {/* Action Button */}
-      <div className="mt-8">
-        <button
+        <a
           ref={buttonRef}
-          className={`w-full rounded-2xl py-3.5 text-xs font-bold uppercase tracking-wider transition-all active:scale-98 cursor-pointer relative overflow-hidden ${
-            plan.isPopular
-              ? "bg-mm-orange text-white shadow-md shadow-mm-orange/15 hover:opacity-95"
-              : "border border-mm-dark/10 bg-transparent text-mm-dark hover:bg-mm-dark/5"
-          }`}
+          href="#"
+          className="flex items-center justify-center rounded-full py-3 text-xs font-bold uppercase tracking-widest transition-all duration-200 hover:opacity-90 relative overflow-hidden"
+          style={{
+            background: plan.highlight ? "#fff" : "#FF5924",
+            color: plan.highlight ? "#FF5924" : "#fff",
+            minHeight: 44,
+          }}
         >
           {/* Internal canvas for dynamic, local ripple overlays */}
           <canvas
             ref={buttonCanvasRef}
             className="absolute inset-0 w-full h-full pointer-events-none rounded-[inherit]"
           />
-          <span className="relative z-10">{plan.buttonText}</span>
-        </button>
+          <span className="relative z-10">{plan.action}</span>
+        </a>
       </div>
 
       {/* SVG filter for responsive cloth edge warping */}
-      <svg style={{ position: "absolute", width: 0, height: 0, pointerEvents: "none" }}>
+      <svg
+        style={{
+          position: "absolute",
+          width: 0,
+          height: 0,
+          pointerEvents: "none",
+        }}
+      >
         <defs>
           <filter id={filterId}>
             <feTurbulence

@@ -1,23 +1,35 @@
 import { useEffect, useRef, useState } from "react";
 import { conveyerItems } from "./conveyerData";
 
-export default function FeatureConveyer() {
+interface FeatureConveyerProps {
+  onActiveItemChange?: (index: number) => void;
+}
+
+export default function FeatureConveyer({
+  onActiveItemChange,
+}: FeatureConveyerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const pathRef = useRef<SVGPathElement>(null);
   const trackRef = useRef<SVGPathElement>(null);
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
   const progress = useRef(0);
-  const lastScrollY = useRef(0);
+  const lastActiveRef = useRef(-1);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const activeIndexRef = useRef(0);
 
-  // Define SVG coordinate space path (400x650)
+  // Path matching 800x300 viewBox layout:
+  // Starts at top of right reel (600, 209), loops clockwise around right reel,
+  // exits bottom-left and runs along bottom (y = 281) under the projector body,
+  // enters Left Reel (200, 281) from bottom, loops clockwise around it, and terminates at top.
   const pathD =
-    "M 200,30 C 380,30 380,150 200,150 C 20,150 20,270 200,270 C 380,270 380,390 200,390 C 20,390 20,510 200,510 C 380,510 380,630 200,630";
+    "M 600,209 C 500,209 460,170 400,170 C 340,170 300,209 200,209 C 164,209 164,281 200,281 C 300,281 500,281 600,281 C 636,281 636,209 600,209";
+
+  // References to the spinning reel wheels
+  const reelRef = useRef<SVGGElement>(null);
+  const leftReelRef = useRef<SVGGElement>(null);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      lastScrollY.current = window.scrollY;
-    }
     setIsLoaded(true);
   }, []);
 
@@ -45,26 +57,28 @@ export default function FeatureConveyer() {
         return;
       }
 
-      // 1. Slow automatic downwards rolling movement
-      progress.current += 0.6;
+      // 1. Automatic downwards/forwards rolling movement (slowed down for premium feel)
+      progress.current += 0.3;
 
-      // 2. Animate the track dash offset to look like rolling tracks
+      // 2. Animate the track dash offset
       if (trackRef.current) {
-        trackRef.current.style.strokeDashoffset = `${-progress.current}px`;
+        trackRef.current.style.strokeDashoffset = `${progress.current}px`;
       }
 
-      let visibleSvgHeight = 650;
-      if (containerRef.current) {
-        const containerWidth = containerRef.current.clientWidth;
-        const containerHeight = containerRef.current.clientHeight;
-        if (containerWidth > 0) {
-          visibleSvgHeight = 400 * (containerHeight / containerWidth);
-        }
+      // Spin both reels clockwise in sync with progress
+      if (reelRef.current) {
+        reelRef.current.style.transform = `rotate(${-progress.current * 2}deg)`;
+      }
+
+      if (leftReelRef.current) {
+        leftReelRef.current.style.transform = `rotate(${-progress.current * 2}deg)`;
       }
 
       const spacing = totalLength / conveyerItems.length;
+      let closestIndex = 0;
+      let minDistance = Infinity;
 
-      // 3. Move each feature item capsule along the spline
+      // 3. Move each feature item pinpoint along the spline
       conveyerItems.forEach((_, index) => {
         const el = itemRefs.current[index];
         if (!el) return;
@@ -73,28 +87,47 @@ export default function FeatureConveyer() {
         const dist = (progress.current + index * spacing) % totalLength;
         const pt = path.getPointAtLength(dist);
 
-        // Map coordinates to percentage of parent container dimensions
-        const xPct = (pt.x / 400) * 100;
-        const yPct = (pt.y / 650) * 100;
+        // Map coordinates to percentage of parent container dimensions (800x300)
+        const xPct = (pt.x / 800) * 100;
+        const yPct = (pt.y / 300) * 100;
 
-        // 3D perspective depth scale (items look larger as they come down the hill)
-        // const scale = 0.55 + 0.45 * (pt.y / 650);
-        const scale = 0.8;
+        // Scale pinpoint: active pinpoint is slightly larger for a subtle, elegant zoom
+        const isActive = index === activeIndexRef.current;
+        const scale = isActive ? 0.9 : 0.75;
 
-        // Fade in near top (y < 80) and fade out near bottom (y > visibleSvgHeight - 50)
+        // Fade in near start (reel) and fade out near end (projector entrance)
         let opacity = 1;
-        if (pt.y < 80) {
-          opacity = (pt.y - 30) / 50;
-        } else if (pt.y > visibleSvgHeight - 50) {
-          opacity = (visibleSvgHeight - pt.y) / 50;
+        if (dist < 50) {
+          opacity = dist / 50;
+        } else if (dist > totalLength - 40) {
+          opacity = (totalLength - dist) / 40;
         }
         opacity = Math.max(0, Math.min(1, opacity));
 
         el.style.left = `${xPct}%`;
         el.style.top = `${yPct}%`;
-        el.style.transform = `translate(-50%, -100%) scale(${scale})`;
+        el.style.transform = `translate(-50%, -50%) scale(${scale})`;
         el.style.opacity = `${opacity}`;
+
+        // Find which item is closest to the projector lens gate (centered at x = 400, top track y = 170)
+        // We restrict pt.y < 220 to avoid selecting returning items on the bottom track
+        const isNearGate = pt.x > 300 && pt.x < 500 && pt.y < 220;
+        if (isNearGate) {
+          const diff = Math.abs(pt.x - 400);
+          if (diff < minDistance) {
+            minDistance = diff;
+            closestIndex = index;
+          }
+        }
       });
+
+      // Call the callback when the active projected item changes
+      if (closestIndex !== lastActiveRef.current) {
+        lastActiveRef.current = closestIndex;
+        activeIndexRef.current = closestIndex;
+        setActiveIndex(closestIndex);
+        onActiveItemChange?.(closestIndex);
+      }
 
       animationFrameId = requestAnimationFrame(updatePositions);
     };
@@ -104,42 +137,25 @@ export default function FeatureConveyer() {
     return () => {
       cancelAnimationFrame(animationFrameId);
     };
-  }, [isLoaded]);
+  }, [isLoaded, onActiveItemChange]);
 
-  // Immersive Wheel Scroll takeover
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const handleWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      progress.current += e.deltaY * 0.8;
-    };
-
-    container.addEventListener("wheel", handleWheel, { passive: false });
-    return () => {
-      container.removeEventListener("wheel", handleWheel);
-    };
-  }, [isLoaded]);
-
-  // Touch Swipe / Drag interaction (smooth takeover)
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
     let isDragging = false;
-    let startY = 0;
+    let startX = 0;
 
     const handleMouseDown = (e: MouseEvent) => {
       isDragging = true;
-      startY = e.clientY;
+      startX = e.clientX;
     };
 
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDragging) return;
-      const deltaY = e.clientY - startY;
-      startY = e.clientY;
-      progress.current -= deltaY * 1.5;
+      const deltaX = e.clientX - startX;
+      startX = e.clientX;
+      progress.current -= deltaX * 1.5;
     };
 
     const handleMouseUp = () => {
@@ -148,14 +164,14 @@ export default function FeatureConveyer() {
 
     const handleTouchStart = (e: TouchEvent) => {
       isDragging = true;
-      startY = e.touches[0].clientY;
+      startX = e.touches[0].clientX;
     };
 
     const handleTouchMove = (e: TouchEvent) => {
       if (!isDragging) return;
-      const deltaY = e.touches[0].clientY - startY;
-      startY = e.touches[0].clientY;
-      progress.current -= deltaY * 1.5;
+      const deltaX = e.touches[0].clientX - startX;
+      startX = e.touches[0].clientX;
+      progress.current -= deltaX * 1.5;
     };
 
     container.addEventListener("mousedown", handleMouseDown);
@@ -180,110 +196,184 @@ export default function FeatureConveyer() {
   }, [isLoaded]);
 
   return (
-    <div
-      ref={containerRef}
-      className="relative w-full aspect-400/650 select-none cursor-grab active:cursor-grabbing overflow-visible bg-transparent"
-    >
-      {/* Background Hill Spline Tracks */}
-      <svg
-        className="absolute inset-0 w-full h-full pointer-events-none overflow-visible"
-        viewBox="0 0 400 650"
-        fill="none"
+    <div className="w-full overflow-visible relative flex justify-center h-[300px]">
+      <div
+        ref={containerRef}
+        className="select-none cursor-grab active:cursor-grabbing overflow-visible bg-transparent font-sans"
+        style={{
+          width: "800px",
+          height: "300px",
+          position: "absolute",
+          left: "50%",
+          top: 0,
+          transform: "translate(-50%, 0)",
+          transformOrigin: "top center",
+          overflow: "visible",
+        }}
       >
-        {/* Winding track support pillars (3D scaffold look) */}
-        {/* <line
-          x1="335"
-          y1="90"
-          x2="335"
-          y2="650"
-          className="stroke-foreground/5"
-          strokeWidth="1"
-          strokeDasharray="3 3"
-        />
-        <line
-          x1="65"
-          y1="210"
-          x2="65"
-          y2="650"
-          className="stroke-foreground/5"
-          strokeWidth="1"
-          strokeDasharray="3 3"
-        />
-        <line
-          x1="335"
-          y1="330"
-          x2="335"
-          y2="650"
-          className="stroke-foreground/5"
-          strokeWidth="1"
-          strokeDasharray="3 3"
-        />
-        <line
-          x1="65"
-          y1="450"
-          x2="65"
-          y2="650"
-          className="stroke-foreground/5"
-          strokeWidth="1"
-          strokeDasharray="3 3"
-        /> */}
-
-        {/* Hidden spline path used for coordinates */}
-        <path ref={pathRef} d={pathD} fill="none" stroke="none" />
-
-        {/* Thick conveyor outer belt */}
-        <path
-          d={pathD}
+        {/* Background SVG path, film reel and projector structure */}
+        <svg
+          className="absolute inset-0 w-full h-full pointer-events-none overflow-visible"
+          viewBox="0 0 800 300"
           fill="none"
-          className="stroke-mm-orange/15"
-          strokeWidth="32"
-          strokeLinecap="round"
-        />
-
-        {/* Inner rolling link path */}
-        <path
-          ref={trackRef}
-          d={pathD}
-          fill="none"
-          className="stroke-mm-orange/40"
-          strokeWidth="2.5"
-          strokeDasharray="8 8"
-        />
-      </svg>
-
-      {/* Floating Traversed Pinpoint Icons */}
-      <div className="absolute inset-0 pointer-events-none overflow-visible">
-        {conveyerItems.map((item, index) => {
-          const Icon = item.Icon;
-          return (
-            <div
-              key={item.id}
-              ref={(el) => {
-                itemRefs.current[index] = el;
-              }}
-              className="absolute flex flex-col items-center pointer-events-auto"
-              style={{
-                left: "50%",
-                top: "50%",
-                transform: "translate(-50%, -100%) scale(0.8)",
-                opacity: 0,
-              }}
+          style={{ zIndex: 20 }}
+        >
+          <defs>
+            <linearGradient
+              id="lensBeamGradient"
+              x1="0.5"
+              y1="0.85"
+              x2="0.5"
+              y2="0.2"
             >
-              {/* Label positioned over the top of the big icon */}
-              <span className="text-[12px] font-extrabold uppercase tracking-wide text-mm-dark/80 bg-white/95 border border-mm-border px-2 py-0.5 rounded-md shadow-sm mb-1 z-10 whitespace-nowrap">
-                {item.label}
-              </span>
+              <stop offset="0%" stopColor="#FFE926" stopOpacity="0.45" />
+              <stop offset="35%" stopColor="#FFE926" stopOpacity="0.18" />
+              <stop offset="100%" stopColor="#FFE926" stopOpacity="0" />
+            </linearGradient>
+          </defs>
 
-              {/* Pinpoint shape base */}
-              <div className="relative w-16 h-16 bg-mm-orange rounded-t-full rounded-bl-full rotate-45 flex items-center justify-center shadow-md border border-white/20">
-                {/* Icon unrotated */}
-                <div className="-rotate-45 flex items-center justify-center text-white">
-                  <Icon className="size-8" />
+          {/* Projected Light Beam Cone (with flicker/pulsing) */}
+          {/* Shoots from lens (400, 150) straight up beyond the Y=0 boundary onto the screen */}
+          <polygon
+            points="400,148 400,152 720,-300 80,-300"
+            fill="url(#lensBeamGradient)"
+            style={{ mixBlendMode: "screen" }}
+            className="animate-pulse duration-75"
+          />
+
+          {/* Projector Body Image rendered inside SVG for absolute locked-coordinate alignment */}
+          <image
+            href="/images/projector_no_wheels.png"
+            x="295"
+            y="75"
+            width="210"
+            height="210"
+          />
+
+          {/* 1. Right Film Supply Reel (Mounted on Projector Right Arm) */}
+          <g ref={reelRef} style={{ transformOrigin: "600px 245px" }}>
+            <circle
+              cx="600"
+              cy="245"
+              r="36"
+              fill="none"
+              stroke="#24272D"
+              strokeWidth="5"
+            />
+            <circle
+              cx="600"
+              cy="245"
+              r="32"
+              fill="none"
+              stroke="#B29B7C"
+              strokeWidth="1"
+            />
+            <circle cx="600" cy="245" r="10" fill="#24272D" />
+            <circle cx="600" cy="245" r="3" fill="#B29B7C" />
+            {[0, 60, 120, 180, 240, 300].map((angle) => (
+              <circle
+                key={angle}
+                cx={600 + 20 * Math.cos((angle * Math.PI) / 180)}
+                cy={245 + 20 * Math.sin((angle * Math.PI) / 180)}
+                r="5"
+                fill="white"
+                stroke="#24272D"
+                strokeWidth="1.2"
+              />
+            ))}
+          </g>
+
+          {/* 1b. Left Film Take-up Reel (Mounted on Projector Left Arm) */}
+          <g ref={leftReelRef} style={{ transformOrigin: "200px 245px" }}>
+            <circle
+              cx="200"
+              cy="245"
+              r="36"
+              fill="none"
+              stroke="#24272D"
+              strokeWidth="5"
+            />
+            <circle
+              cx="200"
+              cy="245"
+              r="32"
+              fill="none"
+              stroke="#B29B7C"
+              strokeWidth="1"
+            />
+            <circle cx="200" cy="245" r="10" fill="#24272D" />
+            <circle cx="200" cy="245" r="3" fill="#B29B7C" />
+            {[0, 60, 120, 180, 240, 300].map((angle) => (
+              <circle
+                key={angle}
+                cx={200 + 20 * Math.cos((angle * Math.PI) / 180)}
+                cy={245 + 20 * Math.sin((angle * Math.PI) / 180)}
+                r="5"
+                fill="white"
+                stroke="#24272D"
+                strokeWidth="1.2"
+              />
+            ))}
+          </g>
+
+          {/* Hidden spline path used for coordinates */}
+          <path ref={pathRef} d={pathD} fill="none" stroke="none" />
+
+          {/* Conveyor outer belt */}
+          <path
+            d={pathD}
+            fill="none"
+            className="stroke-mm-orange/10"
+            strokeWidth="24"
+            strokeLinecap="round"
+          />
+
+          {/* Inner rolling link path */}
+          <path
+            ref={trackRef}
+            d={pathD}
+            fill="none"
+            className="stroke-mm-orange/40"
+            strokeWidth="2"
+            strokeDasharray="8 8"
+          />
+        </svg>
+
+        {/* Floating Traversed Pinpoint Icons */}
+        <div className="absolute inset-0 pointer-events-none overflow-visible">
+          {conveyerItems.map((item, index) => {
+            const Icon = item.Icon;
+            const isActive = index === activeIndex;
+            return (
+              <div
+                key={item.id}
+                ref={(el) => {
+                  itemRefs.current[index] = el;
+                }}
+                className="absolute flex flex-col items-center pointer-events-auto transition-opacity duration-150"
+                style={{
+                  left: "50%",
+                  top: "50%",
+                  transform: "translate(-50%, -50%) scale(0.7)",
+                  opacity: 0,
+                }}
+              >
+                {/* Pinpoint shape base - Highlighting when active */}
+                <div
+                  className={`relative w-11 h-11 rounded-full flex items-center justify-center shadow-md border-2 transition-all duration-300 ${
+                    isActive
+                      ? "bg-white border-mm-orange text-mm-orange shadow-[0_0_15px_rgba(255,107,38,0.75)]"
+                      : "bg-mm-orange border-white text-white"
+                  }`}
+                >
+                  <div className="flex items-center justify-center">
+                    <Icon className="w-5 h-5" />
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );
