@@ -64,6 +64,29 @@ img { max-width: 100%; height: auto; }
   --color-mm-gray: #748297;
   --color-mm-border: #E2E6EE;
   --color-mm-subtle: #F0F2F5;
+
+  --color-mm-yellow-bright: #FFD300;
+  --color-mm-peach: #FA8A43;
+  --color-mm-pink-alt: #F583C2;
+  --color-mm-charcoal: #232A35;
+  --color-mm-bg-gray: #F3F4F7;
+  --color-mm-bg-wrap: #F9FAFC;
+  --color-mm-border-light: #E6DBDB;
+
+  --color-mm-role-designers-bg: #232A35;
+  --color-mm-role-writers-bg: #FDF0F5;
+  --color-mm-role-marketers-bg: #F1F5FD;
+  --color-mm-role-developers-bg: #232A35;
+  --color-mm-role-researchers-bg: #E9F6ED;
+  --color-mm-role-everyone-bg: #F4F5F7;
+  --color-mm-role-text-dark: #2A3444;
+  --color-mm-role-text-green: #344238;
+  --color-mm-role-text-purple: #23152F;
+  --color-mm-muted-gray: #a1aab9;
+
+  --color-mm-plans-bg: #FAF8FC;
+  --color-mm-plans-dominant: #2E1A47;
+  --color-mm-plans-accent: #7C3AED;
 }
 
 :root {

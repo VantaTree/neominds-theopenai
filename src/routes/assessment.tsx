@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import Loader from "../components/Loader";
 import PriceCard from "../components/PriceCard";
-import { questions } from "../utils/questions";
+import { questions } from "../data/questions";
 
 export const Route = createFileRoute("/assessment")({
   component: AssessmentPage,

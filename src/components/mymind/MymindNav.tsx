@@ -5,7 +5,7 @@ import { Link } from "@tanstack/react-router";
 
 const NAV_LINKS = [
   { label: "Product", dot: "#FF5924", href: "#" },
-  { label: "Pricing", dot: "#FFE926", href: "#" },
+  { label: "Pricing", dot: "#FFE926", href: "/plans" },
   { label: "Compare", dot: "#FF7DD3", href: "#" },
   { label: "Blog", dot: "#5CB13E", href: "#" },
 ];

@@ -1,57 +1,6 @@
 import { motion } from "framer-motion";
 import PriceCard from "../PriceCard";
-
-const PLANS = [
-  {
-    name: "Starter",
-    price: "$29.99",
-    period: "/mo",
-    action: "GET STARTED",
-    features: [
-      "Website (Template)",
-      "3 Posts + 1 Reel per month",
-      "AI Chatbot Agent",
-      "Basic SEO optimization",
-      "Google Business Profile setup",
-    ],
-    highlight: false,
-    buttonText: "Get started"
-  },
-  {
-    name: "Growth",
-    price: "$59.99",
-    period: "/mo",
-    action: "GET STARTED",
-    features: [
-      "Website (Customized layout)",
-      "5 Posts + 2 Reels per month",
-      "AI Voicebot integration",
-      "Advanced SEO optimization",
-      "Email marketing campaigns",
-      "Includes all Basic features",
-    ],
-    highlight: true,
-    buttonText: "Get started"
-  },
-  {
-    name: "Enterprise",
-    price: "$89.99",
-    period: "/mo",
-    action: "CONTACT US",
-    features: [
-      "Modern 3D Website design",
-      "7 Posts + 3 Reels per month",
-      "AI Voice + Chatbot agents",
-      "Deep performance analytics",
-      "Paid Ads (Google & Meta)",
-      "All Social Media Optimization",
-      "SEO + GEO + AEO optimization",
-      "Includes all Plus features",
-    ],
-    highlight: false,
-    buttonText: "Get started"
-  },
-];
+import PLANS from "@/data/plans";
 
 export function MymindDownloads() {
   return (
@@ -92,7 +41,7 @@ export function MymindDownloads() {
 
         {/* Pricing cards */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          {PLANS.map((plan, i) => (
+          {PLANS.slice(0, 3).map((plan, i) => (
             <PriceCard key={plan.name} plan={plan} i={i} />
           ))}
         </div>
