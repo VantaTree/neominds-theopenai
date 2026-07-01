@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WhyRouteImport } from './routes/why'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as PlansRouteImport } from './routes/plans'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as HowRouteImport } from './routes/how'
 import { Route as AssessmentRouteImport } from './routes/assessment'
@@ -27,6 +28,11 @@ const WhyRoute = WhyRouteImport.update({
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlansRoute = PlansRouteImport.update({
+  id: '/plans',
+  path: '/plans',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -69,6 +75,7 @@ export interface FileRoutesByFullPath {
   '/assessment': typeof AssessmentRoute
   '/how': typeof HowRoute
   '/login': typeof LoginRoute
+  '/plans': typeof PlansRoute
   '/signup': typeof SignupRoute
   '/why': typeof WhyRoute
   '/dashboard': typeof ClientDashboardRoute
@@ -79,6 +86,7 @@ export interface FileRoutesByTo {
   '/assessment': typeof AssessmentRoute
   '/how': typeof HowRoute
   '/login': typeof LoginRoute
+  '/plans': typeof PlansRoute
   '/signup': typeof SignupRoute
   '/why': typeof WhyRoute
   '/dashboard': typeof ClientDashboardRoute
@@ -91,6 +99,7 @@ export interface FileRoutesById {
   '/assessment': typeof AssessmentRoute
   '/how': typeof HowRoute
   '/login': typeof LoginRoute
+  '/plans': typeof PlansRoute
   '/signup': typeof SignupRoute
   '/why': typeof WhyRoute
   '/_client/dashboard': typeof ClientDashboardRoute
@@ -103,6 +112,7 @@ export interface FileRouteTypes {
     | '/assessment'
     | '/how'
     | '/login'
+    | '/plans'
     | '/signup'
     | '/why'
     | '/dashboard'
@@ -113,6 +123,7 @@ export interface FileRouteTypes {
     | '/assessment'
     | '/how'
     | '/login'
+    | '/plans'
     | '/signup'
     | '/why'
     | '/dashboard'
@@ -124,6 +135,7 @@ export interface FileRouteTypes {
     | '/assessment'
     | '/how'
     | '/login'
+    | '/plans'
     | '/signup'
     | '/why'
     | '/_client/dashboard'
@@ -136,6 +148,7 @@ export interface RootRouteChildren {
   AssessmentRoute: typeof AssessmentRoute
   HowRoute: typeof HowRoute
   LoginRoute: typeof LoginRoute
+  PlansRoute: typeof PlansRoute
   SignupRoute: typeof SignupRoute
   WhyRoute: typeof WhyRoute
 }
@@ -154,6 +167,13 @@ declare module '@tanstack/react-router' {
       path: '/signup'
       fullPath: '/signup'
       preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/plans': {
+      id: '/plans'
+      path: '/plans'
+      fullPath: '/plans'
+      preLoaderRoute: typeof PlansRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -228,6 +248,7 @@ const rootRouteChildren: RootRouteChildren = {
   AssessmentRoute: AssessmentRoute,
   HowRoute: HowRoute,
   LoginRoute: LoginRoute,
+  PlansRoute: PlansRoute,
   SignupRoute: SignupRoute,
   WhyRoute: WhyRoute,
 }

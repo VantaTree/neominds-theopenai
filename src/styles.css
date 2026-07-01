@@ -83,6 +83,10 @@ img { max-width: 100%; height: auto; }
   --color-mm-role-text-green: #344238;
   --color-mm-role-text-purple: #23152F;
   --color-mm-muted-gray: #a1aab9;
+
+  --color-mm-plans-bg: #FAF8FC;
+  --color-mm-plans-dominant: #2E1A47;
+  --color-mm-plans-accent: #7C3AED;
 }
 
 :root {
