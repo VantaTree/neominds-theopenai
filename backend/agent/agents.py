@@ -1,16 +1,37 @@
+import os
 from crewai import Agent, LLM
 from dotenv import load_dotenv
 from tools import website_audit_tool, competitor_research_tool, seo_research_tool
 
 load_dotenv()
 
-llm = LLM(
-    model="groq/llama-3.3-70b-versatile",
-    # model="groq/llama-3.1-8b-instant",
-    temperature=0.3,
-    num_retries=5,
-    max_tokens=4000
-)
+# Determine which provider to use
+provider = os.getenv("LLM_PROVIDER", os.getenv("PROVIDER", "groq")).strip().lower()
+
+if provider == "groq":
+    llm = LLM(
+        model="groq/llama-3.3-70b-versatile",
+        temperature=0.3,
+        num_retries=5,
+        max_tokens=4000
+    )
+else:
+    # Map key for LiteLLM / CrewAI
+    openrouter_api_key = os.getenv("OPEN_ROUTER")
+    if openrouter_api_key:
+        os.environ["OPENROUTER_API_KEY"] = openrouter_api_key
+    
+    # Allow model override, default to Llama 3.3 70B
+    model_name = os.getenv("LLM_MODEL") or os.getenv("OPENROUTER_MODEL") or "meta-llama/llama-3.3-70b-instruct"
+    if not model_name.startswith("openrouter/"):
+        model_name = f"openrouter/{model_name}"
+        
+    llm = LLM(
+        model=model_name,
+        temperature=0.3,
+        max_tokens=4000,
+        base_url="https://openrouter.ai/api/v1"
+    )
 
 # DISCOVERY AGENT
 

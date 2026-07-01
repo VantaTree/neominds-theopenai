@@ -63,15 +63,18 @@ from tasks import (
 
 import time
 
-def task_pacing_callback(output):
-    print("\n" + "="*70)
-    print(" [Pacing] Sleeping for 35 seconds to reset the Groq TPM limit window... ")
-    print("="*70 + "\n")
-    time.sleep(35)
+# Apply task pacing callback only for groq
+provider = os.getenv("LLM_PROVIDER", os.getenv("PROVIDER", "groq")).strip().lower()
+if provider == "groq":
+    def task_pacing_callback(output):
+        print("\n" + "="*70)
+        print(" [Pacing] Sleeping for 35 seconds to reset the Groq TPM limit window... ")
+        print("="*70 + "\n")
+        time.sleep(35)
 
-discovery_task.callback = task_pacing_callback
-research_task.callback = task_pacing_callback
-marketing_task.callback = task_pacing_callback
+    discovery_task.callback = task_pacing_callback
+    research_task.callback = task_pacing_callback
+    marketing_task.callback = task_pacing_callback
 
 
 import contextlib
