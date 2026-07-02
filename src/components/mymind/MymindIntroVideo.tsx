@@ -9,7 +9,7 @@ export function MymindIntroVideo() {
   const { openLightbox } = useLightbox();
 
   return (
-    <section className="w-full overflow-x-hidden bg-white py-16 sm:py-20">
+    <section className="w-full overflow-x-hidden pb-16 sm:pb-20">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 40 }}
@@ -39,7 +39,8 @@ export function MymindIntroVideo() {
               <div
                 className="flex h-16 w-16 items-center justify-center rounded-full shadow-2xl transition-transform duration-300 group-hover:scale-110"
                 style={{
-                  background: "linear-gradient(180deg, #FF5924 0%, #FFA86A 100%)",
+                  background:
+                    "linear-gradient(180deg, #FF5924 0%, #FFA86A 100%)",
                 }}
               >
                 <svg
@@ -52,36 +53,6 @@ export function MymindIntroVideo() {
                 </svg>
               </div>
             </div>
-
-            {/* iPhone mockup floating on bottom-left */}
-            <motion.div
-              className="absolute bottom-0 left-6 sm:left-8 translate-y-4"
-              style={{ zIndex: 10, width: "clamp(7%, 12%, 14%)" }}
-              animate={{ y: [0, -8, 0] }}
-              transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
-              onClick={(e) => {
-                e.stopPropagation();
-                window.open("https://apps.apple.com/us/app/mymind-extend-your-mind/id1520332347", "_blank");
-              }}
-            >
-              <div className="relative overflow-hidden rounded-2xl shadow-2xl">
-                <img
-                  src={IPHONE_MOCKUP}
-                  alt="mymind iPhone app"
-                  className="relative z-10 h-auto w-full object-contain"
-                />
-                {/* iPhone inner video */}
-                <video
-                  src={IPHONE_VIDEO}
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                  className="absolute inset-0 h-full w-full object-cover"
-                  style={{ zIndex: 5 }}
-                />
-              </div>
-            </motion.div>
           </div>
         </motion.div>
       </div>

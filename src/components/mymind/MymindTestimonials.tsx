@@ -340,8 +340,6 @@ export function MymindTestimonials() {
   // Floating pulses running in the background web
   const pulsesRef = useRef<Pulse[]>(initialPulses);
 
-  const [isVisible, setIsVisible] = useState(false);
-
   // Mymind style colors (mapped statically to fit the light gradient background)
   const colorsRef = useRef({
     foreground: { r: 36, g: 39, b: 45 }, // #24272D
@@ -349,23 +347,8 @@ export function MymindTestimonials() {
     accent2: { r: 255, g: 125, b: 211 }, // #FF7DD3
   });
 
-  // Intersection observer to pause calculations off-screen
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        setIsVisible(entry.isIntersecting);
-      },
-      { threshold: 0.05 },
-    );
-    if (containerRef.current) {
-      observer.observe(containerRef.current);
-    }
-    return () => observer.disconnect();
-  }, []);
-
   // Update loop for camera interpolation and canvas rendering
   useEffect(() => {
-    if (!isVisible) return;
     let animId: number;
     let lastTime = performance.now();
 
@@ -561,7 +544,7 @@ export function MymindTestimonials() {
       window.removeEventListener("resize", handleResize);
       cancelAnimationFrame(animId);
     };
-  }, [isVisible, activeIndex]);
+  }, [activeIndex]);
 
   // Window drag/mouse handlers for controller puck and direct canvas dragging
   useEffect(() => {
@@ -801,385 +784,407 @@ export function MymindTestimonials() {
 
   return (
     <section
-      ref={containerRef}
-      id="testimonials"
-      className="relative w-full overflow-hidden"
       style={{
-        background: `
-          radial-gradient(ellipse 80% 60% at 20% 30%, rgba(255, 180, 200, 0.6) 0%, transparent 55%),
-          radial-gradient(ellipse 70% 60% at 80% 70%, rgba(255, 200, 210, 0.5) 0%, transparent 55%),
-          radial-gradient(ellipse 60% 50% at 50% 50%, rgba(255, 210, 220, 0.4) 0%, transparent 60%),
-          linear-gradient(145deg, #ffc8d0 0%, #ffd0c8 25%, #ffc8d8 55%, #f8d0e8 100%)
-        `,
+        backgroundImage: "url('/images/mymind_review_neue-1.jpg')",
+        backgroundSize: "cover",
+        backgroundPosition: "top center",
+        backgroundRepeat: "no-repeat",
       }}
     >
-      {/* 1. MOBILE BUBBLE VIEWPORT (< md) */}
-      <div className="md:hidden mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-20">
-        {/* Floating testimonial bubbles — top 3 */}
-        <div className="flex flex-col gap-12 sm:gap-14 mb-14 sm:mb-20 w-full">
-          {BUBBLE_TESTIMONIALS.slice(0, 3).map((t, i) => {
-            const isLeft = i % 2 === 0;
-            const floatConfigs = [
-              { y: [0, -10, 0] as number[], duration: 4, delay: 0 },
-              { y: [0, -7, 0] as number[], duration: 3.2, delay: 0.5 },
-              { y: [0, -12, 0] as number[], duration: 4.8, delay: 1 },
-            ];
-            const fc = floatConfigs[i % floatConfigs.length];
-            return (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-40px" }}
-                transition={{ duration: 0.6, delay: t.delay }}
-                className={`w-full max-w-[460px] ${isLeft ? "self-end" : "self-start"}`}
-              >
-                <motion.div
-                  animate={{ y: fc.y }}
-                  transition={{
-                    duration: fc.duration,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                    delay: fc.delay,
-                  }}
-                  style={{ willChange: "transform" }}
-                  className="w-full"
-                >
-                  {/* Speech bubble box */}
-                  <div
-                    className="relative rounded-[46px] bg-white px-5 sm:px-6 py-4 sm:py-5"
-                    style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.08)" }}
-                  >
-                    <p className="text-sm leading-relaxed md:text-base text-left font-sans text-mm-dark">
-                      &ldquo;{t.text}&rdquo;
-                    </p>
-                  </div>
-
-                  {/* Speech bubble trail and metadata */}
-                  {isLeft ? (
-                    <div className="relative flex flex-col items-start pl-12 mt-2 w-full">
-                      {/* Trail dots */}
-                      <div className="flex flex-col items-start gap-1.5 -mt-1 mb-2">
-                        <div className="size-3.5 rounded-full bg-white shadow-sm ml-8" />
-                        <div className="size-2 rounded-full bg-white/80 shadow-xs ml-4.5" />
-                      </div>
-
-                      {/* Metadata */}
-                      <div className="flex items-center gap-3">
-                        <div className="text-left">
-                          <p className="text-xs font-semibold text-mm-dark font-sans">
-                            {t.name}
-                          </p>
-                          <p className="text-xs text-mm-gray font-sans mt-0.5">
-                            {t.role}
-                          </p>
-                        </div>
-                        <span
-                          className="shrink-0 text-center rounded-full px-2.5 py-0.5 text-[10px] font-bold"
-                          style={{ background: "#fff0ec", color: "#FF5924" }}
-                        >
-                          {t.result}
-                        </span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="relative flex flex-col items-end pr-12 mt-2 w-full">
-                      {/* Trail dots */}
-                      <div className="flex flex-col items-end gap-1.5 -mt-1 mb-2">
-                        <div className="size-3.5 rounded-full bg-white shadow-sm mr-8" />
-                        <div className="size-2 rounded-full bg-white/80 shadow-xs mr-4.5" />
-                      </div>
-
-                      {/* Metadata */}
-                      <div className="flex items-center gap-3 flex-row-reverse">
-                        <div className="text-right">
-                          <p className="text-xs font-semibold text-mm-dark font-sans">
-                            {t.name}
-                          </p>
-                          <p className="text-xs text-mm-gray font-sans mt-0.5">
-                            {t.role}
-                          </p>
-                        </div>
-                        <span
-                          className="shrink-0 text-center rounded-full px-2.5 py-0.5 text-[10px] font-bold"
-                          style={{ background: "#fff0ec", color: "#FF5924" }}
-                        >
-                          {t.result}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </motion.div>
-              </motion.div>
-            );
-          })}
-        </div>
-
-        {/* Section heading */}
-        <motion.h2
-          initial={{ opacity: 0, y: 24 }}
+      {/* Section Header */}
+      <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 pt-24 pb-16 text-center flex flex-col items-center gap-3 relative z-30">
+        <motion.p
+          initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-60px" }}
-          transition={{ duration: 0.7 }}
-          className="mb-14 sm:mb-20 text-center leading-tight"
+          transition={{ duration: 0.5 }}
+          className="mb-4 text-xs font-semibold uppercase tracking-[0.2em]"
+          style={{ color: "#FF5924" }}
+        >
+          Client Testimonials
+        </motion.p>
+        <h2
+          className="text-[#111418] tracking-tight leading-[1.05]"
           style={{
             fontFamily: "'Louize', Georgia, serif",
-            fontSize: "clamp(2.5rem, 7vw, 6rem)",
+            fontSize: "clamp(2.8rem, 8vw, 5.5rem)",
             letterSpacing: "-0.03em",
-            color: "white",
             fontWeight: 400,
           }}
         >
-          Real results.
-          <br />
-          Real businesses.
-        </motion.h2>
-
-        {/* More bubbles below heading */}
-        <div className="flex flex-col gap-12 sm:gap-14 w-full">
-          {BUBBLE_TESTIMONIALS.slice(3, 5).map((t, i) => {
-            const globalIndex = i + 3;
-            const isLeft = globalIndex % 2 === 0;
-            const floatConfigs = [
-              { y: [0, -8, 0] as number[], duration: 3.6, delay: 0.8 },
-              { y: [0, -11, 0] as number[], duration: 5, delay: 0.3 },
-            ];
-            const fc = floatConfigs[i % floatConfigs.length];
-            return (
-              <motion.div
-                key={globalIndex}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-40px" }}
-                transition={{ duration: 0.6, delay: t.delay }}
-                className={`w-full max-w-[460px] ${isLeft ? "self-end" : "self-start"}`}
-              >
-                <motion.div
-                  animate={{ y: fc.y }}
-                  transition={{
-                    duration: fc.duration,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                    delay: fc.delay,
-                  }}
-                  style={{ willChange: "transform" }}
-                  className="w-full"
-                >
-                  {/* Speech bubble box */}
-                  <div
-                    className="relative rounded-4xl bg-white px-5 sm:px-6 py-4 sm:py-5"
-                    style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.08)" }}
-                  >
-                    <p className="text-sm leading-relaxed md:text-base text-left font-sans text-mm-dark">
-                      &ldquo;{t.text}&rdquo;
-                    </p>
-                  </div>
-
-                  {/* Speech bubble trail and metadata */}
-                  {isLeft ? (
-                    <div className="relative flex flex-col items-start pl-12 mt-2 w-full">
-                      {/* Trail dots */}
-                      <div className="flex flex-col items-start gap-1.5 -mt-1 mb-2">
-                        <div className="size-3.5 rounded-full bg-white shadow-sm ml-8" />
-                        <div className="size-2 rounded-full bg-white/80 shadow-xs ml-4.5" />
-                      </div>
-
-                      {/* Metadata */}
-                      <div className="flex items-center gap-3">
-                        <div className="text-left">
-                          <p className="text-xs font-semibold text-mm-dark font-sans">
-                            {t.name}
-                          </p>
-                          <p className="text-xs text-mm-gray font-sans mt-0.5">
-                            {t.role}
-                          </p>
-                        </div>
-                        <span
-                          className="shrink-0 text-center rounded-full px-2.5 py-0.5 text-[10px] font-bold"
-                          style={{ background: "#fff0ec", color: "#FF5924" }}
-                        >
-                          {t.result}
-                        </span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="relative flex flex-col items-end pr-12 mt-2 w-full">
-                      {/* Trail dots */}
-                      <div className="flex flex-col items-end gap-1.5 -mt-1 mb-2">
-                        <div className="size-3.5 rounded-full bg-white shadow-sm mr-8" />
-                        <div className="size-2 rounded-full bg-white/80 shadow-xs mr-4.5" />
-                      </div>
-
-                      {/* Metadata */}
-                      <div className="flex items-center gap-3 flex-row-reverse">
-                        <div className="text-right">
-                          <p className="text-xs font-semibold text-mm-dark font-sans">
-                            {t.name}
-                          </p>
-                          <p className="text-xs text-mm-gray font-sans mt-0.5">
-                            {t.role}
-                          </p>
-                        </div>
-                        <span
-                          className="shrink-0 text-center rounded-full px-2.5 py-0.5 text-[10px] font-bold"
-                          style={{ background: "#fff0ec", color: "#FF5924" }}
-                        >
-                          {t.result}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </motion.div>
-              </motion.div>
-            );
-          })}
-        </div>
+          Client Testimonials
+        </h2>
+        <p
+          className="max-w-lg leading-relaxed"
+          style={{
+            color: "#4A5465",
+            fontFamily: "'Inter', sans-serif",
+            fontSize: "clamp(1rem, 2vw, 1.15rem)",
+          }}
+        >
+          Drag the canvas directly or slide the relative tracking ball on the
+          control pad below to explore the project web.
+        </p>
       </div>
 
-      {/* 2. DESKTOP INTERACTIVE GRAPH VIEWPORT (>= md) */}
       <div
-        className="hidden md:block w-full h-[800px] select-none cursor-grab active:cursor-grabbing relative"
-        onMouseDown={handleGraphMouseDown}
-        onTouchStart={handleGraphTouchStart}
+        ref={containerRef}
+        id="testimonials"
+        className="relative w-full overflow-hidden"
       >
-        {/* Background canvas connections web */}
-        <canvas
-          ref={canvasRef}
-          className="absolute inset-0 w-full h-full pointer-events-none"
-        />
-
-        {/* Tilted / Panned graph layout wrapper */}
-        <div
-          ref={graphWrapperRef}
-          className="absolute inset-0 pointer-events-none will-change-transform"
-          style={{ transformOrigin: "0 0" }}
-        >
-          {testimonials.map((card, idx) => {
-            const isActive = idx === activeIndex;
-            return (
-              <div
-                key={card.id}
-                style={{
-                  position: "absolute",
-                  left: `${card.x}px`,
-                  top: `${card.y}px`,
-                  transform: "translate(-50%, -50%)",
-                  pointerEvents: "auto",
-                  zIndex: isActive ? 40 : 10,
-                }}
-                onClick={(e) => handleCardClick(idx, e)}
-              >
-                {/* Premium Testimonial Card */}
-                <div
-                  className={`w-[230px] sm:w-[285px] rounded-2xl border bg-white border-mm-border shadow-2xl flex flex-col transition-all duration-500 will-change-transform ${
-                    isActive
-                      ? "ring-1 ring-mm-orange border-mm-orange/40 scale-115 md:scale-150 shadow-[0_15px_45px_rgba(255,89,36,0.12)]"
-                      : "opacity-60 scale-90 saturate-50 hover:opacity-90"
-                  }`}
+        {/* 1. MOBILE BUBBLE VIEWPORT (< md) */}
+        <div className="md:hidden mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-20">
+          {/* Floating testimonial bubbles — top 3 */}
+          <div className="flex flex-col gap-12 sm:gap-14 mb-14 sm:mb-20 w-full">
+            {BUBBLE_TESTIMONIALS.slice(0, 3).map((t, i) => {
+              const isLeft = i % 2 === 0;
+              const floatConfigs = [
+                { y: [0, -10, 0] as number[], duration: 4, delay: 0 },
+                { y: [0, -7, 0] as number[], duration: 3.2, delay: 0.5 },
+                { y: [0, -12, 0] as number[], duration: 4.8, delay: 1 },
+              ];
+              const fc = floatConfigs[i % floatConfigs.length];
+              return (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-40px" }}
+                  transition={{ duration: 0.6, delay: t.delay }}
+                  className={`w-full max-w-[460px] ${isLeft ? "self-end" : "self-start"}`}
                 >
-                  {/* Large Project Image - Flush with top card boundary */}
-                  <div className="w-full aspect-16/10 overflow-hidden rounded-t-2xl bg-[#f0f2f5] border-b border-black/5 relative">
-                    <img
-                      src={card.imagePath}
-                      alt={card.businessName}
-                      className="w-full h-full object-cover select-none pointer-events-none"
-                      style={{
-                        objectFit: "cover",
-                        height: "100%",
-                      }}
-                    />
-                    <div className="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
-                  </div>
-
-                  {/* Card Details & Quote Body - Inner padding applied here */}
-                  <div className="p-4 flex flex-col gap-3">
-                    {/* Meta details */}
-                    <div className="flex flex-col gap-0.5">
-                      <div className="flex items-center justify-between">
-                        <span className="font-extrabold text-sm sm:text-base text-mm-orange tracking-tight leading-none font-sans">
-                          {card.businessName}
-                        </span>
-                        <span className="flex items-center gap-0.5 text-[10px] text-mm-gray font-bold uppercase tracking-wider font-sans">
-                          {card.name}
-                          <BadgeCheck className="h-3 w-3 text-mm-orange shrink-0" />
-                        </span>
-                      </div>
-                      <span className="text-xs text-mm-dark/60 font-medium leading-tight mt-1 font-sans">
-                        {card.projectDescription}
-                      </span>
+                  <motion.div
+                    animate={{ y: fc.y }}
+                    transition={{
+                      duration: fc.duration,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                      delay: fc.delay,
+                    }}
+                    style={{ willChange: "transform" }}
+                    className="w-full"
+                  >
+                    {/* Speech bubble box */}
+                    <div
+                      className="relative rounded-[46px] bg-white px-5 sm:px-6 py-4 sm:py-5"
+                      style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.08)" }}
+                    >
+                      <p className="text-sm leading-relaxed md:text-base text-left font-sans text-mm-dark">
+                        &ldquo;{t.text}&rdquo;
+                      </p>
                     </div>
 
-                    {/* 2-line Review Text */}
-                    <p className="text-mm-dark/85 text-xs sm:text-sm italic leading-relaxed line-clamp-2 font-sans">
-                      "{card.text}"
-                    </p>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                    {/* Speech bubble trail and metadata */}
+                    {isLeft ? (
+                      <div className="relative flex flex-col items-start pl-12 mt-2 w-full">
+                        {/* Trail dots */}
+                        <div className="flex flex-col items-start gap-1.5 -mt-1 mb-2">
+                          <div className="size-3.5 rounded-full bg-white shadow-sm ml-8" />
+                          <div className="size-2 rounded-full bg-white/80 shadow-xs ml-4.5" />
+                        </div>
 
-        {/* Floating HUD Section Header */}
-        <div className="absolute top-8 left-8 sm:top-12 sm:left-12 pointer-events-none space-y-2 z-10 max-w-sm sm:max-w-md">
-          <div className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1 text-[10px] font-bold uppercase tracking-wider text-mm-orange bg-mm-orange/10 backdrop-blur-md border border-mm-orange/10 shadow-sm">
-            <Compass className="h-3 w-3 animate-spin" />
-            Interactive Graph
+                        {/* Metadata */}
+                        <div className="flex items-center gap-3">
+                          <div className="text-left">
+                            <p className="text-xs font-semibold text-mm-dark font-sans">
+                              {t.name}
+                            </p>
+                            <p className="text-xs text-mm-gray font-sans mt-0.5">
+                              {t.role}
+                            </p>
+                          </div>
+                          <span
+                            className="shrink-0 text-center rounded-full px-2.5 py-0.5 text-[10px] font-bold"
+                            style={{ background: "#fff0ec", color: "#FF5924" }}
+                          >
+                            {t.result}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="relative flex flex-col items-end pr-12 mt-2 w-full">
+                        {/* Trail dots */}
+                        <div className="flex flex-col items-end gap-1.5 -mt-1 mb-2">
+                          <div className="size-3.5 rounded-full bg-white shadow-sm mr-8" />
+                          <div className="size-2 rounded-full bg-white/80 shadow-xs mr-4.5" />
+                        </div>
+
+                        {/* Metadata */}
+                        <div className="flex items-center gap-3 flex-row-reverse">
+                          <div className="text-right">
+                            <p className="text-xs font-semibold text-mm-dark font-sans">
+                              {t.name}
+                            </p>
+                            <p className="text-xs text-mm-gray font-sans mt-0.5">
+                              {t.role}
+                            </p>
+                          </div>
+                          <span
+                            className="shrink-0 text-center rounded-full px-2.5 py-0.5 text-[10px] font-bold"
+                            style={{ background: "#fff0ec", color: "#FF5924" }}
+                          >
+                            {t.result}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </motion.div>
+                </motion.div>
+              );
+            })}
           </div>
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-mm-dark tracking-tight drop-shadow-sm">
-            Client Testimonials
-          </h2>
-          <p className="text-mm-dark/60 text-xs sm:text-sm leading-relaxed drop-shadow-sm font-sans">
-            Drag the canvas directly or slide the relative tracking ball on the
-            control pad below to explore the project web.
-          </p>
+
+          {/* Section heading */}
+          <motion.h2
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-60px" }}
+            transition={{ duration: 0.7 }}
+            className="mb-14 sm:mb-20 text-center leading-tight"
+            style={{
+              fontFamily: "'Louize', Georgia, serif",
+              fontSize: "clamp(2.5rem, 7vw, 6rem)",
+              letterSpacing: "-0.03em",
+              color: "white",
+              fontWeight: 400,
+            }}
+          >
+            Real results.
+            <br />
+            Real businesses.
+          </motion.h2>
+
+          {/* More bubbles below heading */}
+          <div className="flex flex-col gap-12 sm:gap-14 w-full">
+            {BUBBLE_TESTIMONIALS.slice(3, 5).map((t, i) => {
+              const globalIndex = i + 3;
+              const isLeft = globalIndex % 2 === 0;
+              const floatConfigs = [
+                { y: [0, -8, 0] as number[], duration: 3.6, delay: 0.8 },
+                { y: [0, -11, 0] as number[], duration: 5, delay: 0.3 },
+              ];
+              const fc = floatConfigs[i % floatConfigs.length];
+              return (
+                <motion.div
+                  key={globalIndex}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-40px" }}
+                  transition={{ duration: 0.6, delay: t.delay }}
+                  className={`w-full max-w-[460px] ${isLeft ? "self-end" : "self-start"}`}
+                >
+                  <motion.div
+                    animate={{ y: fc.y }}
+                    transition={{
+                      duration: fc.duration,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                      delay: fc.delay,
+                    }}
+                    style={{ willChange: "transform" }}
+                    className="w-full"
+                  >
+                    {/* Speech bubble box */}
+                    <div
+                      className="relative rounded-4xl bg-white px-5 sm:px-6 py-4 sm:py-5"
+                      style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.08)" }}
+                    >
+                      <p className="text-sm leading-relaxed md:text-base text-left font-sans text-mm-dark">
+                        &ldquo;{t.text}&rdquo;
+                      </p>
+                    </div>
+
+                    {/* Speech bubble trail and metadata */}
+                    {isLeft ? (
+                      <div className="relative flex flex-col items-start pl-12 mt-2 w-full">
+                        {/* Trail dots */}
+                        <div className="flex flex-col items-start gap-1.5 -mt-1 mb-2">
+                          <div className="size-3.5 rounded-full bg-white shadow-sm ml-8" />
+                          <div className="size-2 rounded-full bg-white/80 shadow-xs ml-4.5" />
+                        </div>
+
+                        {/* Metadata */}
+                        <div className="flex items-center gap-3">
+                          <div className="text-left">
+                            <p className="text-xs font-semibold text-mm-dark font-sans">
+                              {t.name}
+                            </p>
+                            <p className="text-xs text-mm-gray font-sans mt-0.5">
+                              {t.role}
+                            </p>
+                          </div>
+                          <span
+                            className="shrink-0 text-center rounded-full px-2.5 py-0.5 text-[10px] font-bold"
+                            style={{ background: "#fff0ec", color: "#FF5924" }}
+                          >
+                            {t.result}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="relative flex flex-col items-end pr-12 mt-2 w-full">
+                        {/* Trail dots */}
+                        <div className="flex flex-col items-end gap-1.5 -mt-1 mb-2">
+                          <div className="size-3.5 rounded-full bg-white shadow-sm mr-8" />
+                          <div className="size-2 rounded-full bg-white/80 shadow-xs mr-4.5" />
+                        </div>
+
+                        {/* Metadata */}
+                        <div className="flex items-center gap-3 flex-row-reverse">
+                          <div className="text-right">
+                            <p className="text-xs font-semibold text-mm-dark font-sans">
+                              {t.name}
+                            </p>
+                            <p className="text-xs text-mm-gray font-sans mt-0.5">
+                              {t.role}
+                            </p>
+                          </div>
+                          <span
+                            className="shrink-0 text-center rounded-full px-2.5 py-0.5 text-[10px] font-bold"
+                            style={{ background: "#fff0ec", color: "#FF5924" }}
+                          >
+                            {t.result}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </motion.div>
+                </motion.div>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Floating Control Pad Controller */}
-        <div className="absolute bottom-8 right-8 sm:bottom-12 sm:right-12 z-20 flex flex-col items-center gap-1">
-          <span className="text-[9px] uppercase font-extrabold tracking-widest text-mm-dark/40 leading-none">
-            Tracking HUD
-          </span>
-          <div
-            ref={controllerRef}
-            className="relative w-[160px] h-[100px] rounded-2xl bg-white/50 border border-black/5 backdrop-blur-lg shadow-2xl flex items-center justify-center cursor-grab active:cursor-grabbing"
-            onMouseDown={handleControllerMouseDown}
-            onTouchStart={handleControllerTouchStart}
-          >
-            {/* Inner Grid & Guides */}
-            <div className="absolute inset-1.5 rounded-[10px] border border-dashed border-mm-dark/10 pointer-events-none flex items-center justify-center">
-              <div className="absolute w-[95%] h-px bg-mm-dark/5" />
-              <div className="absolute h-[90%] w-px bg-mm-dark/5" />
-            </div>
+        {/* 2. DESKTOP INTERACTIVE GRAPH VIEWPORT (>= md) */}
+        <div
+          className="hidden md:block w-full h-[800px] select-none cursor-grab active:cursor-grabbing relative"
+          onMouseDown={handleGraphMouseDown}
+          onTouchStart={handleGraphTouchStart}
+        >
+          {/* Background canvas connections web */}
+          <canvas
+            ref={canvasRef}
+            className="absolute inset-0 w-full h-full pointer-events-none"
+          />
 
-            {/* Mini Testimonial Node Markers on the pad */}
-            {testimonials.map((node, idx) => {
-              const nodePctX = (node.x - centerX) / rangeX;
-              const nodePctY = (node.y - centerY) / rangeY;
+          {/* Tilted / Panned graph layout wrapper */}
+          <div
+            ref={graphWrapperRef}
+            className="absolute inset-0 pointer-events-none will-change-transform"
+            style={{ transformOrigin: "0 0" }}
+          >
+            {testimonials.map((card, idx) => {
               const isActive = idx === activeIndex;
               return (
                 <div
-                  key={node.id}
-                  className={`absolute size-1.5 rounded-full transition-all duration-300 pointer-events-none ${
-                    isActive
-                      ? "bg-mm-orange scale-150 shadow-[0_0_6px_rgba(255,89,36,0.6)]"
-                      : "bg-mm-dark/20"
-                  }`}
+                  key={card.id}
                   style={{
-                    transform: `translate3d(${nodePctX * 70}px, ${nodePctY * 40}px, 0)`,
+                    position: "absolute",
+                    left: `${card.x}px`,
+                    top: `${card.y}px`,
+                    transform: "translate(-50%, -50%)",
+                    pointerEvents: "auto",
+                    zIndex: isActive ? 40 : 10,
                   }}
-                />
+                  onClick={(e) => handleCardClick(idx, e)}
+                >
+                  {/* Premium Testimonial Card */}
+                  <div
+                    className={`w-[230px] sm:w-[285px] rounded-2xl border bg-white border-mm-border shadow-2xl flex flex-col transition-all duration-500 will-change-transform ${
+                      isActive
+                        ? "ring-1 ring-mm-orange border-mm-orange/40 scale-115 md:scale-150 shadow-[0_15px_45px_rgba(255,89,36,0.12)]"
+                        : "opacity-60 scale-90 saturate-50 hover:opacity-90"
+                    }`}
+                  >
+                    {/* Large Project Image - Flush with top card boundary */}
+                    <div className="w-full aspect-16/10 overflow-hidden rounded-t-2xl bg-[#f0f2f5] border-b border-black/5 relative">
+                      <img
+                        src={card.imagePath}
+                        alt={card.businessName}
+                        className="w-full h-full object-cover select-none pointer-events-none"
+                        style={{
+                          objectFit: "cover",
+                          height: "100%",
+                        }}
+                      />
+                      <div className="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
+                    </div>
+
+                    {/* Card Details & Quote Body - Inner padding applied here */}
+                    <div className="p-4 flex flex-col gap-3">
+                      {/* Meta details */}
+                      <div className="flex flex-col gap-0.5">
+                        <div className="flex items-center justify-between">
+                          <span className="font-extrabold text-sm sm:text-base text-mm-orange tracking-tight leading-none font-sans">
+                            {card.businessName}
+                          </span>
+                          <span className="flex items-center gap-0.5 text-[10px] text-mm-gray font-bold uppercase tracking-wider font-sans">
+                            {card.name}
+                            <BadgeCheck className="h-3 w-3 text-mm-orange shrink-0" />
+                          </span>
+                        </div>
+                        <span className="text-xs text-mm-dark/60 font-medium leading-tight mt-1 font-sans">
+                          {card.projectDescription}
+                        </span>
+                      </div>
+
+                      {/* 2-line Review Text */}
+                      <p className="text-mm-dark/85 text-xs sm:text-sm italic leading-relaxed line-clamp-2 font-sans">
+                        "{card.text}"
+                      </p>
+                    </div>
+                  </div>
+                </div>
               );
             })}
+          </div>
 
-            {/* Draggable Tracking Ball */}
+          {/* Floating Control Pad Controller */}
+          <div className="absolute bottom-8 right-8 sm:bottom-12 sm:right-12 z-20 flex flex-col items-center gap-1">
+            <span className="text-[9px] uppercase font-extrabold tracking-widest text-mm-dark/40 leading-none">
+              Tracking HUD
+            </span>
             <div
-              className="absolute size-6 rounded-full bg-mm-orange hover:bg-mm-pink shadow-[0_0_12px_rgba(255,89,36,0.5)] flex items-center justify-center pointer-events-none transition-colors duration-200"
-              style={{
-                transform: `translate3d(${ballPos.x}px, ${ballPos.y}px, 0)`,
-              }}
+              ref={controllerRef}
+              className="relative w-[160px] h-[100px] rounded-2xl bg-white/50 border border-black/5 backdrop-blur-lg shadow-2xl flex items-center justify-center cursor-grab active:cursor-grabbing"
+              onMouseDown={handleControllerMouseDown}
+              onTouchStart={handleControllerTouchStart}
             >
-              <div className="size-2 rounded-full bg-white opacity-90" />
+              {/* Inner Grid & Guides */}
+              <div className="absolute inset-1.5 rounded-[10px] border border-dashed border-mm-dark/10 pointer-events-none flex items-center justify-center">
+                <div className="absolute w-[95%] h-px bg-mm-dark/5" />
+                <div className="absolute h-[90%] w-px bg-mm-dark/5" />
+              </div>
+
+              {/* Mini Testimonial Node Markers on the pad */}
+              {testimonials.map((node, idx) => {
+                const nodePctX = (node.x - centerX) / rangeX;
+                const nodePctY = (node.y - centerY) / rangeY;
+                const isActive = idx === activeIndex;
+                return (
+                  <div
+                    key={node.id}
+                    className={`absolute size-1.5 rounded-full transition-all duration-300 pointer-events-none ${
+                      isActive
+                        ? "bg-mm-orange scale-150 shadow-[0_0_6px_rgba(255,89,36,0.6)]"
+                        : "bg-mm-dark/20"
+                    }`}
+                    style={{
+                      transform: `translate3d(${nodePctX * 70}px, ${nodePctY * 40}px, 0)`,
+                    }}
+                  />
+                );
+              })}
+
+              {/* Draggable Tracking Ball */}
+              <div
+                className="absolute size-6 rounded-full bg-mm-orange hover:bg-mm-pink shadow-[0_0_12px_rgba(255,89,36,0.5)] flex items-center justify-center pointer-events-none transition-colors duration-200"
+                style={{
+                  transform: `translate3d(${ballPos.x}px, ${ballPos.y}px, 0)`,
+                }}
+              >
+                <div className="size-2 rounded-full bg-white opacity-90" />
+              </div>
             </div>
           </div>
         </div>

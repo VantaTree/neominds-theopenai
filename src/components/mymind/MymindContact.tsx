@@ -1,6 +1,14 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mail, Phone, MapPin, Clock, Send, Check, Sparkles } from "lucide-react";
+import {
+  Mail,
+  Phone,
+  MapPin,
+  Clock,
+  Send,
+  Check,
+  Sparkles,
+} from "lucide-react";
 import GradientGlow from "../GradientGlow";
 
 const SERVICES = [
@@ -32,10 +40,14 @@ export function MymindContact() {
     }, 1800);
   };
 
-  const activeColor = SERVICES.find((s) => s.id === selectedService)?.color || "#FF5924";
+  const activeColor =
+    SERVICES.find((s) => s.id === selectedService)?.color || "#FF5924";
 
   return (
-    <section id="contact" className="relative w-full overflow-hidden bg-white py-20 border-t border-mm-border">
+    <section
+      id="contact"
+      className="relative w-full overflow-hidden bg-white py-20 border-t border-mm-border"
+    >
       {/* Decorative Background Glows */}
       <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
         <GradientGlow
@@ -65,16 +77,16 @@ export function MymindContact() {
       <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header Section */}
         <div className="text-center max-w-2xl mx-auto mb-16">
-          <motion.div
-            initial={{ opacity: 0, y: 15 }}
+          <motion.p
+            initial={{ opacity: 0, y: 12 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
+            viewport={{ once: true }}
             transition={{ duration: 0.5 }}
-            className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full border border-mm-orange/20 bg-mm-orange/5 text-mm-orange text-xs font-semibold uppercase tracking-wider mb-4"
+            className="mb-3 text-center text-xs font-semibold uppercase tracking-[0.22em]"
+            style={{ color: "#FF5924" }}
           >
-            <Sparkles className="w-3.5 h-3.5" />
             Let's Collaborate
-          </motion.div>
+          </motion.p>
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -91,7 +103,9 @@ export function MymindContact() {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="text-base sm:text-lg text-mm-gray font-normal leading-relaxed"
           >
-            Tell us about your project goals. We analyze your requirements and assemble the ideal team to design, manage, and scale your digital solution.
+            Tell us about your project goals. We analyze your requirements and
+            assemble the ideal team to design, manage, and scale your digital
+            solution.
           </motion.p>
         </div>
 
@@ -110,7 +124,8 @@ export function MymindContact() {
                 Direct Contact
               </h3>
               <p className="text-sm sm:text-base text-mm-gray leading-relaxed mb-6">
-                Prefer to reach out directly? Use the channels below. We look forward to hearing from you.
+                Prefer to reach out directly? Use the channels below. We look
+                forward to hearing from you.
               </p>
             </motion.div>
 
@@ -168,7 +183,10 @@ export function MymindContact() {
                           {item.value}
                         </a>
                       ) : (
-                        <span id={item.id} className="text-base font-semibold text-mm-dark">
+                        <span
+                          id={item.id}
+                          className="text-base font-semibold text-mm-dark"
+                        >
                           {item.value}
                         </span>
                       )}
@@ -191,7 +209,9 @@ export function MymindContact() {
                 <span>Operating Hours</span>
               </div>
               <p className="text-xs sm:text-sm text-mm-gray leading-relaxed">
-                Monday through Friday, 9:00 AM – 6:00 PM IST. We strive to review and reply to all project submissions within one business day.
+                Monday through Friday, 9:00 AM – 6:00 PM IST. We strive to
+                review and reply to all project submissions within one business
+                day.
               </p>
             </motion.div>
           </div>
@@ -231,8 +251,14 @@ export function MymindContact() {
                               onClick={() => setSelectedService(srv.id)}
                               className="relative px-4 py-2 text-xs font-semibold rounded-full border transition-all cursor-pointer focus:outline-none overflow-hidden"
                               style={{
-                                borderColor: selectedService === srv.id ? srv.color : "var(--color-mm-border)",
-                                color: selectedService === srv.id ? "#fff" : "var(--color-mm-dark)",
+                                borderColor:
+                                  selectedService === srv.id
+                                    ? srv.color
+                                    : "var(--color-mm-border)",
+                                color:
+                                  selectedService === srv.id
+                                    ? "#fff"
+                                    : "var(--color-mm-dark)",
                               }}
                             >
                               <span className="relative z-10">{srv.label}</span>
@@ -241,7 +267,11 @@ export function MymindContact() {
                                   layoutId="active-pill-bg-section"
                                   className="absolute inset-0 z-0"
                                   style={{ backgroundColor: srv.color }}
-                                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                                  transition={{
+                                    type: "spring",
+                                    stiffness: 380,
+                                    damping: 30,
+                                  }}
                                 />
                               )}
                             </button>
@@ -340,9 +370,18 @@ export function MymindContact() {
                       >
                         {isSubmitting ? (
                           <div className="flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-white animate-bounce" style={{ animationDelay: "0ms" }} />
-                            <span className="w-2 h-2 rounded-full bg-white animate-bounce" style={{ animationDelay: "150ms" }} />
-                            <span className="w-2 h-2 rounded-full bg-white animate-bounce" style={{ animationDelay: "300ms" }} />
+                            <span
+                              className="w-2 h-2 rounded-full bg-white animate-bounce"
+                              style={{ animationDelay: "0ms" }}
+                            />
+                            <span
+                              className="w-2 h-2 rounded-full bg-white animate-bounce"
+                              style={{ animationDelay: "150ms" }}
+                            />
+                            <span
+                              className="w-2 h-2 rounded-full bg-white animate-bounce"
+                              style={{ animationDelay: "300ms" }}
+                            />
                           </div>
                         ) : (
                           <>
@@ -365,7 +404,12 @@ export function MymindContact() {
                     <motion.div
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
-                      transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.15 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 200,
+                        damping: 15,
+                        delay: 0.15,
+                      }}
                       className="w-20 h-20 rounded-full flex items-center justify-center text-white mb-8"
                       style={{ backgroundColor: activeColor }}
                     >
@@ -376,7 +420,13 @@ export function MymindContact() {
                       Message Sent!
                     </h3>
                     <p className="text-mm-gray text-base max-w-sm mb-8 leading-relaxed font-sans">
-                      Thank you for reaching out, <span className="font-semibold text-mm-dark">{name}</span>. We've received your request about <span className="font-semibold text-mm-dark">{SERVICES.find((s) => s.id === selectedService)?.label}</span> and will get back to you shortly.
+                      Thank you for reaching out,{" "}
+                      <span className="font-semibold text-mm-dark">{name}</span>
+                      . We've received your request about{" "}
+                      <span className="font-semibold text-mm-dark">
+                        {SERVICES.find((s) => s.id === selectedService)?.label}
+                      </span>{" "}
+                      and will get back to you shortly.
                     </p>
 
                     <button

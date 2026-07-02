@@ -6,7 +6,11 @@ export function MymindDownloads() {
   return (
     <section
       className="w-full overflow-x-hidden py-16 md:py-20"
-      style={{ background: "#fff0ec" }}
+      // style={{ background: "#fff0ec" }} FFF5F0
+      style={{
+        background:
+          "linear-gradient(180deg, #FFF5F0 0%, #fff0ec 30%, #fff0ec 100%)",
+      }}
       id="downloads"
     >
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">

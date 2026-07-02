@@ -49,7 +49,7 @@ export default function ClientAside() {
           <img
             src="/logos/logo.PNG"
             alt="theopenai logo"
-            style={{ height: "35px", width: "auto", display: "block" }}
+            style={{ height: "24px", width: "auto", display: "block" }}
           />
         </a>
         <div className="flex items-center gap-2">
@@ -85,7 +85,7 @@ export default function ClientAside() {
             <img
               src="/logos/logo.PNG"
               alt="theopenai logo"
-              style={{ height: "35px", width: "auto", display: "block" }}
+              style={{ height: "24px", width: "auto", display: "block" }}
             />
           </a>
           <div className="flex items-center gap-1.5">

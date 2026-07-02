@@ -73,9 +73,9 @@ export default function AddOnsSection({}: Props) {
 
   // Mymind style colors (mapped statically to fit the light gradient background)
   const colorsRef = useRef({
-    accent: { r: 255, g: 89, b: 36 },     // #FF5924
-    accent2: { r: 255, g: 125, b: 211 },  // #FF7DD3
-    foreground: { r: 36, g: 39, b: 45 },  // #24272D
+    accent: { r: 255, g: 89, b: 36 }, // #FF5924
+    accent2: { r: 255, g: 125, b: 211 }, // #FF7DD3
+    foreground: { r: 36, g: 39, b: 45 }, // #24272D
   });
 
   const addOns: AddOnItem[] = [
@@ -313,16 +313,19 @@ export default function AddOnsSection({}: Props) {
         background: `
           radial-gradient(ellipse 60% 40% at 50% 60%, rgba(255, 125, 211, 0.12) 0%, transparent 70%),
           radial-gradient(ellipse 50% 50% at 20% 40%, rgba(255, 89, 36, 0.08) 0%, transparent 60%),
-          #ffffff
+          #fff0ec
         `,
       }}
-      className="relative w-full py-24 overflow-hidden border-t border-mm-border mt-12"
+      className="relative w-full py-24 overflow-hidde"
     >
       <div className="max-w-6xl mx-auto px-6 relative z-10">
         <div className="text-center space-y-3">
-          <span className="text-xs font-bold text-mm-orange uppercase tracking-widest bg-mm-orange/10 px-3.5 py-1.5 rounded-full">
+          <p
+            className="mb-3 text-center text-xs font-semibold uppercase tracking-[0.22em]"
+            style={{ color: "#FF5924" }}
+          >
             Package Extensions
-          </span>
+          </p>
           <h3 className="text-3xl sm:text-4xl font-extrabold text-mm-dark tracking-tight pt-2">
             Elevate Your{" "}
             <span className="bg-linear-to-r from-mm-orange to-mm-pink bg-clip-text text-transparent">
