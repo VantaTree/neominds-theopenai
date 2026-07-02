@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Card } from "../components/admin/shared";
+import { Card } from "@/components/admin/shared";
 import { useState, useEffect, useMemo } from "react";
 import { FileText, Search, Trash2, Eye, X, RefreshCw, SearchX, Clock, CheckCircle2, AlertCircle, ChevronDown } from "lucide-react";
-import type { Report } from "../lib/types";
-import { getReports, deleteReport, saveReport, logAuditEvent } from "../lib/db";
+import type { Report } from "@/lib/types";
+import { getReports, deleteReport, saveReport, logAuditEvent } from "@/lib/db";
 
-export const Route = createFileRoute("/reports")({
+export const Route = createFileRoute("/_admin/admin/reports")({
   head: () => ({ meta: [{ title: "Reports — GrowConsult AI" }] }),
   component: ReportsPage,
 });

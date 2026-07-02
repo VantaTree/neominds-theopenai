@@ -8,10 +8,10 @@ import {
   Area, AreaChart, PieChart, Pie, Cell,
 } from "recharts";
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Card } from "../components/admin/shared";
-import { getUsers, getProjects, getPayments, getReports } from "../lib/db";
+import { Card } from "@/components/admin/shared";
+import { getUsers, getProjects, getPayments, getReports } from "@/lib/db";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/_admin/admin/")({
   head: () => ({ meta: [{ title: "Dashboard — GrowConsult AI" }] }),
   component: Dashboard,
 });
@@ -27,7 +27,7 @@ interface KpiProps {
 
 function Kpi({ label, value, delta, icon: Icon, subLabel, valueSize }: KpiProps) {
   return (
-    <Card className="!p-5">
+    <Card className="p-5!">
       <div className="flex items-start justify-between">
         <div>
           <div className="text-sm font-semibold" style={{ color: "var(--color-title)" }}>{label}</div>
@@ -473,8 +473,8 @@ function Dashboard() {
 
             {isNotificationOpen && (
               <>
-                <div className="fixed inset-0 z-[190]" onClick={() => setIsNotificationOpen(false)} />
-                <div className="absolute right-0 z-[200]" style={{ top: "calc(100% + 8px)" }}>
+                <div className="fixed inset-0 z-190" onClick={() => setIsNotificationOpen(false)} />
+                <div className="absolute right-0 z-200" style={{ top: "calc(100% + 8px)" }}>
                   <div style={{ background: "#FCF8F1", border: "1px solid #E8DCC8", borderRadius: "20px", width: "380px", boxShadow: "0 8px 32px rgba(78,52,46,0.12)", overflow: "hidden" }}>
                     <div className="flex justify-between items-center" style={{ padding: "16px 20px", borderBottom: "1px solid #E8DCC8" }}>
                       <div className="font-bold text-[16px]" style={{ color: "#4E342E" }}>Notifications</div>
@@ -705,7 +705,7 @@ function Dashboard() {
       )}
 
       {showAllNotificationsModal && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-300 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-[#4E342E]/60 backdrop-blur-sm" onClick={() => setShowAllNotificationsModal(false)} />
           <div 
             className="relative w-full max-w-4xl max-h-[85vh] flex flex-col rounded-2xl overflow-hidden shadow-2xl" 
@@ -832,7 +832,7 @@ function Dashboard() {
           
           {/* Clear Confirm Sub-modal */}
           {clearConfirmOpen && (
-            <div className="fixed inset-0 z-[400] flex items-center justify-center p-4">
+            <div className="fixed inset-0 z-400 flex items-center justify-center p-4">
               <div className="absolute inset-0 bg-[#4E342E]/40 backdrop-blur-sm" onClick={() => setClearConfirmOpen(false)} />
               <div className="relative p-6 rounded-2xl shadow-xl max-w-sm w-full" style={{ background: "#FCF8F1", border: "1px solid #E8DCC8" }}>
                 <h3 className="font-bold text-lg mb-2" style={{ color: "#4E342E" }}>Clear All Notifications?</h3>

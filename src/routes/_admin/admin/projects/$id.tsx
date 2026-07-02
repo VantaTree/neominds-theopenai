@@ -4,11 +4,11 @@ import {
   CheckCircle2, Check, X, Pencil, Trash2, Plus, Download, Loader2,
   FileText, FileSpreadsheet, FileType, UploadCloud, Search, FileSearch, ArrowLeft, Eye
 } from "lucide-react";
-import type { Project, ServiceGroup, Status, Task, Priority } from "../lib/mock-data";
-import { Avatar, Card, ProgressBar, StatusBadge } from "../components/admin/shared";
-import { getProjects, saveProject } from "../lib/db";
+import type { Project, ServiceGroup, Status, Task, Priority } from "@/lib/mock-data";
+import { Avatar, Card, ProgressBar, StatusBadge } from "@/components/admin/shared";
+import { getProjects, saveProject } from "@/lib/db";
 
-export const Route = createFileRoute("/projects/$id")({
+export const Route = createFileRoute("/_admin/admin/projects/$id")({
   head: () => ({ meta: [{ title: "Project — GrowConsult AI" }] }),
   validateSearch: (search: Record<string, unknown>) => {
     return {
@@ -80,7 +80,7 @@ function ProjectDetail() {
               return (
                 <button
                   key={p.id}
-                  onClick={() => navigate({ to: "/projects/$id", params: { id: p.id } })}
+                  onClick={() => navigate({ to: "/admin/projects/$id", params: { id: p.id } })}
                   className="w-full text-left px-3 py-2.5 rounded-xl transition-colors"
                   style={{
                     background: active ? "color-mix(in oklch, var(--color-primary) 18%, transparent)" : "transparent",
@@ -102,7 +102,7 @@ function ProjectDetail() {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="text-xs" style={{ color: "var(--color-subtle)" }}>
-              <Link to="/projects" className="hover:underline">Projects</Link> / {project.id}
+              <Link to="/admin/projects" className="hover:underline">Projects</Link> / {project.id}
             </div>
             <h1 className="text-xl font-bold mt-1" style={{ color: "var(--color-heading)" }}>
               {project.client} — {project.services.join(" + ")}
@@ -275,7 +275,7 @@ function OverviewTab({ project, onChange }: { project: Project; onChange: (p: Pr
       <Card>
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold" style={{ color: "var(--color-title)" }}>Recent Activity</h3>
-          <Link to="/projects" className="text-sm font-semibold hover:underline" style={{ color: "var(--color-primary)" }}>
+          <Link to="/admin/projects" className="text-sm font-semibold hover:underline" style={{ color: "var(--color-primary)" }}>
             View All Activity →
           </Link>
         </div>

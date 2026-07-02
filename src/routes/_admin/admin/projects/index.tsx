@@ -1,13 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Search, Plus, Eye, Edit2, Trash2 } from "lucide-react";
-import { statusColors } from "../lib/mock-data";
-import type { Project } from "../lib/mock-data";
-import { Avatar, ProgressBar, StatusBadge, Card } from "../components/admin/shared";
+import { statusColors } from "@/lib/mock-data";
+import type { Project } from "@/lib/mock-data";
+import { Avatar, ProgressBar, StatusBadge, Card } from "@/components/admin/shared";
 import { CheckCircle2, ArrowRight, X, ChevronDown, SearchX } from "lucide-react";
 import { useState, useEffect, useRef, useMemo } from "react";
-import { getProjects, saveProject, getUsers, deleteProject, logAuditEvent } from "../lib/db";
+import { getProjects, saveProject, getUsers, deleteProject, logAuditEvent } from "@/lib/db";
 
-export const Route = createFileRoute("/projects/")({
+export const Route = createFileRoute("/_admin/admin/projects/")({
   head: () => ({ meta: [{ title: "Projects — GrowConsult AI" }] }),
   component: ProjectsPage,
 });
@@ -374,10 +374,10 @@ function ProjectsPage() {
                     <td className="px-4 py-3 text-xs whitespace-nowrap" style={{ color: "var(--color-subtle)" }}>{p.deadline}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <Link to="/projects/$id" params={{ id: p.id }} className="hover:opacity-70" title="View">
+                        <Link to="/admin/projects/$id" params={{ id: p.id }} className="hover:opacity-70" title="View">
                           <Eye size={16} style={{ color: "var(--color-title)" }} />
                         </Link>
-                        <Link to="/projects/$id" params={{ id: p.id }} search={{ edit: true }} className="hover:opacity-70" title="Edit">
+                        <Link to="/admin/projects/$id" params={{ id: p.id }} search={{ edit: true }} className="hover:opacity-70" title="Edit">
                           <Edit2 size={16} style={{ color: "var(--color-title)" }} />
                         </Link>
                         <button onClick={() => setConfirmDelete(p)} className="hover:opacity-70 text-[#EF5350]" title="Delete">

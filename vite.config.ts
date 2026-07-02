@@ -19,5 +19,8 @@ export default defineConfig({
     server: {
       allowedHosts: ["talented-albacore-utterly.ngrok-free.app"],
     },
+    resolve: {
+      tsconfigPaths: true,
+    },
   },
 });

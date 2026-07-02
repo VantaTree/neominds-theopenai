@@ -49,43 +49,6 @@ img { max-width: 100%; height: auto; }
 
 @custom-variant dark (&:is(.dark *));
 
-:root {
-  --color-mm-orange: #FF5924;
-  --color-mm-yellow: #FFE926;
-  --color-mm-pink: #FF7DD3;
-  --color-mm-red: #FF6866;
-  --color-mm-green: #5CB13E;
-  --color-mm-blue: #85D3FF;
-  --color-mm-dark: #24272D;
-  --color-mm-gray: #748297;
-  --color-mm-border: #E2E6EE;
-  --color-mm-subtle: #F0F2F5;
-
-  --color-mm-yellow-bright: #FFD300;
-  --color-mm-peach: #FA8A43;
-  --color-mm-pink-alt: #F583C2;
-  --color-mm-charcoal: #232A35;
-  --color-mm-bg-gray: #F3F4F7;
-  --color-mm-bg-wrap: #F9FAFC;
-  --color-mm-border-light: #E6DBDB;
-
-  --color-mm-role-designers-bg: #232A35;
-  --color-mm-role-writers-bg: #FDF0F5;
-  --color-mm-role-marketers-bg: #F1F5FD;
-  --color-mm-role-developers-bg: #232A35;
-  --color-mm-role-researchers-bg: #E9F6ED;
-  --color-mm-role-everyone-bg: #F4F5F7;
-  --color-mm-role-text-dark: #2A3444;
-  --color-mm-role-text-green: #344238;
-  --color-mm-role-text-purple: #23152F;
-  --color-mm-muted-gray: #a1aab9;
-
-  --color-mm-plans-bg: #FAF8FC;
-  --color-mm-plans-dominant: #2E1A47;
-  --color-mm-plans-accent: #7C3AED;
-  --radius: 0.75rem;
-}
-
 @theme inline {
   --font-display: "Louize", "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
   --font-serif: "Louize", Georgia, serif;
@@ -124,11 +87,148 @@ img { max-width: 100%; height: auto; }
   --color-mm-plans-bg: var(--color-mm-plans-bg);
   --color-mm-plans-dominant: var(--color-mm-plans-dominant);
   --color-mm-plans-accent: var(--color-mm-plans-accent);
+
+  /* Admin Side */
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-card-secondary: var(--card-secondary);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-border-hover: var(--border-hover);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-heading: var(--heading);
+  --color-title: var(--title);
+  --color-body: var(--body);
+  --color-subtle: var(--subtle);
+
+  --color-success: var(--success);
+  --color-info: var(--info);
+  --color-pending: var(--pending);
+  --color-danger: var(--danger);
+
+  --color-row-hover: var(--row-hover);
+
+  /* --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif; */
+}
+
+:root {
+  --color-mm-orange: #FF5924;
+  --color-mm-yellow: #FFE926;
+  --color-mm-pink: #FF7DD3;
+  --color-mm-red: #FF6866;
+  --color-mm-green: #5CB13E;
+  --color-mm-blue: #85D3FF;
+  --color-mm-dark: #24272D;
+  --color-mm-gray: #748297;
+  --color-mm-border: #E2E6EE;
+  --color-mm-subtle: #F0F2F5;
+
+  --color-mm-yellow-bright: #FFD300;
+  --color-mm-peach: #FA8A43;
+  --color-mm-pink-alt: #F583C2;
+  --color-mm-charcoal: #232A35;
+  --color-mm-bg-gray: #F3F4F7;
+  --color-mm-bg-wrap: #F9FAFC;
+  --color-mm-border-light: #E6DBDB;
+
+  --color-mm-role-designers-bg: #232A35;
+  --color-mm-role-writers-bg: #FDF0F5;
+  --color-mm-role-marketers-bg: #F1F5FD;
+  --color-mm-role-developers-bg: #232A35;
+  --color-mm-role-researchers-bg: #E9F6ED;
+  --color-mm-role-everyone-bg: #F4F5F7;
+  --color-mm-role-text-dark: #2A3444;
+  --color-mm-role-text-green: #344238;
+  --color-mm-role-text-purple: #23152F;
+  --color-mm-muted-gray: #a1aab9;
+
+  --color-mm-plans-bg: #FAF8FC;
+  --color-mm-plans-dominant: #2E1A47;
+  --color-mm-plans-accent: #7C3AED;
+  --radius: 0.75rem;
+
+  /* Admin Side */
+
+  --background: #FFFDF8;
+  --foreground: #4E342E;
+
+  --card: #FCF8F1;
+  --card-foreground: #6D4C41;
+  --card-secondary: #F8F1E7;
+
+  --popover: #FCF8F1;
+  --popover-foreground: #6D4C41;
+
+  --primary: #E89D18;
+  --primary-foreground: #ffffff;
+  --primary-hover: #D18B0E;
+
+  --secondary: #FCF8F1;
+  --secondary-foreground: #6D4C41;
+
+  --muted: #F8F1E7;
+  --muted-foreground: #A1887F;
+
+  --accent: #FFF3D6;
+  --accent-foreground: #6D4C41;
+
+  --destructive: #EF5350;
+  --destructive-foreground: #ffffff;
+
+  --border: #E8DCC8;
+  --border-hover: #D4B483;
+  --input: #FFFDF8;
+  --ring: #E89D18;
+
+  --heading: #4E342E;
+  --title: #6D4C41;
+  --body: #8D6E63;
+  --subtle: #A1887F;
+
+  --success: #4CAF50;
+  --info: #3B82F6;
+  --pending: #F4B942;
+  --danger: #EF5350;
+
+  --row-hover: #FFF3D6;
+
+  --sidebar: #FCF8F1;
+  --sidebar-foreground: #6D4C41;
+  --sidebar-primary: #FFF3D6;
+  --sidebar-primary-foreground: #E89D18;
+  --sidebar-accent: #F8F1E7;
+  --sidebar-accent-foreground: #6D4C41;
+  --sidebar-border: #E8DCC8;
+  --sidebar-ring: #E89D18;
+  
 }
 
 @layer base {
   html {
-    background: #ffffff;
     color-scheme: light;
   }
 
@@ -317,3 +417,43 @@ img { max-width: 100%; height: auto; }
   max-width: 100vw;
   overflow-x: hidden;
 } */
+
+@utility card-surface {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 24px;
+  box-shadow: 0 2px 12px rgba(78, 52, 46, 0.06);
+}
+
+@utility btn-primary {
+  background: var(--color-primary);
+  color: var(--color-primary-foreground);
+  border-radius: 12px;
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+  transition: background 150ms ease;
+  &:hover { background: var(--color-primary-hover); }
+}
+
+@utility btn-secondary {
+  background: var(--color-secondary);
+  border: 1px solid var(--color-border-hover);
+  color: var(--color-secondary-foreground);
+  border-radius: 12px;
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+  transition: all 150ms ease;
+  &:hover { background: var(--color-muted); }
+}
+
+@utility input-field {
+  background: var(--color-input);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  color: var(--color-heading);
+  padding: 0.5rem 0.75rem;
+  width: 100%;
+  transition: border-color 150ms ease;
+  &::placeholder { color: var(--color-subtle); }
+  &:focus { outline: none; border-color: var(--color-ring); }
+}

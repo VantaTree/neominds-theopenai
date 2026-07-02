@@ -9,7 +9,7 @@ import {
   orderBy,
   getDoc
 } from "firebase/firestore";
-import { db, isFirebaseConfigured } from "../../../lib/firebase";
+import { db, isFirebaseConfigured } from "@/lib/firebase";
 import type { Blog, CreateBlogInput, UpdateBlogInput } from "../types/blog";
 
 const LS_BLOGS = "growconsult_blogs";

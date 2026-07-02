@@ -6,7 +6,7 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { LightboxProvider } from "../components/mymind/LightboxContext";
+import { LightboxProvider } from "@/components/mymind/LightboxContext";
 
 import appCss from "../styles.css?url";
 

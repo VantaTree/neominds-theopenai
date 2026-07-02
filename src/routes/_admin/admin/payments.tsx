@@ -1,14 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Avatar, StatusBadge, PlanBadge, Card } from "../components/admin/shared";
+import { Avatar, StatusBadge, PlanBadge, Card } from "@/components/admin/shared";
 import { 
   AlertCircle, DollarSign, Clock, AlertTriangle, Search, Download, 
   CheckCircle2, PauseCircle, ArrowUpCircle, FileText, X, ChevronDown, 
   ArrowUpDown, Loader2, Mail, ChevronLeft, ArrowLeft, Copy, Calendar, DownloadCloud, SearchX 
 } from "lucide-react";
 import { useState, useMemo, useEffect, useRef } from "react";
-import { getPayments, savePayments } from "../lib/db";
+import { getPayments, savePayments } from "@/lib/db";
 
-export const Route = createFileRoute("/payments")({
+export const Route = createFileRoute("/_admin/admin/payments")({
   head: () => ({ meta: [{ title: "Payments — GrowConsult AI" }] }),
   component: PaymentsPage,
 });
@@ -232,7 +232,7 @@ ${paymentsData.map(p => `"${p.paymentId}","${p.invoiceId}","${p.client}","${p.bu
     });
     setModalOpen("reminder_success");
     setToast(
-      <div style={{ background: "#E8F5E9", color: "#4CAF50", border: "1px solid #4CAF50", borderRadius: "12px", padding: "12px 20px", color: "#4CAF50" }}>
+      <div style={{ background: "#E8F5E9", color: "#4CAF50", border: "1px solid #4CAF50", borderRadius: "12px", padding: "12px 20px" }}>
         ✓ Reminder sent to {selectedClient.name}!
       </div>
     );

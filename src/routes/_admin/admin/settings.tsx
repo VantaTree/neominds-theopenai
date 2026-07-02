@@ -1,13 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Card } from "../components/admin/shared";
+import { Card } from "@/components/admin/shared";
 import { useState, useEffect } from "react";
 import { CreditCard, Check, Settings as SettingsIcon, Bell, User, CheckCircle2, Database, Loader2, AlertTriangle, Wifi, WifiOff } from "lucide-react";
-import { getNotificationSettings, saveNotificationSettings, getPlans, savePlan, getAdminConfig, saveAdminConfig, getUsers, saveUser, logAuditEvent } from "../lib/db";
-import { db, isFirebaseConfigured } from "../lib/firebase";
+import { getNotificationSettings, saveNotificationSettings, getPlans, savePlan, getAdminConfig, saveAdminConfig, getUsers, saveUser, logAuditEvent } from "@/lib/db";
+import { db, isFirebaseConfigured } from "@/lib/firebase";
 import { doc, setDoc, getDoc, deleteDoc } from "firebase/firestore";
-import { fetchBlogs, createBlog } from "../modules/blogs/services/blogService";
+import { fetchBlogs, createBlog } from "@/modules/blogs/services/blogService";
 
-export const Route = createFileRoute("/settings")({
+export const Route = createFileRoute("/_admin/admin/settings")({
   head: () => ({ meta: [{ title: "Settings — GrowConsult AI" }] }),
   component: SettingsPage,
 });

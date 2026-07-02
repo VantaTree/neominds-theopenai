@@ -1,12 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Search, Plus, Edit2, Trash2, ChevronLeft, ChevronRight, Phone, Mail, X, FileText, Eye, ArrowLeft } from "lucide-react";
 import { useState, useEffect, useRef, useMemo } from "react";
-import { type User } from "../lib/mock-data";
-import { Avatar, PlanBadge, StatusBadge } from "../components/admin/shared";
+import { type User } from "@/lib/mock-data";
+import { Avatar, PlanBadge, StatusBadge } from "@/components/admin/shared";
 import { SearchX, CheckCircle2, ChevronDown } from "lucide-react";
-import { getUsers, saveUser, deleteUser as removeUserDb } from "../lib/db";
+import { getUsers, saveUser, deleteUser as removeUserDb } from "@/lib/db";
 
-export const Route = createFileRoute("/users")({
+export const Route = createFileRoute("/_admin/admin/users")({
   head: () => ({ meta: [{ title: "Users — GrowConsult AI" }] }),
   component: UsersPage,
 });
