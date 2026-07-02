@@ -18,6 +18,7 @@ import { MymindFooter } from "@/components/mymind/MymindFooter";
 import AddOnsSection from "@/components/AddOnsSection";
 import { MymindContact } from "@/components/mymind/MymindContact";
 import GradientArc from "@/components/GradientArc";
+import { StoreboxFAQ } from "@/components/mymind/StoreboxFAQ";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -104,6 +105,7 @@ function MymindPage() {
       <MymindDownloads />
       <AddOnsSection />
       <MymindContact />
+      <StoreboxFAQ/>
       <MymindFooter />
     </div>
   );
