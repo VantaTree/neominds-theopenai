@@ -5,12 +5,29 @@ from tools import website_audit_tool, competitor_research_tool, seo_research_too
 
 load_dotenv()
 
+# Define the default model at the top of the file.
+# You can change this to any free model from OpenRouter depending on upstream rate limits:
+# - "meta-llama/llama-3.3-70b-instruct:free"   (Large Llama 3.3 model, highly capable but frequently rate-limited)
+# - "google/gemma-4-31b-it:free"               (Strong Google model)
+# - "qwen/qwen3-next-80b-a3b-instruct:free"    (Capable large Qwen model)
+# - "meta-llama/llama-3.2-3b-instruct:free"    (Small, very fast model, least likely to rate-limit)
+MODEL = "meta-llama/llama-3.3-70b-instruct:free"
+
 # Determine which provider to use
 provider = os.getenv("LLM_PROVIDER", os.getenv("PROVIDER", "groq")).strip().lower()
 
 if provider == "groq":
+    # Resolve the model name for Groq. Default to llama-3.3-70b-versatile.
+    model_name = os.getenv("LLM_MODEL") or os.getenv("GROQ_MODEL")
+    if not model_name or "openrouter/free" in model_name:
+        groq_model = "groq/llama-3.3-70b-versatile"
+    elif "llama-3.3-70b" in model_name:
+        groq_model = "groq/llama-3.3-70b-versatile"
+    else:
+        groq_model = model_name if model_name.startswith("groq/") else f"groq/{model_name}"
+        
     llm = LLM(
-        model="groq/llama-3.3-70b-versatile",
+        model=groq_model,
         temperature=0.3,
         num_retries=5,
         max_tokens=4000
@@ -21,8 +38,8 @@ else:
     if openrouter_api_key:
         os.environ["OPENROUTER_API_KEY"] = openrouter_api_key
     
-    # Allow model override, default to Llama 3.3 70B
-    model_name = os.getenv("LLM_MODEL") or os.getenv("OPENROUTER_MODEL") or "meta-llama/llama-3.3-70b-instruct"
+    # Allow model override, default to the defined MODEL
+    model_name = os.getenv("LLM_MODEL") or os.getenv("OPENROUTER_MODEL") or MODEL
     if not model_name.startswith("openrouter/"):
         model_name = f"openrouter/{model_name}"
         
@@ -559,7 +576,7 @@ marketing_agent = Agent(
     Do not include text outside the JSON object.
 
     The complete report should be concise
-    (approximately 350–450 words).
+    (approximately 450–550 words).
 
     Avoid repeating information across sections.
 
@@ -698,15 +715,14 @@ marketing_agent = Agent(
         "expected_results": [],
     },
 
-    "metrics_summary": {
-        "overall_health": 0,
-        "growth_potential": 0,
-        "digital_readiness": 0,
-        "marketing_effectiveness": 0,
-        "brand_strength": 0,
-        "seo_score": 0,
-        "priority_level": ""
-    }
+    # "metrics_summary": {
+    #     "overall_health": 0,
+    #     "growth_potential": 0,
+    #     "digital_readiness": 0,
+    #     "marketing_effectiveness": 0,
+    #     "brand_strength": 0,
+    #     "priority_level": ""
+    # }
     }
 
     ==================================================
