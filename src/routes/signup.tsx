@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
-import GradientGlow from "../components/GradientGlow";
+import GradientGlow from "@/components/GradientGlow";
 import { MymindNav } from "@/components/mymind/MymindNav";
 
 export const Route = createFileRoute("/signup")({

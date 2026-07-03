@@ -22,9 +22,9 @@ import {
   Lock,
   Unlock
 } from "lucide-react";
-import Loader from "../components/Loader";
-import PriceCard from "../components/PriceCard";
-import { questions } from "../data/questions";
+import Loader from "@/components/Loader";
+import PriceCard from "@/components/PriceCard";
+import { questions } from "@/data/questions";
 
 export const Route = createFileRoute("/assessment")({
   component: AssessmentPage,

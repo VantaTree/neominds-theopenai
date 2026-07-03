@@ -16,9 +16,20 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as HowRouteImport } from './routes/how'
 import { Route as AssessmentRouteImport } from './routes/assessment'
 import { Route as ClientRouteRouteImport } from './routes/_client/route'
+import { Route as AdminRouteRouteImport } from './routes/_admin/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ClientProjectsRouteImport } from './routes/_client/projects'
 import { Route as ClientDashboardRouteImport } from './routes/_client/dashboard'
+import { Route as AdminAdminIndexRouteImport } from './routes/_admin/admin/index'
+import { Route as AdminAdminUsersRouteImport } from './routes/_admin/admin/users'
+import { Route as AdminAdminTemplatesRouteImport } from './routes/_admin/admin/templates'
+import { Route as AdminAdminSupportRouteImport } from './routes/_admin/admin/support'
+import { Route as AdminAdminSettingsRouteImport } from './routes/_admin/admin/settings'
+import { Route as AdminAdminReportsRouteImport } from './routes/_admin/admin/reports'
+import { Route as AdminAdminPaymentsRouteImport } from './routes/_admin/admin/payments'
+import { Route as AdminAdminBlogsRouteImport } from './routes/_admin/admin/blogs'
+import { Route as AdminAdminProjectsIndexRouteImport } from './routes/_admin/admin/projects/index'
+import { Route as AdminAdminProjectsIdRouteImport } from './routes/_admin/admin/projects/$id'
 
 const WhyRoute = WhyRouteImport.update({
   id: '/why',
@@ -54,6 +65,10 @@ const ClientRouteRoute = ClientRouteRouteImport.update({
   id: '/_client',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminRouteRoute = AdminRouteRouteImport.update({
+  id: '/_admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -69,6 +84,56 @@ const ClientDashboardRoute = ClientDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => ClientRouteRoute,
 } as any)
+const AdminAdminIndexRoute = AdminAdminIndexRouteImport.update({
+  id: '/admin/',
+  path: '/admin/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminAdminUsersRoute = AdminAdminUsersRouteImport.update({
+  id: '/admin/users',
+  path: '/admin/users',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminAdminTemplatesRoute = AdminAdminTemplatesRouteImport.update({
+  id: '/admin/templates',
+  path: '/admin/templates',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminAdminSupportRoute = AdminAdminSupportRouteImport.update({
+  id: '/admin/support',
+  path: '/admin/support',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminAdminSettingsRoute = AdminAdminSettingsRouteImport.update({
+  id: '/admin/settings',
+  path: '/admin/settings',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminAdminReportsRoute = AdminAdminReportsRouteImport.update({
+  id: '/admin/reports',
+  path: '/admin/reports',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminAdminPaymentsRoute = AdminAdminPaymentsRouteImport.update({
+  id: '/admin/payments',
+  path: '/admin/payments',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminAdminBlogsRoute = AdminAdminBlogsRouteImport.update({
+  id: '/admin/blogs',
+  path: '/admin/blogs',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminAdminProjectsIndexRoute = AdminAdminProjectsIndexRouteImport.update({
+  id: '/admin/projects/',
+  path: '/admin/projects/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminAdminProjectsIdRoute = AdminAdminProjectsIdRouteImport.update({
+  id: '/admin/projects/$id',
+  path: '/admin/projects/$id',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -80,6 +145,16 @@ export interface FileRoutesByFullPath {
   '/why': typeof WhyRoute
   '/dashboard': typeof ClientDashboardRoute
   '/projects': typeof ClientProjectsRoute
+  '/admin/blogs': typeof AdminAdminBlogsRoute
+  '/admin/payments': typeof AdminAdminPaymentsRoute
+  '/admin/reports': typeof AdminAdminReportsRoute
+  '/admin/settings': typeof AdminAdminSettingsRoute
+  '/admin/support': typeof AdminAdminSupportRoute
+  '/admin/templates': typeof AdminAdminTemplatesRoute
+  '/admin/users': typeof AdminAdminUsersRoute
+  '/admin/': typeof AdminAdminIndexRoute
+  '/admin/projects/$id': typeof AdminAdminProjectsIdRoute
+  '/admin/projects/': typeof AdminAdminProjectsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -91,10 +166,21 @@ export interface FileRoutesByTo {
   '/why': typeof WhyRoute
   '/dashboard': typeof ClientDashboardRoute
   '/projects': typeof ClientProjectsRoute
+  '/admin/blogs': typeof AdminAdminBlogsRoute
+  '/admin/payments': typeof AdminAdminPaymentsRoute
+  '/admin/reports': typeof AdminAdminReportsRoute
+  '/admin/settings': typeof AdminAdminSettingsRoute
+  '/admin/support': typeof AdminAdminSupportRoute
+  '/admin/templates': typeof AdminAdminTemplatesRoute
+  '/admin/users': typeof AdminAdminUsersRoute
+  '/admin': typeof AdminAdminIndexRoute
+  '/admin/projects/$id': typeof AdminAdminProjectsIdRoute
+  '/admin/projects': typeof AdminAdminProjectsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_admin': typeof AdminRouteRouteWithChildren
   '/_client': typeof ClientRouteRouteWithChildren
   '/assessment': typeof AssessmentRoute
   '/how': typeof HowRoute
@@ -104,6 +190,16 @@ export interface FileRoutesById {
   '/why': typeof WhyRoute
   '/_client/dashboard': typeof ClientDashboardRoute
   '/_client/projects': typeof ClientProjectsRoute
+  '/_admin/admin/blogs': typeof AdminAdminBlogsRoute
+  '/_admin/admin/payments': typeof AdminAdminPaymentsRoute
+  '/_admin/admin/reports': typeof AdminAdminReportsRoute
+  '/_admin/admin/settings': typeof AdminAdminSettingsRoute
+  '/_admin/admin/support': typeof AdminAdminSupportRoute
+  '/_admin/admin/templates': typeof AdminAdminTemplatesRoute
+  '/_admin/admin/users': typeof AdminAdminUsersRoute
+  '/_admin/admin/': typeof AdminAdminIndexRoute
+  '/_admin/admin/projects/$id': typeof AdminAdminProjectsIdRoute
+  '/_admin/admin/projects/': typeof AdminAdminProjectsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -117,6 +213,16 @@ export interface FileRouteTypes {
     | '/why'
     | '/dashboard'
     | '/projects'
+    | '/admin/blogs'
+    | '/admin/payments'
+    | '/admin/reports'
+    | '/admin/settings'
+    | '/admin/support'
+    | '/admin/templates'
+    | '/admin/users'
+    | '/admin/'
+    | '/admin/projects/$id'
+    | '/admin/projects/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -128,9 +234,20 @@ export interface FileRouteTypes {
     | '/why'
     | '/dashboard'
     | '/projects'
+    | '/admin/blogs'
+    | '/admin/payments'
+    | '/admin/reports'
+    | '/admin/settings'
+    | '/admin/support'
+    | '/admin/templates'
+    | '/admin/users'
+    | '/admin'
+    | '/admin/projects/$id'
+    | '/admin/projects'
   id:
     | '__root__'
     | '/'
+    | '/_admin'
     | '/_client'
     | '/assessment'
     | '/how'
@@ -140,10 +257,21 @@ export interface FileRouteTypes {
     | '/why'
     | '/_client/dashboard'
     | '/_client/projects'
+    | '/_admin/admin/blogs'
+    | '/_admin/admin/payments'
+    | '/_admin/admin/reports'
+    | '/_admin/admin/settings'
+    | '/_admin/admin/support'
+    | '/_admin/admin/templates'
+    | '/_admin/admin/users'
+    | '/_admin/admin/'
+    | '/_admin/admin/projects/$id'
+    | '/_admin/admin/projects/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRouteRoute: typeof AdminRouteRouteWithChildren
   ClientRouteRoute: typeof ClientRouteRouteWithChildren
   AssessmentRoute: typeof AssessmentRoute
   HowRoute: typeof HowRoute
@@ -204,6 +332,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClientRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_admin': {
+      id: '/_admin'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AdminRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -225,8 +360,108 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClientDashboardRouteImport
       parentRoute: typeof ClientRouteRoute
     }
+    '/_admin/admin/': {
+      id: '/_admin/admin/'
+      path: '/admin'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminAdminIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/_admin/admin/users': {
+      id: '/_admin/admin/users'
+      path: '/admin/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminAdminUsersRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/_admin/admin/templates': {
+      id: '/_admin/admin/templates'
+      path: '/admin/templates'
+      fullPath: '/admin/templates'
+      preLoaderRoute: typeof AdminAdminTemplatesRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/_admin/admin/support': {
+      id: '/_admin/admin/support'
+      path: '/admin/support'
+      fullPath: '/admin/support'
+      preLoaderRoute: typeof AdminAdminSupportRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/_admin/admin/settings': {
+      id: '/_admin/admin/settings'
+      path: '/admin/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AdminAdminSettingsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/_admin/admin/reports': {
+      id: '/_admin/admin/reports'
+      path: '/admin/reports'
+      fullPath: '/admin/reports'
+      preLoaderRoute: typeof AdminAdminReportsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/_admin/admin/payments': {
+      id: '/_admin/admin/payments'
+      path: '/admin/payments'
+      fullPath: '/admin/payments'
+      preLoaderRoute: typeof AdminAdminPaymentsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/_admin/admin/blogs': {
+      id: '/_admin/admin/blogs'
+      path: '/admin/blogs'
+      fullPath: '/admin/blogs'
+      preLoaderRoute: typeof AdminAdminBlogsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/_admin/admin/projects/': {
+      id: '/_admin/admin/projects/'
+      path: '/admin/projects'
+      fullPath: '/admin/projects/'
+      preLoaderRoute: typeof AdminAdminProjectsIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/_admin/admin/projects/$id': {
+      id: '/_admin/admin/projects/$id'
+      path: '/admin/projects/$id'
+      fullPath: '/admin/projects/$id'
+      preLoaderRoute: typeof AdminAdminProjectsIdRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
   }
 }
+
+interface AdminRouteRouteChildren {
+  AdminAdminBlogsRoute: typeof AdminAdminBlogsRoute
+  AdminAdminPaymentsRoute: typeof AdminAdminPaymentsRoute
+  AdminAdminReportsRoute: typeof AdminAdminReportsRoute
+  AdminAdminSettingsRoute: typeof AdminAdminSettingsRoute
+  AdminAdminSupportRoute: typeof AdminAdminSupportRoute
+  AdminAdminTemplatesRoute: typeof AdminAdminTemplatesRoute
+  AdminAdminUsersRoute: typeof AdminAdminUsersRoute
+  AdminAdminIndexRoute: typeof AdminAdminIndexRoute
+  AdminAdminProjectsIdRoute: typeof AdminAdminProjectsIdRoute
+  AdminAdminProjectsIndexRoute: typeof AdminAdminProjectsIndexRoute
+}
+
+const AdminRouteRouteChildren: AdminRouteRouteChildren = {
+  AdminAdminBlogsRoute: AdminAdminBlogsRoute,
+  AdminAdminPaymentsRoute: AdminAdminPaymentsRoute,
+  AdminAdminReportsRoute: AdminAdminReportsRoute,
+  AdminAdminSettingsRoute: AdminAdminSettingsRoute,
+  AdminAdminSupportRoute: AdminAdminSupportRoute,
+  AdminAdminTemplatesRoute: AdminAdminTemplatesRoute,
+  AdminAdminUsersRoute: AdminAdminUsersRoute,
+  AdminAdminIndexRoute: AdminAdminIndexRoute,
+  AdminAdminProjectsIdRoute: AdminAdminProjectsIdRoute,
+  AdminAdminProjectsIndexRoute: AdminAdminProjectsIndexRoute,
+}
+
+const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(
+  AdminRouteRouteChildren,
+)
 
 interface ClientRouteRouteChildren {
   ClientDashboardRoute: typeof ClientDashboardRoute
@@ -244,6 +479,7 @@ const ClientRouteRouteWithChildren = ClientRouteRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRouteRoute: AdminRouteRouteWithChildren,
   ClientRouteRoute: ClientRouteRouteWithChildren,
   AssessmentRoute: AssessmentRoute,
   HowRoute: HowRoute,

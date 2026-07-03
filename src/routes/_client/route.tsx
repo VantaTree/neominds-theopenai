@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { createFileRoute, Outlet, useLocation } from "@tanstack/react-router";
-import ClientAside from "@/components/ClientAside";
+import ClientAside from "@/components/client/ClientAside";
 
 export const Route = createFileRoute("/_client")({
   component: RouteComponent,
