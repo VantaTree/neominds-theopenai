@@ -17,7 +17,7 @@ export function MymindFooter() {
   return (
     <footer className="w-full overflow-x-hidden" style={{ background: "#fff" }}>
       {/* Blog posts */}
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-6 pt-12 sm:pt-16">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-6 sm:pt-16">
         {/* Footer Main Content Grid */}
         <motion.div
           initial={{ opacity: 0, y: 24 }}
@@ -28,14 +28,13 @@ export function MymindFooter() {
         >
           {/* Logo & Tagline column */}
           <div className="col-span-1 md:col-span-4 space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-mm-orange text-white text-lg font-bold">
-                ∅
-              </div>
-              <span className="font-extrabold text-xl text-mm-dark font-sans tracking-tight">
-                The Open AI
-              </span>
-            </div>
+            <a href="/" className="flex items-center gap-2">
+              <img
+                src="/logos/logo.PNG"
+                alt="theopenai logo"
+                style={{ height: "32px", width: "auto", display: "block" }}
+              />
+            </a>
             <div className="space-y-1 pt-2">
               <p className="text-lg font-bold text-mm-dark leading-tight font-sans">
                 AI Finds the <span className="text-mm-orange">Problem</span>.

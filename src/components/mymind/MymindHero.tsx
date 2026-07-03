@@ -41,7 +41,7 @@ export function MymindHero() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.1 }}
             >
-              AI finds the problem
+              Affordable Digital growth, 
             </motion.span>
           </div>
           <div style={{ overflow: "hidden" }}>
@@ -51,7 +51,7 @@ export function MymindHero() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.25 }}
             >
-              Experts deliver the solution
+              Built for your Business
             </motion.span>
           </div>
         </h1>
