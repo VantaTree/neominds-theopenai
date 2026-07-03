@@ -2,9 +2,10 @@ import React, { useState } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
 import {
   LayoutDashboard,
-  MessageSquare,
+  BarChart3,
+  TrendingUp,
   Briefcase,
-  FileText,
+  MessageSquare,
   Settings,
   X,
   Menu,
@@ -23,10 +24,16 @@ export default function ClientAside() {
       Icon: LayoutDashboard,
     },
     {
-      name: "Chat Assistant",
-      href: "#",
-      isRealRoute: false,
-      Icon: MessageSquare,
+      name: "Bussiness Report",
+      href: "/report",
+      isRealRoute: true,
+      Icon: BarChart3,
+    },
+    {
+      name: "Growth Plan",
+      href: "/plan",
+      isRealRoute: true,
+      Icon: TrendingUp,
     },
     {
       name: "Projects",
@@ -34,8 +41,18 @@ export default function ClientAside() {
       isRealRoute: true,
       Icon: Briefcase,
     },
-    { name: "Reports", href: "#", isRealRoute: false, Icon: FileText },
-    { name: "Settings", href: "#", isRealRoute: false, Icon: Settings },
+    {
+      name: "Message",
+      href: "/message",
+      isRealRoute: true,
+      Icon: MessageSquare,
+    },
+    {
+      name: "Settings",
+      href: "/settings",
+      isRealRoute: true,
+      Icon: Settings,
+    },
   ];
 
   const onClose = () => setIsOpen(false);

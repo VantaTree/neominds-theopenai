@@ -86,7 +86,7 @@ function RouteComponent() {
       <ClientAside />
 
       {/* Main Viewport Panel */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 bg-mm-bg-wrap">
         {/* Content Area */}
         <main className="flex-1 overflow-y-auto px-6 py-8 md:px-12 md:py-10">
           <PageTransitionWrapper>
