@@ -6,6 +6,8 @@ def process_assessment(data: dict) -> dict:
     print("Service Layer: Delegating assessment task to Agent Crew...")
     try:
         result = run_assessment_crew(data)
+        if isinstance(result, dict):
+            result.pop("_is_fallback", None)
         return result
     except Exception as e:
         print(f"Error executing Agent Crew: {e}")
