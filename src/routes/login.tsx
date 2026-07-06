@@ -7,7 +7,7 @@ import { MymindNav } from "@/components/mymind/MymindNav";
 export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [
-      { title: "Login — theopenai" },
+      { title: "Login" },
       { name: "description", content: "Login to your theopenai account" },
     ],
   }),
@@ -130,7 +130,6 @@ function LoginPage() {
                 type="submit"
                 className="w-full py-4 bg-mm-orange text-white font-semibold text-sm rounded-[14px] shadow-lg shadow-mm-orange/20 hover:bg-mm-orange/90 active:scale-[0.98] transition-all mt-6 cursor-pointer"
               >
-                Login
               </button>
             </form>
           </div>

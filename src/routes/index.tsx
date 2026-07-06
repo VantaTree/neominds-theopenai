@@ -23,7 +23,7 @@ import { StoreboxFAQ } from "@/components/mymind/StoreboxFAQ";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "theopenai — Website + CRM + SEO. Done for you." },
+      { title: "theopenAI" },
       {
         name: "description",
         content:
@@ -31,7 +31,7 @@ export const Route = createFileRoute("/")({
       },
       {
         property: "og:title",
-        content: "theopenai — Website + CRM + SEO. Done for you.",
+        content: "theopenai",
       },
       {
         property: "og:description",

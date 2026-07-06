@@ -7,7 +7,7 @@ import { MymindNav } from "@/components/mymind/MymindNav";
 export const Route = createFileRoute("/signup")({
   head: () => ({
     meta: [
-      { title: "Sign Up — theopenai" },
+      { title: "Sign Up" },
       { name: "description", content: "Create your account on theopenai" },
     ],
   }),

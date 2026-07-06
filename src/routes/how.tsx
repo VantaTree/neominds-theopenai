@@ -14,7 +14,7 @@ import HowDownloads from "@/components/mymind/how/HowDownloads";
 export const Route = createFileRoute("/how")({
   head: () => ({
     meta: [
-      { title: "How mymind works — mymind" },
+      { title: "How theOpenAI" },
       {
         name: "description",
         content:
