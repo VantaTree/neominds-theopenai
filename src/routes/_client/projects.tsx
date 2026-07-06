@@ -44,7 +44,7 @@ const initialProjects: Project[] = [
 
 function RouteComponent() {
   return (
-    <div className="max-w-6xl mx-auto space-y-12 py-4 select-none font-sans text-mm-dark">
+    <div className="flex-1 w-full px-6 py-8 md:px-8 md:py-10 space-y-12 select-none font-sans text-mm-dark">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -66,54 +66,31 @@ function RouteComponent() {
         {projectsDataMapped.map((project) => (
           <div
             key={project.id}
-            className="bg-white border border-mm-border rounded-3xl p-6.5 shadow-[0_8px_30px_rgba(0,0,0,0.02)] flex flex-col justify-between space-y-6"
+            className="bg-white border border-mm-border rounded-3xl p-6.5 flex flex-col justify-between space-y-6 shadow-[0_8px_30px_rgba(0,0,0,0.01)]"
           >
-            {/* Title & Status Row */}
-            <div className="flex items-center justify-between gap-4">
-              <h3 className="text-xl font-bold text-mm-dark tracking-tight">
-                {project.title}
-              </h3>
-              <span
-                className={`px-3 py-1 rounded-full text-xs font-bold tracking-wide whitespace-nowrap ${project.statusClass}`}
-              >
-                {project.status}
-              </span>
-            </div>
-
-            {/* Dates Grid */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <span className="text-[11px] font-bold text-mm-gray uppercase tracking-wider block">
-                  Start Date
+            {/* Top Info */}
+            <div className="flex justify-between items-start">
+              <div className="space-y-1">
+                <span className={`px-3 py-1 rounded-full text-xs font-bold ${project.statusClass}`}>
+                  {project.status}
                 </span>
-                <div className="flex items-center gap-2 text-mm-dark/80">
-                  <Calendar className="h-4 w-4 text-mm-gray shrink-0" />
-                  <span className="text-sm font-semibold">{project.startDate}</span>
-                </div>
+                <h3 className="text-lg font-bold text-mm-dark mt-2 tracking-tight">
+                  {project.title}
+                </h3>
               </div>
-              <div className="space-y-1.5">
-                <span className="text-[11px] font-bold text-mm-gray uppercase tracking-wider block">
-                  Due Date
-                </span>
-                <div className="flex items-center gap-2 text-mm-dark/80">
-                  <Calendar className="h-4 w-4 text-mm-gray shrink-0" />
-                  <span className="text-sm font-semibold">{project.dueDate}</span>
-                </div>
+              <div className="flex items-center gap-1.5 text-xs font-bold text-mm-gray">
+                <Calendar className="h-4 w-4" />
+                <span>{project.startDate}</span>
               </div>
             </div>
 
-            {/* Progress Section */}
+            {/* Progress Bar */}
             <div className="space-y-2">
-              <div className="flex justify-between items-baseline">
-                <span className="text-[11px] font-bold text-mm-gray uppercase tracking-wider">
-                  Progress
-                </span>
-                <span className="text-xs font-extrabold text-mm-orange">
-                  {project.progress}%
-                </span>
+              <div className="flex justify-between text-xs font-bold text-mm-gray">
+                <span>Progress</span>
+                <span className="text-mm-dark">{project.progress}%</span>
               </div>
-              {/* Progress Bar Container */}
-              <div className="h-2 w-full bg-mm-subtle rounded-full overflow-hidden">
+              <div className="h-2 bg-mm-subtle rounded-full overflow-hidden">
                 <div
                   className="h-full bg-mm-orange rounded-full transition-all duration-500"
                   style={{ width: `${project.progress}%` }}
@@ -121,11 +98,11 @@ function RouteComponent() {
               </div>
             </div>
 
-            {/* Next Update - Structured as Plain Content Area (No Nested Cards) */}
-            <div className="border-l-2 border-mm-orange/25 pl-4 py-1 space-y-1">
-              <div className="flex items-center gap-2 text-[11px] font-bold text-mm-gray uppercase tracking-wider">
-                <Bell className="h-3.5 w-3.5 text-mm-orange/70" />
-                Next Update
+            {/* Next Update Task Info */}
+            <div className="p-4 bg-[#F9FAFC] border border-mm-border/50 rounded-2xl space-y-1">
+              <div className="flex items-center gap-1.5 text-[10px] font-extrabold text-mm-gray uppercase tracking-wider">
+                <Bell className="h-3 w-3 text-mm-orange" />
+                <span>Next Update</span>
               </div>
               <p className="text-sm font-bold text-mm-dark">
                 {project.nextUpdateTitle}
