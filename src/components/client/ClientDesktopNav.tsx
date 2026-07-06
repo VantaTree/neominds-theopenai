@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import { Home, Folder, Building2, Crown, Settings, ChevronDown, LogOut, User } from "lucide-react";
 
-export default function ClientNav() {
+export default function ClientDesktopNav() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 

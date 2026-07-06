@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Store, Globe, Heart, Megaphone, ArrowUp, ArrowDown, ChevronDown } from "lucide-react";
 
-interface InsightItem {
+export interface InsightItem {
   label: string;
   value: string;
   trend: string;
   isPositive: boolean;
 }
 
-interface CardData {
+export interface CardData {
   name: string;
   filter: string;
   category: "google" | "website" | "social" | "campaign";
@@ -17,12 +17,12 @@ interface CardData {
   dates: string[];
 }
 
-interface AnalyticsCardProps {
+export interface AnalyticsCardProps {
   apiUrl?: string;
   category: "google" | "website" | "social" | "campaign";
 }
 
-const MOCK_DATA: Record<string, CardData> = {
+export const MOCK_DATA: Record<string, CardData> = {
   google: {
     name: "Google Business Profile",
     filter: "30 Days",
@@ -81,7 +81,7 @@ const MOCK_DATA: Record<string, CardData> = {
   }
 };
 
-const THEME_STYLES = {
+export const THEME_STYLES = {
   google: {
     iconColor: "text-blue-600",
     iconBg: "bg-blue-50 border-blue-100",
@@ -115,6 +115,65 @@ const THEME_STYLES = {
     gridBg: "bg-indigo-50/20"
   }
 };
+
+export function getScaledData(data: CardData, filter: string): CardData {
+  const factor = filter === "Last 7 Days" ? 0.23 : filter === "Last 10 Days" ? 0.35 : 1.0;
+
+  const scaleValue = (valStr: string) => {
+    if (valStr.includes(":")) {
+      return factor === 1.0 ? valStr : factor === 0.35 ? "00:58" : "00:41";
+    }
+    if (valStr.includes("%")) {
+      const val = parseFloat(valStr);
+      return `${(val * (0.9 + factor * 0.1)).toFixed(1)}%`;
+    }
+
+    const isCurrency = valStr.startsWith("$");
+    const clean = isCurrency ? valStr.slice(1) : valStr;
+    const isK = clean.endsWith("K");
+    const numStr = isK ? clean.slice(0, -1) : clean;
+
+    const num = parseFloat(numStr);
+    if (isNaN(num)) return valStr;
+
+    const scaled = num * factor;
+    let result = "";
+    if (isK) {
+      result = `${scaled.toFixed(1)}K`;
+    } else if (scaled > 10) {
+      result = Math.round(scaled).toString();
+    } else {
+      result = scaled.toFixed(2);
+    }
+    return isCurrency ? `$${result}` : result;
+  };
+
+  const scaledInsights = data.insights.map(ins => ({
+    ...ins,
+    value: scaleValue(ins.value),
+    trend: `${(parseFloat(ins.trend) * (0.95 + (factor - 1) * 0.05)).toFixed(1)}%`
+  }));
+
+  const chartSlice = filter === "Last 7 Days"
+    ? data.chartData.slice(-7)
+    : filter === "Last 10 Days"
+      ? data.chartData.slice(-10)
+      : data.chartData;
+
+  const datesSlice = filter === "Last 7 Days"
+    ? ["May 13", "May 15", "May 17", "May 19"]
+    : filter === "Last 10 Days"
+      ? ["May 10", "May 13", "May 16", "May 19"]
+      : data.dates;
+
+  return {
+    ...data,
+    filter,
+    insights: scaledInsights,
+    chartData: chartSlice,
+    dates: datesSlice
+  };
+}
 
 export default function AnalyticsCard({ apiUrl, category }: AnalyticsCardProps) {
   const [data, setData] = useState<CardData>(MOCK_DATA[category]);
@@ -178,71 +237,7 @@ export default function AnalyticsCard({ apiUrl, category }: AnalyticsCardProps) 
     }
   };
 
-  // Helper to scale values dynamically based on selected filter for high-fidelity client feel
-  const getScaledData = (): CardData => {
-    const factor = selectedFilter === "Last 7 Days" ? 0.23 : selectedFilter === "Last 10 Days" ? 0.35 : 1.0;
-
-    const scaleValue = (valStr: string) => {
-      if (valStr.includes(":")) {
-        // Time format scale
-        return factor === 1.0 ? valStr : factor === 0.35 ? "00:58" : "00:41";
-      }
-      if (valStr.includes("%")) {
-        // Percentage scale
-        const val = parseFloat(valStr);
-        return `${(val * (0.9 + factor * 0.1)).toFixed(1)}%`;
-      }
-
-      const isCurrency = valStr.startsWith("$");
-      const clean = isCurrency ? valStr.slice(1) : valStr;
-      const isK = clean.endsWith("K");
-      const numStr = isK ? clean.slice(0, -1) : clean;
-
-      const num = parseFloat(numStr);
-      if (isNaN(num)) return valStr;
-
-      const scaled = num * factor;
-      let result = "";
-      if (isK) {
-        // Keeps the decimal for K values e.g. 5.4K -> 1.9K
-        result = `${scaled.toFixed(1)}K`;
-      } else if (scaled > 10) {
-        result = Math.round(scaled).toString();
-      } else {
-        result = scaled.toFixed(2);
-      }
-      return isCurrency ? `$${result}` : result;
-    };
-
-    const scaledInsights = data.insights.map(ins => ({
-      ...ins,
-      value: scaleValue(ins.value),
-      // Scale percentage trend slightly for organic variance
-      trend: `${(parseFloat(ins.trend) * (0.95 + (factor - 1) * 0.05)).toFixed(1)}%`
-    }));
-
-    const chartSlice = selectedFilter === "Last 7 Days"
-      ? data.chartData.slice(-7)
-      : selectedFilter === "Last 10 Days"
-        ? data.chartData.slice(-10)
-        : data.chartData;
-
-    const datesSlice = selectedFilter === "Last 7 Days"
-      ? ["May 13", "May 15", "May 17", "May 19"]
-      : selectedFilter === "Last 10 Days"
-        ? ["May 10", "May 13", "May 16", "May 19"]
-        : data.dates;
-
-    return {
-      ...data,
-      filter: selectedFilter,
-      insights: scaledInsights,
-      chartData: chartSlice,
-      dates: datesSlice
-    };
-  };
-
-  const displayData = getScaledData();
+  const displayData = getScaledData(data, selectedFilter);
 
   // Sparkline SVG generators
   const buildSparklinePaths = (chartData: number[]) => {
