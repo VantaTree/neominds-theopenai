@@ -21,6 +21,7 @@ dist-ssr
 __unconfig*
 todos.json
 .vercel
+service-account.json
 
 # Wrangler / Cloudflare
 .wrangler/
