@@ -19,18 +19,13 @@ export default function ClientDesktopNav() {
 
   return (
     <nav className="md:mb-0 w-full h-16 bg-white border-b border-mm-border px-6 md:px-8 flex items-center justify-between font-sans select-none fixed top-0 left-0 right-0 z-30 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
-      {/* Left: Brand Logo & Navigation Tabs */}
       <div className="flex items-center gap-8 lg:gap-12">
-        {/* Brand Logo */}
-        <Link to="/dashboard" className="flex items-center gap-2 shrink-0">
-          <img
-            src="/logos/logo.PNG"
-            alt="theopenai logo"
-            style={{ height: "24px", width: "auto", display: "block" }}
-          />
-        </Link>
+        <img
+          src="/logos/logo.PNG"
+          alt="theopenai logo"
+          style={{ height: "24px", width: "auto", display: "block" }}
+        />
 
-        {/* Navigation Links */}
         <div className="flex items-center gap-1.5 flex-wrap">
           <Link
             to="/dashboard"
