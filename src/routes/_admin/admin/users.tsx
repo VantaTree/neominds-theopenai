@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { type User } from "@/lib/mock-data";
 import { Avatar, PlanBadge, StatusBadge } from "@/components/admin/shared";
 import { SearchX, CheckCircle2, ChevronDown } from "lucide-react";
-import { getUsersFn, saveUserFn, deleteUserFn } from "@/lib/server-functions";
+import { getUsersFn, saveUserFn, deleteUserFn, getBusinessesFn, saveBusinessFn } from "@/lib/server-functions";
 
 export const Route = createFileRoute("/_admin/admin/users")({
   head: () => ({ meta: [{ title: "Users — GrowConsult AI" }] }),
@@ -13,11 +13,31 @@ export const Route = createFileRoute("/_admin/admin/users")({
 
 function UsersPage() {
   const [userList, setUserList] = useState<User[]>([]);
+  const [businesses, setBusinesses] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const refreshUsers = async () => {
-    const data = await getUsersFn();
-    setUserList(data);
+    const [uData, bData] = await Promise.all([
+      getUsersFn(),
+      getBusinessesFn()
+    ]);
+    setBusinesses(bData);
+    
+    const mapped = uData.map(u => {
+      const biz = bData.find(b => b.userId === u.id);
+      return {
+        id: u.id,
+        name: u.fullName,
+        business: biz ? biz.businessName : "No business",
+        email: u.email,
+        phone: u.phone,
+        plan: (biz?.plan || "None") + " Plan" as any,
+        status: u.status,
+        joinedOn: u.createdAt ? new Date(u.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ""
+      };
+    });
+    
+    setUserList(mapped);
   };
 
   useEffect(() => {
@@ -34,8 +54,8 @@ function UsersPage() {
 
   const [addForm, setAddForm] = useState({ name: "", business: "", email: "", phone: "", password: "", confirmPassword: "" });
   const [addErrors, setAddErrors] = useState<Record<string, string>>({});
-  const [isCreatingUser, setIsCreatingUser] = useState(false);
   const [confirmClose, setConfirmClose] = useState(false);
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [planFilter, setPlanFilter] = useState("All Plans");
@@ -85,20 +105,50 @@ function UsersPage() {
     }
 
     setIsCreatingUser(true);
-    const newUser: User = {
-      id: `u${Date.now()}`,
-      name: addForm.name,
-      business: addForm.business,
+    const userId = `usr_${Date.now()}`;
+    const newUserSchema = {
+      id: userId,
+      fullName: addForm.name,
       email: addForm.email,
       phone: addForm.phone,
-      plan: "Basic Plan" as any,
-      status: "Active",
-      joinedOn: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      status: "Active" as const,
+      businessCount: 1,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     };
-    saveUserFn({ data: newUser }).then(() => {
+    const newBusinessSchema = {
+      id: `biz_${userId}`,
+      userId: userId,
+      plan: "Basic" as const,
+      addons: [],
+      businessName: addForm.business,
+      businessType: "Consulting",
+      contactEmail: addForm.email,
+      contactPhone: addForm.phone,
+      websiteUrl: "",
+      paymentStatus: "Paid" as const,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    Promise.all([
+      saveUserFn({ data: newUserSchema }),
+      saveBusinessFn({ data: newBusinessSchema })
+    ]).then(() => {
+      const newUserLegacy: User = {
+        id: userId,
+        name: addForm.name,
+        business: addForm.business,
+        email: addForm.email,
+        phone: addForm.phone,
+        plan: "Basic Plan" as any,
+        status: "Active",
+        joinedOn: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      };
       setIsCreatingUser(false);
       setIsAddUserOpen(false);
-      setUserList([newUser, ...userList]);
+      setUserList([newUserLegacy, ...userList]);
+      setBusinesses(prev => [newBusinessSchema, ...prev]);
       setAddForm({ name: "", business: "", email: "", phone: "", password: "", confirmPassword: "" });
       setToast({ title: "✓ User created successfully!", sub: `${addForm.name} has been added to the platform.` });
     });
@@ -135,8 +185,42 @@ function UsersPage() {
     }
 
     const updated = { ...editingUser, ...editForm } as User;
-    saveUserFn({ data: updated }).then(() => {
+    
+    const userSchemaData = {
+      id: updated.id,
+      fullName: updated.name,
+      email: updated.email,
+      phone: updated.phone,
+      status: updated.status,
+      businessCount: 1,
+      createdAt: new Date(updated.joinedOn),
+      updatedAt: new Date(),
+    };
+    
+    const matchedBiz = businesses.find(b => b.userId === updated.id);
+    const bizId = matchedBiz ? matchedBiz.id : `biz_${updated.id}`;
+    const parsedPlan = updated.plan.replace(" Plan", "") as any;
+    const businessSchemaData = {
+      id: bizId,
+      userId: updated.id,
+      plan: parsedPlan,
+      addons: matchedBiz ? matchedBiz.addons : [],
+      businessName: updated.business,
+      businessType: matchedBiz ? matchedBiz.businessType : "Consulting",
+      contactEmail: updated.email,
+      contactPhone: updated.phone,
+      websiteUrl: matchedBiz ? matchedBiz.websiteUrl : "",
+      paymentStatus: matchedBiz ? matchedBiz.paymentStatus : "Paid",
+      createdAt: matchedBiz ? matchedBiz.createdAt : new Date(),
+      updatedAt: new Date(),
+    };
+
+    Promise.all([
+      saveUserFn({ data: userSchemaData }),
+      saveBusinessFn({ data: businessSchemaData })
+    ]).then(() => {
       setUserList(list => list.map(u => u.id === editingUser?.id ? updated : u));
+      setBusinesses(list => list.map(b => b.id === businessSchemaData.id ? businessSchemaData : b));
       if (selectedUser?.id === editingUser?.id) {
         setSelectedUser(updated);
       }

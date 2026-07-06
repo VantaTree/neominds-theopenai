@@ -1,14 +1,25 @@
 import { adminDb } from "./firebase-admin.server";
-import type { User, Project } from "./mock-data";
-import type {
+import { createZodConverter } from "./firestore-converter.server";
+import {
+  UserSchema,
+  User,
+  BusinessSchema,
+  Business,
+  ProjectSchema,
+  Project,
+  BlogSchema,
+  Blog,
+  PaymentSchema,
+  Payment,
+  AuditLogSchema,
+  AuditLog,
+  ReportSchema,
+  Report,
   Profile,
   Plan,
   Subscription,
-  Report,
-  AuditLogEntry,
   AdminConfig,
-} from "./types";
-import type { Blog, CreateBlogInput, UpdateBlogInput } from "../modules/blogs/types/blog";
+} from "./schemas";
 
 // Ensure database is initialized before run
 const getDb = () => {
@@ -19,6 +30,15 @@ const getDb = () => {
   }
   return adminDb;
 };
+
+// ==================== ZOD CONVERTER INSTANCES ====================
+const userConverter = createZodConverter(UserSchema);
+const businessConverter = createZodConverter(BusinessSchema);
+const projectConverter = createZodConverter(ProjectSchema);
+const blogConverter = createZodConverter(BlogSchema);
+const paymentConverter = createZodConverter(PaymentSchema);
+const auditLogConverter = createZodConverter(AuditLogSchema);
+const reportConverter = createZodConverter(ReportSchema);
 
 // ==================== DEFAULT CONFIGURATIONS ====================
 
@@ -98,19 +118,19 @@ const DEFAULT_ADMIN_CONFIG: AdminConfig = {
 
 export const getUsers = async (): Promise<User[]> => {
   const db = getDb();
-  const snap = await db.collection("users").get();
-  return snap.docs.map((d: any) => ({ id: d.id, ...d.data() }) as User);
+  const snap = await db.collection("users").withConverter(userConverter).get();
+  return snap.docs.map((d) => d.data());
 };
 
 export const getUser = async (userId: string): Promise<User | null> => {
   const db = getDb();
-  const snap = await db.collection("users").doc(userId).get();
-  return snap.exists ? ({ id: snap.id, ...snap.data() } as User) : null;
+  const snap = await db.collection("users").doc(userId).withConverter(userConverter).get();
+  return snap.exists ? snap.data()! : null;
 };
 
 export const saveUser = async (user: User): Promise<void> => {
   const db = getDb();
-  await db.collection("users").doc(user.id).set(user, { merge: true });
+  await db.collection("users").doc(user.id).withConverter(userConverter).set(user, { merge: true });
 };
 
 export const deleteUser = async (userId: string): Promise<void> => {
@@ -119,8 +139,7 @@ export const deleteUser = async (userId: string): Promise<void> => {
 };
 
 export const ensureUserDocument = async (
-  user: { uid: string; displayName?: string | null; email?: string | null; phoneNumber?: string | null },
-  defaultPlan: "None" | "Plus" | "Growth" | "Basic" = "None"
+  user: { uid: string; displayName?: string | null; email?: string | null; phoneNumber?: string | null }
 ): Promise<User> => {
   const existingUser = await getUser(user.uid);
   if (existingUser) {
@@ -129,34 +148,60 @@ export const ensureUserDocument = async (
 
   const newUser: User = {
     id: user.uid,
-    name: user.displayName || user.email?.split("@")[0] || "New User",
-    business: "My Business",
+    fullName: user.displayName || user.email?.split("@")[0] || "New User",
     email: user.email || "",
     phone: user.phoneNumber || "",
-    plan: defaultPlan,
     status: "Active",
-    joinedOn: new Date().toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    }),
+    businessCount: 0,
+    createdAt: new Date(),
+    updatedAt: new Date(),
   };
 
   await saveUser(newUser);
   return newUser;
 };
 
+// ==================== BUSINESS REPOSITORY ====================
+
+export const getBusinesses = async (): Promise<Business[]> => {
+  const db = getDb();
+  const snap = await db.collection("businesses").withConverter(businessConverter).get();
+  return snap.docs.map((d) => d.data());
+};
+
+export const getBusiness = async (businessId: string): Promise<Business | null> => {
+  const db = getDb();
+  const snap = await db.collection("businesses").doc(businessId).withConverter(businessConverter).get();
+  return snap.exists ? snap.data()! : null;
+};
+
+export const getBusinessesByUser = async (userId: string): Promise<Business[]> => {
+  const db = getDb();
+  const snap = await db.collection("businesses").where("userId", "==", userId).withConverter(businessConverter).get();
+  return snap.docs.map((d) => d.data());
+};
+
+export const saveBusiness = async (business: Business): Promise<void> => {
+  const db = getDb();
+  await db.collection("businesses").doc(business.id).withConverter(businessConverter).set(business, { merge: true });
+};
+
+export const deleteBusiness = async (businessId: string): Promise<void> => {
+  const db = getDb();
+  await db.collection("businesses").doc(businessId).delete();
+};
+
 // ==================== PROJECTS REPOSITORY ====================
 
 export const getProjects = async (): Promise<Project[]> => {
   const db = getDb();
-  const snap = await db.collection("projects").get();
-  return snap.docs.map((d: any) => ({ id: d.id, ...d.data() }) as Project);
+  const snap = await db.collection("projects").withConverter(projectConverter).get();
+  return snap.docs.map((d) => d.data());
 };
 
 export const saveProject = async (project: Project): Promise<void> => {
   const db = getDb();
-  await db.collection("projects").doc(project.id).set(project, { merge: true });
+  await db.collection("projects").doc(project.id).withConverter(projectConverter).set(project, { merge: true });
 };
 
 export const deleteProject = async (projectId: string): Promise<void> => {
@@ -166,17 +211,17 @@ export const deleteProject = async (projectId: string): Promise<void> => {
 
 // ==================== PAYMENTS REPOSITORY ====================
 
-export const getPayments = async (): Promise<any[]> => {
+export const getPayments = async (): Promise<Payment[]> => {
   const db = getDb();
-  const snap = await db.collection("payments").get();
-  return snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+  const snap = await db.collection("payments").withConverter(paymentConverter).get();
+  return snap.docs.map((d) => d.data());
 };
 
-export const savePayments = async (payments: any[]): Promise<void> => {
+export const savePayments = async (payments: Payment[]): Promise<void> => {
   const db = getDb();
   const batch = db.batch();
   for (const p of payments) {
-    const ref = db.collection("payments").doc(String(p.id));
+    const ref = db.collection("payments").doc(String(p.id)).withConverter(paymentConverter);
     batch.set(ref, p, { merge: true });
   }
   await batch.commit();
@@ -283,20 +328,20 @@ export const saveSubscription = async (sub: Subscription): Promise<void> => {
 
 export const getReports = async (): Promise<Report[]> => {
   const db = getDb();
-  const snap = await db.collection("reports").get();
-  return snap.docs.map((d: any) => ({ id: d.id, ...d.data() }) as Report);
+  const snap = await db.collection("reports").withConverter(reportConverter).get();
+  return snap.docs.map((d) => d.data());
 };
 
 export const getReportsByUser = async (uid: string): Promise<Report[]> => {
   const db = getDb();
-  const snap = await db.collection("reports").where("uid", "==", uid).get();
-  return snap.docs.map((d: any) => ({ id: d.id, ...d.data() }) as Report);
+  const snap = await db.collection("reports").where("userId", "==", uid).withConverter(reportConverter).get();
+  return snap.docs.map((d) => d.data());
 };
 
 export const saveReport = async (report: Report): Promise<void> => {
   const db = getDb();
   const id = report.id || `rpt_${Date.now()}`;
-  await db.collection("reports").doc(id).set({ ...report, id }, { merge: true });
+  await db.collection("reports").doc(id).withConverter(reportConverter).set({ ...report, id }, { merge: true });
 };
 
 export const deleteReport = async (reportId: string): Promise<void> => {
@@ -310,31 +355,37 @@ export const logAuditEvent = async (
   uid: string,
   action: string,
   payload: Record<string, any>,
-  userName?: string
+  actor = "System",
+  ipAddress?: string,
+  userAgent?: string
 ): Promise<void> => {
   const db = getDb();
-  const entry: AuditLogEntry = {
-    id: `log_${Date.now()}`,
-    uid,
-    userName,
+  const id = `log_${Date.now()}`;
+  const entry: AuditLog = {
+    id,
+    timestamp: new Date(),
     action,
     payload,
-    timestamp: Date.now(),
+    uid,
+    userName: actor || "System",
+    ipAddress: ipAddress || null,
+    userAgent: userAgent || null,
   };
-  await db.collection("auditLog").doc(entry.id).set(entry);
+  await db.collection("auditLog").doc(id).withConverter(auditLogConverter).set(entry);
 };
 
 export const getAuditLog = async (
   limitCount = 100
-): Promise<AuditLogEntry[]> => {
+): Promise<AuditLog[]> => {
   const db = getDb();
   const snap = await db
     .collection("auditLog")
+    .withConverter(auditLogConverter)
     .orderBy("timestamp", "desc")
     .limit(limitCount)
     .get();
 
-  return snap.docs.map((d: any) => ({ id: d.id, ...d.data() }) as AuditLogEntry);
+  return snap.docs.map((d) => d.data());
 };
 
 // ==================== ADMIN CONFIG REPOSITORY ====================
@@ -358,43 +409,43 @@ export const saveAdminConfig = async (config: AdminConfig): Promise<void> => {
 
 export const fetchBlogs = async (onlyPublished = false): Promise<Blog[]> => {
   const db = getDb();
-  let query = db.collection("blogs").orderBy("createdAt", "desc");
+  let query = db.collection("blogs").withConverter(blogConverter).orderBy("createdAt", "desc");
   if (onlyPublished) {
-    query = query.where("published", "==", true);
+    query = query.where("status", "==", "Published");
   }
   const snap = await query.get();
-  return snap.docs.map((d: any) => ({ id: d.id, ...d.data() }) as Blog);
+  return snap.docs.map((d) => d.data());
 };
 
 export const fetchBlogBySlug = async (slug: string): Promise<Blog | null> => {
   const db = getDb();
-  const snap = await db.collection("blogs").where("slug", "==", slug).limit(1).get();
-  return snap.empty ? null : ({ id: snap.docs[0].id, ...snap.docs[0].data() } as Blog);
+  const snap = await db.collection("blogs").where("slug", "==", slug).withConverter(blogConverter).limit(1).get();
+  return snap.empty ? null : snap.docs[0].data();
 };
 
-export const createBlog = async (data: CreateBlogInput): Promise<Blog> => {
+export const createBlog = async (data: Omit<Blog, "id" | "createdAt" | "updatedAt">): Promise<Blog> => {
   const db = getDb();
   const id = `blog_${Date.now()}`;
   const newBlog: Blog = {
     ...data,
     id,
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-  };
-  await db.collection("blogs").doc(id).set(newBlog);
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  } as Blog;
+  await db.collection("blogs").doc(id).withConverter(blogConverter).set(newBlog);
   return newBlog;
 };
 
-export const updateBlog = async (id: string, data: UpdateBlogInput): Promise<Blog> => {
+export const updateBlog = async (id: string, data: Partial<Blog>): Promise<Blog> => {
   const db = getDb();
-  const docRef = db.collection("blogs").doc(id);
+  const docRef = db.collection("blogs").doc(id).withConverter(blogConverter);
   const updateData = {
     ...data,
-    updatedAt: Date.now(),
+    updatedAt: new Date(),
   };
-  await docRef.set(updateData, { merge: true });
+  await docRef.set(updateData as any, { merge: true });
   const snap = await docRef.get();
-  return { id: snap.id, ...snap.data() } as Blog;
+  return snap.data()!;
 };
 
 export const deleteBlog = async (id: string): Promise<void> => {

@@ -3,7 +3,7 @@ import {
   ArrowLeft, Calendar, User, Eye, Monitor, Smartphone, Share2, 
   Copy, Check, ExternalLink, RefreshCw
 } from "lucide-react";
-import type { Blog } from "../types/blog";
+import { type Blog } from "@/lib/schemas";
 
 interface BlogPreviewProps {
   blog: Blog;
@@ -110,7 +110,7 @@ export default function BlogPreview({ blog, onBack, onEdit }: BlogPreviewProps) 
           {/* Cover image banner */}
           <div className="relative aspect-video w-full overflow-hidden">
             <img
-              src={blog.coverImage || "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=800&q=80"}
+              src={blog.coverImageUrl || "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=800&q=80"}
               alt={blog.title}
               className="w-full h-full object-cover"
             />
@@ -118,7 +118,7 @@ export default function BlogPreview({ blog, onBack, onEdit }: BlogPreviewProps) 
             
             <div className="absolute bottom-6 left-6 right-6 text-white space-y-2">
               <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#E89D18]">
-                {blog.published ? "Live Post" : "Draft Preview"}
+                {blog.status === "Published" ? "Live Post" : "Draft Preview"}
               </div>
               <h2 className="text-xl sm:text-2xl font-bold leading-tight drop-shadow-sm">
                 {blog.title}

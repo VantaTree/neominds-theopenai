@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Card } from "@/components/admin/shared";
 import { useState, useEffect, useMemo } from "react";
 import { Shield, Search, RefreshCw, SearchX, ChevronDown, Clock } from "lucide-react";
-import type { AuditLogEntry } from "@/lib/types";
+import type { AuditLog } from "@/lib/schemas";
 import { getAuditLogFn } from "@/lib/server-functions";
 
 export const Route = createFileRoute("/_admin/admin/support")({
@@ -21,7 +21,7 @@ const ACTION_COLORS: Record<string, { bg: string; text: string }> = {
 };
 
 function AuditLogPage() {
-  const [logs, setLogs] = useState<AuditLogEntry[]>([]);
+  const [logs, setLogs] = useState<AuditLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [actionFilter, setActionFilter] = useState("All Actions");
@@ -52,7 +52,7 @@ function AuditLogPage() {
     });
   }, [logs, searchQuery, actionFilter]);
 
-  const formatDate = (ts: number) => new Date(ts).toLocaleString("en-US", {
+  const formatDate = (ts: Date | number) => new Date(ts).toLocaleString("en-US", {
     month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit",
   });
 

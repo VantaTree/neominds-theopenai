@@ -6,7 +6,7 @@ import {
   ArrowUpDown, Loader2, Mail, ChevronLeft, ArrowLeft, Copy, Calendar, DownloadCloud, SearchX 
 } from "lucide-react";
 import { useState, useMemo, useEffect, useRef } from "react";
-import { getPaymentsFn, savePaymentsFn } from "@/lib/server-functions";
+import { getPaymentsFn, savePaymentsFn, getUsersFn, getBusinessesFn } from "@/lib/server-functions";
 
 export const Route = createFileRoute("/_admin/admin/payments")({
   head: () => ({ meta: [{ title: "Payments — GrowConsult AI" }] }),
@@ -27,8 +27,41 @@ function PaymentsPage() {
 
   useEffect(() => {
     const loadPayments = async () => {
-      const data = await getPaymentsFn();
-      setPaymentsData(data);
+      const [pData, uData, bData] = await Promise.all([
+        getPaymentsFn(),
+        getUsersFn(),
+        getBusinessesFn()
+      ]);
+
+      const mapped = pData.map(p => {
+        const usr = uData.find(u => u.id === p.userId);
+        const biz = bData.find(b => b.id === p.businessId);
+
+        return {
+          id: p.id,
+          paymentId: p.id,
+          invoiceId: p.gatewayInfo?.orderId || `INV-${p.id.replace(/\D/g, "") || "1024"}`,
+          client: usr?.fullName || biz?.businessName || "Unknown Client",
+          business: biz?.businessName || "Unknown Business",
+          email: usr?.email || "",
+          phone: usr?.phone || "",
+          plan: biz?.plan || "None",
+          amount: `$${p.amount.toFixed(2)}`,
+          date: p.createdAt ? new Date(p.createdAt).toLocaleDateString() : "",
+          time: p.createdAt ? new Date(p.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "",
+          status: p.status,
+          paymentMethod: p.paymentMethod,
+          user: usr ? {
+            id: usr.id,
+            name: usr.fullName,
+            email: usr.email,
+            phone: usr.phone,
+            joinedOn: usr.createdAt ? new Date(usr.createdAt).toLocaleDateString() : ""
+          } : null
+        };
+      });
+
+      setPaymentsData(mapped);
       setIsLoading(false);
     };
     loadPayments();

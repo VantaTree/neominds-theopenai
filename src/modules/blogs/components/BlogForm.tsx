@@ -3,7 +3,10 @@ import {
   Bold, Italic, Underline, List, ListOrdered, Link, Heading1, Heading2, 
   UploadCloud, ArrowLeft, Loader2, FileText, CheckCircle2, ShieldAlert, Eye
 } from "lucide-react";
-import type { Blog, CreateBlogInput } from "../types/blog";
+import { type Blog } from "@/lib/schemas";
+
+export type CreateBlogInput = Omit<Blog, "id" | "createdAt" | "updatedAt">;
+
 // Helper for cover image uploads (converts file to Base64 dataURL)
 const uploadImage = async (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -32,9 +35,9 @@ export default function BlogForm({ initialBlog, onSave, onCancel, isSaving }: Bl
   const [slug, setSlug] = useState(initialBlog?.slug || "");
   const [summary, setSummary] = useState(initialBlog?.summary || "");
   const [content, setContent] = useState(initialBlog?.content || "");
-  const [coverImage, setCoverImage] = useState(initialBlog?.coverImage || "");
+  const [coverImageUrl, setCoverImageUrl] = useState(initialBlog?.coverImageUrl || "");
   const [author, setAuthor] = useState(initialBlog?.author || "Admin");
-  const [published, setPublished] = useState(initialBlog?.published ?? false);
+  const [published, setPublished] = useState(initialBlog?.status === "Published");
 
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
@@ -90,7 +93,7 @@ export default function BlogForm({ initialBlog, onSave, onCancel, isSaving }: Bl
     setUploadError("");
     try {
       const url = await uploadImage(file);
-      setCoverImage(url);
+      setCoverImageUrl(url);
     } catch (err: any) {
       setUploadError(err.message || "Failed to upload image");
     } finally {
@@ -118,10 +121,10 @@ export default function BlogForm({ initialBlog, onSave, onCancel, isSaving }: Bl
       slug,
       summary,
       content,
-      coverImage: coverImage || "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=800&q=80",
-      images: initialBlog?.images || [],
+      coverImageUrl: coverImageUrl || "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=800&q=80",
       author,
-      published
+      status: published ? "Published" : "Draft",
+      featured: initialBlog?.featured || false,
     });
   };
 
@@ -269,12 +272,12 @@ export default function BlogForm({ initialBlog, onSave, onCancel, isSaving }: Bl
           <div className="bg-[#FCF8F1] border border-[#E8DCC8] p-5 rounded-[24px] space-y-4">
             <label className="block text-xs font-bold text-[#8D6E63] uppercase tracking-wider">Cover Image</label>
             
-            {coverImage ? (
+            {coverImageUrl ? (
               <div className="relative group rounded-xl overflow-hidden aspect-video border border-[#E8DCC8]">
-                <img src={coverImage} alt="Cover Preview" className="w-full h-full object-cover" />
+                <img src={coverImageUrl} alt="Cover Preview" className="w-full h-full object-cover" />
                 <button
                   type="button"
-                  onClick={() => setCoverImage("")}
+                  onClick={() => setCoverImageUrl("")}
                   className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs font-bold transition-all"
                 >
                   Change Image

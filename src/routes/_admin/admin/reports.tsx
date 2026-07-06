@@ -2,13 +2,25 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Card } from "@/components/admin/shared";
 import { useState, useEffect, useMemo } from "react";
 import { FileText, Search, Trash2, Eye, X, RefreshCw, SearchX, Clock, CheckCircle2, AlertCircle, ChevronDown } from "lucide-react";
-import type { Report } from "@/lib/types";
 import { getReportsFn, deleteReportFn, saveReportFn, logAuditEventFn } from "@/lib/server-functions";
 
 export const Route = createFileRoute("/_admin/admin/reports")({
   head: () => ({ meta: [{ title: "Reports — GrowConsult AI" }] }),
   component: ReportsPage,
 });
+
+interface LegacyReport {
+  id: string;
+  uid: string;
+  title: string;
+  status: "ready" | "processing" | "failed";
+  createdAt: number;
+  content?: string;
+  metadata?: {
+    tokensUsed?: number;
+    durationMs?: number;
+  };
+}
 
 const STATUS_COLORS: Record<string, { bg: string; text: string; border: string; icon: any }> = {
   ready: { bg: "#E8F5E9", text: "#4CAF50", border: "#4CAF50", icon: CheckCircle2 },
@@ -17,14 +29,14 @@ const STATUS_COLORS: Record<string, { bg: string; text: string; border: string; 
 };
 
 function ReportsPage() {
-  const [reports, setReports] = useState<Report[]>([]);
+  const [reports, setReports] = useState<LegacyReport[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All Status");
   const [isStatusOpen, setIsStatusOpen] = useState(false);
-  const [viewReport, setViewReport] = useState<Report | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<Report | null>(null);
+  const [viewReport, setViewReport] = useState<LegacyReport | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<LegacyReport | null>(null);
 
   useEffect(() => {
     if (toast) { const t = setTimeout(() => setToast(null), 3000); return () => clearTimeout(t); }
@@ -33,7 +45,22 @@ function ReportsPage() {
   const loadReports = async () => {
     setIsLoading(true);
     const data = await getReportsFn();
-    setReports(data.sort((a, b) => b.createdAt - a.createdAt));
+    const mapped = data.map(r => {
+      const status = (r.data?.status || "ready") as "ready" | "processing" | "failed";
+      return {
+        id: r.id,
+        uid: r.userId,
+        title: r.title,
+        status: status,
+        createdAt: r.createdAt ? new Date(r.createdAt).getTime() : Date.now(),
+        content: (r.data?.content || "") as string,
+        metadata: {
+          tokensUsed: (r.data?.tokensUsed || 0) as number,
+          durationMs: (r.data?.durationMs || 0) as number
+        }
+      };
+    });
+    setReports(mapped.sort((a, b) => b.createdAt - a.createdAt));
     setIsLoading(false);
   };
 
@@ -47,7 +74,7 @@ function ReportsPage() {
     });
   }, [reports, searchQuery, statusFilter]);
 
-  const handleDelete = async (r: Report) => {
+  const handleDelete = async (r: LegacyReport) => {
     await deleteReportFn({ data: r.id });
     await logAuditEventFn({ data: { uid: "admin", action: "report_deleted", payload: { reportId: r.id, title: r.title, uid: r.uid }, userName: "Admin" } });
     setReports(prev => prev.filter(x => x.id !== r.id));
@@ -55,10 +82,23 @@ function ReportsPage() {
     setToast("✓ Report deleted successfully.");
   };
 
-  const handleReprocess = async (r: Report) => {
-    const updated: Report = { ...r, status: "processing" };
+  const handleReprocess = async (r: LegacyReport) => {
+    const updated = {
+      id: r.id,
+      userId: r.uid,
+      businessId: null,
+      title: r.title,
+      createdAt: new Date(r.createdAt),
+      updatedAt: new Date(),
+      data: {
+        status: "processing",
+        content: r.content || "",
+        tokensUsed: r.metadata?.tokensUsed || 0,
+        durationMs: r.metadata?.durationMs || 0
+      }
+    };
     await saveReportFn({ data: updated });
-    setReports(prev => prev.map(x => x.id === r.id ? updated : x));
+    setReports(prev => prev.map(x => x.id === r.id ? { ...r, status: "processing" } : x));
     setToast(`↺ Report "${r.title}" queued for reprocessing.`);
   };
 

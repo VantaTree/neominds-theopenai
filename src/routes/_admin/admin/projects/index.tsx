@@ -5,7 +5,7 @@ import type { Project } from "@/lib/mock-data";
 import { Avatar, ProgressBar, StatusBadge, Card } from "@/components/admin/shared";
 import { CheckCircle2, ArrowRight, X, ChevronDown, SearchX } from "lucide-react";
 import { useState, useEffect, useRef, useMemo } from "react";
-import { getProjectsFn, saveProjectFn, getUsersFn, deleteProjectFn, logAuditEventFn } from "@/lib/server-functions";
+import { getProjectsFn, saveProjectFn, getUsersFn, deleteProjectFn, logAuditEventFn, getBusinessesFn } from "@/lib/server-functions";
 
 export const Route = createFileRoute("/_admin/admin/projects/")({
   head: () => ({ meta: [{ title: "Projects — GrowConsult AI" }] }),
@@ -15,15 +15,68 @@ export const Route = createFileRoute("/_admin/admin/projects/")({
 function ProjectsPage() {
   const [projectList, setProjectList] = useState<Project[]>([]);
   const [users, setUsers] = useState<any[]>([]);
+  const [businesses, setBusinesses] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const refreshProjects = async () => {
-    const [pData, uData] = await Promise.all([
+    const [pData, uData, bData] = await Promise.all([
       getProjectsFn(),
-      getUsersFn()
+      getUsersFn(),
+      getBusinessesFn()
     ]);
-    setProjectList(pData);
-    setUsers(uData);
+    setBusinesses(bData);
+
+    const mapped = pData.map(p => {
+      const biz = bData.find(b => b.id === p.businessId);
+      const usr = uData.find(u => u.id === (biz ? biz.userId : ""));
+      
+      let status: "Pending" | "In Progress" | "Completed" = "In Progress";
+      if (p.progress === 0) status = "Pending";
+      else if (p.progress === 100) status = "Completed";
+
+      return {
+        id: p.id,
+        client: biz?.businessName || "No business",
+        services: [p.type],
+        manager: "John Smith",
+        status: status,
+        progress: p.progress,
+        deadline: p.deadline ? new Date(p.deadline).toLocaleDateString() : "",
+        startDate: p.createdAt ? new Date(p.createdAt).toLocaleDateString() : "",
+        priority: "Medium" as const,
+        email: usr?.email || "",
+        phone: usr?.phone || "",
+        industry: biz?.businessType || "Consulting",
+        website: biz?.websiteUrl || "",
+        joinedOn: usr?.createdAt ? new Date(usr.createdAt).toLocaleDateString() : "",
+        plan: (biz?.plan || "None") + " Plan",
+        description: p.description,
+        notes: "",
+        serviceGroups: [
+          { 
+            name: p.type, 
+            progress: p.progress,
+            color: "var(--color-primary)",
+            tasks: p.updates.map((u, i) => ({
+              id: `t-${i}`,
+              name: u.message,
+              assignee: u.designation,
+              status: p.progress === 100 ? ("Completed" as const) : ("In Progress" as const),
+              progress: p.progress
+            }))
+          }
+        ]
+      };
+    });
+    setProjectList(mapped);
+    setUsers(uData.map(u => {
+      const biz = bData.find(b => b.userId === u.id);
+      return {
+        ...u,
+        name: u.fullName,
+        business: biz ? biz.businessName : ""
+      };
+    }));
   };
 
   useEffect(() => {
@@ -97,29 +150,37 @@ function ProjectsPage() {
       return;
     }
 
-    const newPrj = {
+    const selectedUserObj = users.find(u => {
+      const label = u.business ? `${u.name} — ${u.business}` : u.name;
+      return label === newProjectForm.client;
+    });
+    const matchedBiz = businesses.find(b => b.userId === selectedUserObj?.id);
+    const businessId = matchedBiz ? matchedBiz.id : `biz_${selectedUserObj?.id || "unknown"}`;
+
+    const newPrjSchema = {
       id: `PRJ-${1000 + projectList.length + 1}`,
-      client: newProjectForm.client.split(" — ")[0],
-      services: newProjectForm.services,
-      manager: newProjectForm.manager,
-      status: newProjectForm.status,
+      businessId: businessId,
+      name: newProjectForm.name,
+      description: newProjectForm.description,
+      domain: "",
+      type: newProjectForm.services.join(" + "),
       progress: 0,
-      deadline: newProjectForm.deadline,
-      priority: newProjectForm.priority,
-      startDate: newProjectForm.startDate,
-      email: "", phone: "", industry: "", website: "", joinedOn: "", plan: "",
-      serviceGroups: [], description: newProjectForm.description, notes: ""
+      updates: [],
+      deadline: newProjectForm.deadline ? new Date(newProjectForm.deadline) : null,
+      createdAt: newProjectForm.startDate ? new Date(newProjectForm.startDate) : new Date(),
+      updatedAt: new Date(),
     };
 
-    saveProjectFn({ data: newPrj }).then(() => {
-      setProjectList([newPrj, ...projectList]);
-      setIsNewProjectOpen(false);
-      setNewProjectForm({
-        name: "", client: "", services: [], manager: "John Smith",
-        startDate: "", deadline: "", status: "Pending", priority: "Medium",
-        description: "", budget: ""
+    saveProjectFn({ data: newPrjSchema }).then(() => {
+      refreshProjects().then(() => {
+        setIsNewProjectOpen(false);
+        setNewProjectForm({
+          name: "", client: "", services: [], manager: "John Smith",
+          startDate: "", deadline: "", status: "Pending", priority: "Medium",
+          description: "", budget: ""
+        });
+        setToast("✓ Project created successfully!");
       });
-      setToast("✓ Project created successfully!");
     });
   };
 

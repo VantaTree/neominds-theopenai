@@ -4,7 +4,7 @@ import {
   CheckCircle2, AlertTriangle, ChevronLeft, ChevronRight, BookOpen, Clock, 
   HelpCircle, EyeOff, ClipboardList
 } from "lucide-react";
-import type { Blog } from "../types/blog";
+import { type Blog } from "@/lib/schemas";
 
 interface BlogListPageProps {
   blogs: Blog[];
@@ -32,8 +32,8 @@ export default function BlogListPage({
   const stats = useMemo(() => {
     return {
       total: blogs.length,
-      published: blogs.filter(b => b.published).length,
-      drafts: blogs.filter(b => !b.published).length
+      published: blogs.filter(b => b.status === "Published").length,
+      drafts: blogs.filter(b => b.status !== "Published").length
     };
   }, [blogs]);
 
@@ -42,8 +42,8 @@ export default function BlogListPage({
     return blogs.filter(b => {
       const matchStatus = 
         statusFilter === "all" ||
-        (statusFilter === "published" && b.published) ||
-        (statusFilter === "draft" && !b.published);
+        (statusFilter === "published" && b.status === "Published") ||
+        (statusFilter === "draft" && b.status !== "Published");
 
       const term = searchQuery.toLowerCase();
       const matchSearch = 
@@ -69,8 +69,8 @@ export default function BlogListPage({
     }
   };
 
-  const formatDate = (ts: number) => {
-    return new Date(ts).toLocaleDateString("en-US", {
+  const formatDate = (dateInput: Date | number | string) => {
+    return new Date(dateInput).toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
       year: "numeric"
@@ -167,20 +167,20 @@ export default function BlogListPage({
                 {/* Cover Photo */}
                 <div className="relative aspect-video w-full overflow-hidden bg-stone-100">
                   <img
-                    src={b.coverImage}
+                    src={b.coverImageUrl}
                     alt={b.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                   <div className="absolute top-3 right-3">
                     <span 
-                      className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider shadow-sm border"
+                       className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider shadow-sm border"
                       style={{
-                        background: b.published ? "#E8F5E9" : "#FFF3E0",
-                        color: b.published ? "#4CAF50" : "#E89D18",
-                        borderColor: b.published ? "#A5D6A7" : "#FFE082"
+                        background: b.status === "Published" ? "#E8F5E9" : "#FFF3E0",
+                        color: b.status === "Published" ? "#4CAF50" : "#E89D18",
+                        borderColor: b.status === "Published" ? "#A5D6A7" : "#FFE082"
                       }}
                     >
-                      {b.published ? "Published" : "Draft"}
+                      {b.status === "Published" ? "Published" : "Draft"}
                     </span>
                   </div>
                 </div>

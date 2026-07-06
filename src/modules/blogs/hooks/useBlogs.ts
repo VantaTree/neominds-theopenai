@@ -6,7 +6,10 @@ import {
   updateBlogFn,
   deleteBlogFn,
 } from "@/lib/server-functions";
-import type { CreateBlogInput, UpdateBlogInput, Blog } from "../types/blog";
+import { type Blog } from "@/lib/schemas";
+
+export type CreateBlogInput = Omit<Blog, "id" | "createdAt" | "updatedAt">;
+export type UpdateBlogInput = Partial<CreateBlogInput>;
 
 export const useBlogsList = (onlyPublished = false) => {
   return useQuery<Blog[]>({

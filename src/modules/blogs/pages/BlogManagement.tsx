@@ -8,7 +8,8 @@ import {
   useUpdateBlog, 
   useDeleteBlog 
 } from "../hooks/useBlogs";
-import type { Blog, CreateBlogInput } from "../types/blog";
+import type { Blog } from "@/lib/schemas";
+import type { CreateBlogInput } from "../hooks/useBlogs";
 import { X, AlertCircle } from "lucide-react";
 
 type ViewState = "list" | "add" | "edit" | "preview";

@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import type { Project, ServiceGroup, Status, Task, Priority } from "@/lib/mock-data";
 import { Avatar, Card, ProgressBar, StatusBadge } from "@/components/admin/shared";
-import { getProjectsFn, saveProjectFn } from "@/lib/server-functions";
+import { getProjectsFn, saveProjectFn, getUsersFn, getBusinessesFn } from "@/lib/server-functions";
 
 export const Route = createFileRoute("/_admin/admin/projects/$id")({
   head: () => ({ meta: [{ title: "Project — GrowConsult AI" }] }),
@@ -24,11 +24,60 @@ function ProjectDetail() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const [projectList, setProjectList] = useState<Project[]>([]);
+  const [businesses, setBusinesses] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const refreshProjects = async () => {
-    const data = await getProjectsFn();
-    setProjectList(data);
+    const [pData, uData, bData] = await Promise.all([
+      getProjectsFn(),
+      getUsersFn(),
+      getBusinessesFn()
+    ]);
+    setBusinesses(bData);
+
+    const mapped = pData.map(p => {
+      const biz = bData.find(b => b.id === p.businessId);
+      const usr = uData.find(u => u.id === (biz ? biz.userId : ""));
+      
+      let status: "Pending" | "In Progress" | "Completed" = "In Progress";
+      if (p.progress === 0) status = "Pending";
+      else if (p.progress === 100) status = "Completed";
+
+      return {
+        id: p.id,
+        client: biz?.businessName || "No business",
+        services: [p.type],
+        manager: "John Smith",
+        status: status,
+        progress: p.progress,
+        deadline: p.deadline ? new Date(p.deadline).toLocaleDateString() : "",
+        startDate: p.createdAt ? new Date(p.createdAt).toLocaleDateString() : "",
+        priority: "Medium" as const,
+        email: usr?.email || "",
+        phone: usr?.phone || "",
+        industry: biz?.businessType || "Consulting",
+        website: biz?.websiteUrl || "",
+        joinedOn: usr?.createdAt ? new Date(usr.createdAt).toLocaleDateString() : "",
+        plan: (biz?.plan || "None") + " Plan",
+        description: p.description,
+        notes: "",
+        serviceGroups: [
+          { 
+            name: p.type, 
+            progress: p.progress,
+            color: "var(--color-primary)",
+            tasks: p.updates.map((u, i) => ({
+              id: `t-${i}`,
+              name: u.message,
+              assignee: u.designation,
+              status: p.progress === 100 ? ("Completed" as const) : ("In Progress" as const),
+              progress: p.progress
+            }))
+          }
+        ]
+      };
+    });
+    setProjectList(mapped);
   };
 
   const { edit } = Route.useSearch();
@@ -47,7 +96,28 @@ function ProjectDetail() {
   const [tab, setTab] = useState<Tab>("overview");
 
   const updateProject = (next: Project) => {
-    saveProjectFn({ data: next }).then(() => {
+    const matchedBiz = businesses.find(b => b.businessName === next.client);
+    const businessId = matchedBiz ? matchedBiz.id : next.id;
+    
+    const projectSchemaData = {
+      id: next.id,
+      businessId: businessId,
+      name: next.client,
+      description: next.description,
+      domain: next.website || "",
+      type: next.services.join(" + "),
+      progress: next.progress,
+      updates: next.serviceGroups.map(g => ({
+        message: `${g.name} progress updated to ${g.progress}%`,
+        timestamp: new Date(),
+        designation: "Manager"
+      })),
+      deadline: next.deadline ? new Date(next.deadline) : null,
+      createdAt: next.startDate ? new Date(next.startDate) : new Date(),
+      updatedAt: new Date(),
+    };
+
+    saveProjectFn({ data: projectSchemaData }).then(() => {
       setProjectList((list) => list.map((p) => (p.id === next.id ? next : p)));
     });
   };
