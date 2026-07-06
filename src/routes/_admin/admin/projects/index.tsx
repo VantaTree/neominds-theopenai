@@ -5,7 +5,7 @@ import type { Project } from "@/lib/mock-data";
 import { Avatar, ProgressBar, StatusBadge, Card } from "@/components/admin/shared";
 import { CheckCircle2, ArrowRight, X, ChevronDown, SearchX } from "lucide-react";
 import { useState, useEffect, useRef, useMemo } from "react";
-import { getProjects, saveProject, getUsers, deleteProject, logAuditEvent } from "@/lib/db";
+import { getProjectsFn, saveProjectFn, getUsersFn, deleteProjectFn, logAuditEventFn } from "@/lib/server-functions";
 
 export const Route = createFileRoute("/_admin/admin/projects/")({
   head: () => ({ meta: [{ title: "Projects — GrowConsult AI" }] }),
@@ -19,8 +19,8 @@ function ProjectsPage() {
 
   const refreshProjects = async () => {
     const [pData, uData] = await Promise.all([
-      getProjects(),
-      getUsers()
+      getProjectsFn(),
+      getUsersFn()
     ]);
     setProjectList(pData);
     setUsers(uData);
@@ -40,8 +40,8 @@ function ProjectsPage() {
   const [confirmDelete, setConfirmDelete] = useState<Project | null>(null);
 
   const handleDelete = async (p: Project) => {
-    await deleteProject(p.id);
-    await logAuditEvent("admin", "project_deleted", { projectId: p.id, client: p.client, manager: p.manager }, "Admin");
+    await deleteProjectFn({ data: p.id });
+    await logAuditEventFn({ data: { uid: "admin", action: "project_deleted", payload: { projectId: p.id, client: p.client, manager: p.manager }, userName: "Admin" } });
     setProjectList(prev => prev.filter(x => x.id !== p.id));
     setConfirmDelete(null);
     setToast(`✓ Project "${p.id}" deleted successfully.`);
@@ -111,7 +111,7 @@ function ProjectsPage() {
       serviceGroups: [], description: newProjectForm.description, notes: ""
     };
 
-    saveProject(newPrj).then(() => {
+    saveProjectFn({ data: newPrj }).then(() => {
       setProjectList([newPrj, ...projectList]);
       setIsNewProjectOpen(false);
       setNewProjectForm({
@@ -374,7 +374,7 @@ function ProjectsPage() {
                     <td className="px-4 py-3 text-xs whitespace-nowrap" style={{ color: "var(--color-subtle)" }}>{p.deadline}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <Link to="/admin/projects/$id" params={{ id: p.id }} className="hover:opacity-70" title="View">
+                        <Link to="/admin/projects/$id" params={{ id: p.id }} search={{ edit: false }} className="hover:opacity-70" title="View">
                           <Eye size={16} style={{ color: "var(--color-title)" }} />
                         </Link>
                         <Link to="/admin/projects/$id" params={{ id: p.id }} search={{ edit: true }} className="hover:opacity-70" title="Edit">

@@ -3,7 +3,7 @@ import { Card } from "@/components/admin/shared";
 import { useState, useEffect, useMemo } from "react";
 import { Shield, Search, RefreshCw, SearchX, ChevronDown, Clock } from "lucide-react";
 import type { AuditLogEntry } from "@/lib/types";
-import { getAuditLog } from "@/lib/db";
+import { getAuditLogFn } from "@/lib/server-functions";
 
 export const Route = createFileRoute("/_admin/admin/support")({
   head: () => ({ meta: [{ title: "Audit Log — GrowConsult AI" }] }),
@@ -29,7 +29,7 @@ function AuditLogPage() {
 
   const loadLogs = async () => {
     setIsLoading(true);
-    const data = await getAuditLog(200);
+    const data = await getAuditLogFn({ data: 200 });
     setLogs(data);
     setIsLoading(false);
   };

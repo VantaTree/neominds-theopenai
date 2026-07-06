@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import type { Project, ServiceGroup, Status, Task, Priority } from "@/lib/mock-data";
 import { Avatar, Card, ProgressBar, StatusBadge } from "@/components/admin/shared";
-import { getProjects, saveProject } from "@/lib/db";
+import { getProjectsFn, saveProjectFn } from "@/lib/server-functions";
 
 export const Route = createFileRoute("/_admin/admin/projects/$id")({
   head: () => ({ meta: [{ title: "Project — GrowConsult AI" }] }),
@@ -27,7 +27,7 @@ function ProjectDetail() {
   const [isLoading, setIsLoading] = useState(true);
 
   const refreshProjects = async () => {
-    const data = await getProjects();
+    const data = await getProjectsFn();
     setProjectList(data);
   };
 
@@ -47,7 +47,7 @@ function ProjectDetail() {
   const [tab, setTab] = useState<Tab>("overview");
 
   const updateProject = (next: Project) => {
-    saveProject(next).then(() => {
+    saveProjectFn({ data: next }).then(() => {
       setProjectList((list) => list.map((p) => (p.id === next.id ? next : p)));
     });
   };
@@ -80,7 +80,7 @@ function ProjectDetail() {
               return (
                 <button
                   key={p.id}
-                  onClick={() => navigate({ to: "/admin/projects/$id", params: { id: p.id } })}
+                  onClick={() => navigate({ to: "/admin/projects/$id", params: { id: p.id }, search: { edit: false } })}
                   className="w-full text-left px-3 py-2.5 rounded-xl transition-colors"
                   style={{
                     background: active ? "color-mix(in oklch, var(--color-primary) 18%, transparent)" : "transparent",

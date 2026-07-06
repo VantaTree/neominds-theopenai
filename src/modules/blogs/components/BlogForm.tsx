@@ -4,7 +4,21 @@ import {
   UploadCloud, ArrowLeft, Loader2, FileText, CheckCircle2, ShieldAlert, Eye
 } from "lucide-react";
 import type { Blog, CreateBlogInput } from "../types/blog";
-import { uploadImage } from "../services/blogService";
+// Helper for cover image uploads (converts file to Base64 dataURL)
+const uploadImage = async (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+      } else {
+        reject(new Error("Failed to convert file to base64"));
+      }
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+};
 
 interface BlogFormProps {
   initialBlog?: Blog | null;

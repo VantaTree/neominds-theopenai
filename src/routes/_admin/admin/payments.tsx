@@ -6,7 +6,7 @@ import {
   ArrowUpDown, Loader2, Mail, ChevronLeft, ArrowLeft, Copy, Calendar, DownloadCloud, SearchX 
 } from "lucide-react";
 import { useState, useMemo, useEffect, useRef } from "react";
-import { getPayments, savePayments } from "@/lib/db";
+import { getPaymentsFn, savePaymentsFn } from "@/lib/server-functions";
 
 export const Route = createFileRoute("/_admin/admin/payments")({
   head: () => ({ meta: [{ title: "Payments — GrowConsult AI" }] }),
@@ -27,7 +27,7 @@ function PaymentsPage() {
 
   useEffect(() => {
     const loadPayments = async () => {
-      const data = await getPayments();
+      const data = await getPaymentsFn();
       setPaymentsData(data);
       setIsLoading(false);
     };
@@ -1147,7 +1147,7 @@ function ActionsDropdown({
     setIsOpen(false);
     setPaymentsData((prev: any) => {
       const next = prev.map((item: any) => item.id === p.id ? { ...item, status: "Suspended" } : item);
-      savePayments(next);
+      savePaymentsFn({ data: next });
       return next;
     });
     setToast(

@@ -9,7 +9,7 @@ import {
 } from "recharts";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { Card } from "@/components/admin/shared";
-import { getUsers, getProjects, getPayments, getReports } from "@/lib/db";
+import { getUsersFn, getProjectsFn, getPaymentsFn, getReportsFn } from "@/lib/server-functions";
 
 export const Route = createFileRoute("/_admin/admin/")({
   head: () => ({ meta: [{ title: "Dashboard — GrowConsult AI" }] }),
@@ -82,10 +82,10 @@ function Dashboard() {
     const loadAllData = async () => {
       try {
         const [u, p, pay, r] = await Promise.all([
-          getUsers(),
-          getProjects(),
-          getPayments(),
-          getReports()
+          getUsersFn(),
+          getProjectsFn(),
+          getPaymentsFn(),
+          getReportsFn()
         ]);
         setUsers(u);
         setProjects(p);

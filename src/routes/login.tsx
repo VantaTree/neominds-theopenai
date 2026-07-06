@@ -10,7 +10,7 @@ import {
   GoogleAuthProvider,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { ensureUserDocument } from "@/lib/db";
+import { ensureUserDocumentFn } from "@/lib/server-functions";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const loginSearchSchema = z.object({
@@ -58,9 +58,22 @@ function LoginPage() {
         password,
       );
       const user = userCredential.user;
+      const token = await user.getIdToken();
+      
+      // Set session cookie for SSR
+      document.cookie = `__session=${token}; path=/; max-age=3600; Secure; SameSite=Lax`;
 
-      // Ensure user document exists in database
-      await ensureUserDocument(user);
+      // Ensure user document exists in database via server function
+      await ensureUserDocumentFn({
+        data: {
+          user: {
+            uid: user.uid,
+            displayName: user.displayName,
+            email: user.email,
+            phoneNumber: user.phoneNumber,
+          }
+        }
+      });
 
       // Redirect back to intended page or dashboard
       navigate({ to: search.redirect || "/dashboard" });
@@ -84,9 +97,22 @@ function LoginPage() {
       const provider = new GoogleAuthProvider();
       const userCredential = await signInWithPopup(auth, provider);
       const user = userCredential.user;
+      const token = await user.getIdToken();
 
-      // Ensure user document exists in database
-      await ensureUserDocument(user);
+      // Set session cookie for SSR
+      document.cookie = `__session=${token}; path=/; max-age=3600; Secure; SameSite=Lax`;
+
+      // Ensure user document exists in database via server function
+      await ensureUserDocumentFn({
+        data: {
+          user: {
+            uid: user.uid,
+            displayName: user.displayName,
+            email: user.email,
+            phoneNumber: user.phoneNumber,
+          }
+        }
+      });
 
       // Redirect back to intended page or dashboard
       navigate({ to: search.redirect || "/dashboard" });

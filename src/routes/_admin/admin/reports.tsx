@@ -3,7 +3,7 @@ import { Card } from "@/components/admin/shared";
 import { useState, useEffect, useMemo } from "react";
 import { FileText, Search, Trash2, Eye, X, RefreshCw, SearchX, Clock, CheckCircle2, AlertCircle, ChevronDown } from "lucide-react";
 import type { Report } from "@/lib/types";
-import { getReports, deleteReport, saveReport, logAuditEvent } from "@/lib/db";
+import { getReportsFn, deleteReportFn, saveReportFn, logAuditEventFn } from "@/lib/server-functions";
 
 export const Route = createFileRoute("/_admin/admin/reports")({
   head: () => ({ meta: [{ title: "Reports — GrowConsult AI" }] }),
@@ -32,7 +32,7 @@ function ReportsPage() {
 
   const loadReports = async () => {
     setIsLoading(true);
-    const data = await getReports();
+    const data = await getReportsFn();
     setReports(data.sort((a, b) => b.createdAt - a.createdAt));
     setIsLoading(false);
   };
@@ -48,8 +48,8 @@ function ReportsPage() {
   }, [reports, searchQuery, statusFilter]);
 
   const handleDelete = async (r: Report) => {
-    await deleteReport(r.id);
-    await logAuditEvent("admin", "report_deleted", { reportId: r.id, title: r.title, uid: r.uid }, "Admin");
+    await deleteReportFn({ data: r.id });
+    await logAuditEventFn({ data: { uid: "admin", action: "report_deleted", payload: { reportId: r.id, title: r.title, uid: r.uid }, userName: "Admin" } });
     setReports(prev => prev.filter(x => x.id !== r.id));
     setConfirmDelete(null);
     setToast("✓ Report deleted successfully.");
@@ -57,7 +57,7 @@ function ReportsPage() {
 
   const handleReprocess = async (r: Report) => {
     const updated: Report = { ...r, status: "processing" };
-    await saveReport(updated);
+    await saveReportFn({ data: updated });
     setReports(prev => prev.map(x => x.id === r.id ? updated : x));
     setToast(`↺ Report "${r.title}" queued for reprocessing.`);
   };

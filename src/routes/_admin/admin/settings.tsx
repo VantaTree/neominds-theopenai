@@ -1,11 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Card } from "@/components/admin/shared";
 import { useState, useEffect } from "react";
-import { CreditCard, Check, Settings as SettingsIcon, Bell, User, CheckCircle2, Database, Loader2, AlertTriangle, Wifi, WifiOff } from "lucide-react";
-import { getNotificationSettings, saveNotificationSettings, getPlans, savePlan, getAdminConfig, saveAdminConfig, getUsers, saveUser, logAuditEvent } from "@/lib/db";
-import { db, isFirebaseConfigured } from "@/lib/firebase";
-import { doc, setDoc, getDoc, deleteDoc } from "firebase/firestore";
-import { fetchBlogs, createBlog } from "@/modules/blogs/services/blogService";
+import { CreditCard, Check, Settings as SettingsIcon, Bell, User, CheckCircle2, Database, Loader2, AlertTriangle, Wifi } from "lucide-react";
+import {
+  getNotificationSettingsFn,
+  saveNotificationSettingsFn,
+  testFirestoreConnectionFn,
+  seedDatabaseFn
+} from "@/lib/server-functions";
 
 export const Route = createFileRoute("/_admin/admin/settings")({
   head: () => ({ meta: [{ title: "Settings — GrowConsult AI" }] }),
@@ -24,6 +26,8 @@ function SettingsPage() {
     email: "billing@growconsult.ai",
     address: "123 Business Avenue, Suite 100, New York, NY 10001"
   });
+
+  const isFirebaseConfigured = true;
 
   useEffect(() => {
     if (toast) {
@@ -49,83 +53,37 @@ function SettingsPage() {
     setTestStatus("testing");
     setTestError("");
     try {
-      const testRef = doc(db, "_connectionTest", "ping");
-      await setDoc(testRef, { ts: Date.now(), ok: true });
-      const snap = await getDoc(testRef);
-      if (snap.exists()) {
-        await deleteDoc(testRef);
+      const res = await testFirestoreConnectionFn();
+      if (res.ok) {
         setTestStatus("ok");
       } else {
         setTestStatus("fail");
-        setTestError("Write succeeded but read failed — possible rules issue.");
+        setTestError(res.error || "Connection failed.");
       }
     } catch (e: any) {
       setTestStatus("fail");
-      const msg: string = e.message || "";
-      if (msg.includes("offline") || msg.includes("network")) {
-        setTestError("Network error — check your internet connection.");
-      } else if (msg.includes("permission") || msg.includes("PERMISSION_DENIED")) {
-        setTestError("Permission denied — go to Firebase Console → Firestore → Rules and set: allow read, write: if true; (for testing)");
-      } else if (msg.includes("NOT_FOUND") || msg.includes("not found")) {
-        setTestError("Firestore database not created — go to Firebase Console → Firestore Database → Create database, choose 'Start in test mode'.");
-      } else {
-        setTestError(msg);
-      }
+      setTestError(e.message || "Failed to test connection.");
     }
   };
 
-
   const handleSeedDatabase = async () => {
-    if (!isFirebaseConfigured) {
-      setToast("✗ Firebase is not configured. Check your .env file.");
-      return;
-    }
     setSeeding(true);
     setSeedLog([]);
     const log = (msg: string) => setSeedLog(prev => [...prev, msg]);
     try {
-      // Seed Plans
-      log("Seeding plans collection...");
-      const plans = await getPlans();
-      for (const plan of plans) { await savePlan(plan); }
-      log(`✓ ${plans.length} plans written to Firestore`);
-
-      // Seed Admin Config
-      log("Seeding adminSettings/config...");
-      const config = await getAdminConfig();
-      await saveAdminConfig(config);
-      log("✓ adminSettings/config written");
-
-      // Seed Notification Settings
-      log("Seeding adminSettings/notifications...");
-      await saveNotificationSettings({ emailNotif, smsNotif, auditNotif, weeklyNotif });
-      log("✓ adminSettings/notifications written");
-
-      // Seed existing users from localStorage
-      log("Seeding users collection...");
-      const users = await getUsers();
-      for (const u of users) { await saveUser(u); }
-      log(`✓ ${users.length} users written to Firestore`);
-
-      // Seed blogs from localStorage / initial fallback
-      log("Seeding blogs collection...");
-      const blogsList = await fetchBlogs(false);
-      for (const b of blogsList) {
-        // Strip auto-generated attributes to prevent duplicates in timestamps
-        const { id, createdAt, updatedAt, ...bInput } = b;
-        await createBlog(bInput);
+      log("Seeding database via server function...");
+      const res = await seedDatabaseFn({
+        data: { emailNotif, smsNotif, auditNotif, weeklyNotif }
+      });
+      if (res.success) {
+        log("🎉 Database seeded successfully! Collections seeded on server.");
+        setToast("✓ Firebase database seeded successfully!");
+      } else {
+        log("✗ Seeding failed.");
       }
-      log(`✓ ${blogsList.length} blogs written to Firestore`);
-
-      // Write audit event
-      await logAuditEvent("admin", "db_seeded", { collections: ["plans", "adminSettings", "users", "blogs"], count: plans.length + users.length + blogsList.length + 2 }, "Admin");
-      log("✓ Audit event logged");
-      log("");
-      log("🎉 Database seeded successfully! Refresh Firebase Console to see collections.");
-      setToast("✓ Firebase database seeded successfully!");
     } catch (e: any) {
       log(`✗ Error: ${e.message}`);
-      setToast("✗ Seeding failed — check console for details.");
+      setToast("✗ Seeding failed.");
     }
     setSeeding(false);
   };
@@ -143,7 +101,7 @@ function SettingsPage() {
   const [weeklyNotif, setWeeklyNotif] = useState(true);
 
   useEffect(() => {
-    getNotificationSettings().then(data => {
+    getNotificationSettingsFn().then(data => {
       setEmailNotif(data.emailNotif);
       setSmsNotif(data.smsNotif);
       setAuditNotif(data.auditNotif);
@@ -152,11 +110,13 @@ function SettingsPage() {
   }, []);
 
   const handleSaveNotifications = () => {
-    saveNotificationSettings({
-      emailNotif,
-      smsNotif,
-      auditNotif,
-      weeklyNotif
+    saveNotificationSettingsFn({
+      data: {
+        emailNotif,
+        smsNotif,
+        auditNotif,
+        weeklyNotif
+      }
     }).then(() => {
       setToast("✓ Notification Settings saved successfully!");
     });
@@ -364,8 +324,8 @@ function SettingsPage() {
                   border: `1px solid ${isFirebaseConfigured ? "#4CAF50" : "#EF5350"}`
                 }}>
                   {isFirebaseConfigured
-                    ? <><CheckCircle2 size={14} /> .env loaded — project: theopenai</>
-                    : <><AlertTriangle size={14} /> .env NOT loaded — restart npm run dev</>}
+                    ? <><CheckCircle2 size={14} /> Server database connection initialized</>
+                    : <><AlertTriangle size={14} /> Server database connection error</>}
                 </div>
 
                 {isFirebaseConfigured && (
@@ -393,28 +353,6 @@ function SettingsPage() {
                           <AlertTriangle size={14} className="mt-0.5 shrink-0" />
                           <span>{testError}</span>
                         </div>
-                        {testError.includes("not created") && (
-                          <div className="rounded-xl p-3 text-xs space-y-1" style={{ background: "#FFF3D6", color: "#4E342E", border: "1px solid #E8DCC8" }}>
-                            <div className="font-bold mb-1">How to fix:</div>
-                            <div>1. Go to <strong>console.firebase.google.com</strong></div>
-                            <div>2. Select project <strong>theopenai</strong></div>
-                            <div>3. Click <strong>Firestore Database</strong> in the left menu</div>
-                            <div>4. Click <strong>"Create database"</strong></div>
-                            <div>5. Choose <strong>"Start in test mode"</strong> → Next → Done</div>
-                            <div>6. Come back here and click "Test Firestore Connection" again</div>
-                          </div>
-                        )}
-                        {testError.includes("Permission") && (
-                          <div className="rounded-xl p-3 text-xs space-y-1" style={{ background: "#FFF3D6", color: "#4E342E", border: "1px solid #E8DCC8" }}>
-                            <div className="font-bold mb-1">How to fix:</div>
-                            <div>1. Go to Firebase Console → <strong>Firestore Database → Rules</strong></div>
-                            <div>2. Replace all rules with:</div>
-                            <code className="block mt-1 p-2 rounded" style={{ background: "#1C1C1E", color: "#4CAF50" }}>
-                              {"rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /{document=**} {\n      allow read, write: if true;\n    }\n  }\n}"}
-                            </code>
-                            <div>3. Click <strong>Publish</strong>, then test again</div>
-                          </div>
-                        )}
                       </div>
                     )}
                   </>
@@ -464,7 +402,7 @@ function SettingsPage() {
       </div>
 
       {toast && (
-        <div className="fixed bottom-6 right-6 z-[100] px-5 py-3 rounded-xl shadow-lg transition-all animate-in slide-in-from-bottom-5" style={{ background: "#E8F5E9", border: "1px solid #4CAF50", color: "#4CAF50", fontWeight: 600 }}>
+        <div className="fixed bottom-6 right-6 z-100 px-5 py-3 rounded-xl shadow-lg transition-all animate-in slide-in-from-bottom-5" style={{ background: "#E8F5E9", border: "1px solid #4CAF50", color: "#4CAF50", fontWeight: 600 }}>
           {toast}
         </div>
       )}

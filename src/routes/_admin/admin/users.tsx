@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { type User } from "@/lib/mock-data";
 import { Avatar, PlanBadge, StatusBadge } from "@/components/admin/shared";
 import { SearchX, CheckCircle2, ChevronDown } from "lucide-react";
-import { getUsers, saveUser, deleteUser as removeUserDb } from "@/lib/db";
+import { getUsersFn, saveUserFn, deleteUserFn } from "@/lib/server-functions";
 
 export const Route = createFileRoute("/_admin/admin/users")({
   head: () => ({ meta: [{ title: "Users — GrowConsult AI" }] }),
@@ -16,7 +16,7 @@ function UsersPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   const refreshUsers = async () => {
-    const data = await getUsers();
+    const data = await getUsersFn();
     setUserList(data);
   };
 
@@ -95,7 +95,7 @@ function UsersPage() {
       status: "Active",
       joinedOn: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     };
-    saveUser(newUser).then(() => {
+    saveUserFn({ data: newUser }).then(() => {
       setIsCreatingUser(false);
       setIsAddUserOpen(false);
       setUserList([newUser, ...userList]);
@@ -135,7 +135,7 @@ function UsersPage() {
     }
 
     const updated = { ...editingUser, ...editForm } as User;
-    saveUser(updated).then(() => {
+    saveUserFn({ data: updated }).then(() => {
       setUserList(list => list.map(u => u.id === editingUser?.id ? updated : u));
       if (selectedUser?.id === editingUser?.id) {
         setSelectedUser(updated);
@@ -149,7 +149,7 @@ function UsersPage() {
     const user = userList.find(u => u.id === userId);
     if (!user) return;
     if (window.confirm(`Are you sure you want to delete ${user.name}?`)) {
-      removeUserDb(userId).then(() => {
+      deleteUserFn({ data: userId }).then(() => {
         setUserList(list => list.filter(u => u.id !== userId));
         if (selectedUser?.id === userId) {
           setSelectedUser(null);
@@ -194,7 +194,7 @@ function UsersPage() {
     if (window.confirm(confirmMsg)) {
       const newStatus = isSuspended ? "Active" : "Inactive";
       const updated = { ...selectedUser, status: newStatus } as User;
-      saveUser(updated).then(() => {
+      saveUserFn({ data: updated }).then(() => {
         setUserList(list => list.map(u => u.id === selectedUser.id ? updated : u));
         setSelectedUser(updated);
         setToast({

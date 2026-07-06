@@ -11,7 +11,7 @@ export interface User {
   email: string;
   phone: string;
   plan: "Plus" | "Growth" | "Basic" | "None";
-  status: "Active" | "Trial" | "Overdue" | "Pending";
+  status: "Active" | "Trial" | "Overdue" | "Pending" | "Inactive" | "Suspended";
   joinedOn: string;
 }
 

@@ -9,7 +9,7 @@ import {
   GoogleAuthProvider,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { ensureUserDocument } from "@/lib/db";
+import { ensureUserDocumentFn } from "@/lib/server-functions";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 export const Route = createFileRoute("/signup")({
@@ -51,9 +51,22 @@ function SignupPage() {
         password,
       );
       const user = userCredential.user;
+      const token = await user.getIdToken();
 
-      // Create new user row/document referencing the auth user uid
-      await ensureUserDocument(user);
+      // Set session cookie for SSR
+      document.cookie = `__session=${token}; path=/; max-age=3600; Secure; SameSite=Lax`;
+
+      // Create new user row/document referencing the auth user uid via server function
+      await ensureUserDocumentFn({
+        data: {
+          user: {
+            uid: user.uid,
+            displayName: user.displayName,
+            email: user.email,
+            phoneNumber: user.phoneNumber,
+          }
+        }
+      });
 
       localStorage.setItem("audit_unlocked", "true");
       alert("Account created successfully!");
@@ -80,9 +93,22 @@ function SignupPage() {
       const provider = new GoogleAuthProvider();
       const userCredential = await signInWithPopup(auth, provider);
       const user = userCredential.user;
+      const token = await user.getIdToken();
 
-      // Ensure user document exists in database
-      await ensureUserDocument(user);
+      // Set session cookie for SSR
+      document.cookie = `__session=${token}; path=/; max-age=3600; Secure; SameSite=Lax`;
+
+      // Ensure user document exists in database via server function
+      await ensureUserDocumentFn({
+        data: {
+          user: {
+            uid: user.uid,
+            displayName: user.displayName,
+            email: user.email,
+            phoneNumber: user.phoneNumber,
+          }
+        }
+      });
 
       localStorage.setItem("audit_unlocked", "true");
       navigate({ to: "/assessment" });
