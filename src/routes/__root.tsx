@@ -15,17 +15,17 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "mymind — Remember everything. Organize nothing." },
+      { title: "theOpenAI" },
       {
         name: "description",
         content:
-          "A private place to save your most precious notes, images, quotes and highlights. Enhanced with AI.",
+          "theOpenAI",
       },
       { name: "theme-color", content: "#ffffff" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
-      { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
+      { rel: "icon", href: "/logos/logo.PNG", type: "image/svg+xml" },
     ],
   }),
   shellComponent: RootShell,
