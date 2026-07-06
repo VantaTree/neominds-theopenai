@@ -1,6 +1,14 @@
 import { useState, useEffect, useRef } from "react";
-import { createFileRoute, Outlet, useLocation } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Outlet,
+  useLocation,
+  useNavigate,
+  redirect,
+} from "@tanstack/react-router";
 import ClientAside from "@/components/client/ClientAside";
+import { auth } from "@/lib/firebase";
+import { onAuthStateChanged, type User } from "firebase/auth";
 
 export const Route = createFileRoute("/_client")({
   component: RouteComponent,
@@ -68,7 +76,10 @@ function PageTransitionWrapper({ children }: { children: React.ReactNode }) {
             {prevChildren}
           </div>
           {/* New Page */}
-          <div className="w-full page-enter" onAnimationEnd={handleAnimationEnd}>
+          <div
+            className="w-full page-enter"
+            onAnimationEnd={handleAnimationEnd}
+          >
             {displayChildren}
           </div>
         </div>
@@ -80,6 +91,46 @@ function PageTransitionWrapper({ children }: { children: React.ReactNode }) {
 }
 
 function RouteComponent() {
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [initialized, setInitialized] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    // Check initial auth state synchronously first if possible
+    if (auth && auth.currentUser) {
+      setCurrentUser(auth.currentUser);
+      setInitialized(true);
+    }
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      setCurrentUser(u);
+      setInitialized(true);
+    });
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    // Only redirect if auth has finished checking and no user is found
+    if (initialized && !currentUser) {
+      navigate({
+        to: "/login",
+        search: {
+          redirect: location.href,
+        },
+      });
+    }
+  }, [initialized, currentUser, navigate, location.href]);
+
+  if (typeof window === "undefined" || !initialized || !currentUser) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#F9FAFC]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-3 border-mm-orange/20 border-t-mm-orange rounded-full animate-spin"></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen bg-white text-mm-dark font-sans flex-col md:flex-row">
       {/* Responsive Sidebar & Mobile Header Bar */}
