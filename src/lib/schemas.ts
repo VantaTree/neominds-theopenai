@@ -51,6 +51,7 @@ export const UserSchema = z.object({
   id: z.string().min(1, "User ID is required"),
   email: z.string().email("Invalid email address").min(1, "Email is required"),
   fullName: z.string().default(""),
+  image:z.string().url().optional(),
   phone: z.string().default(""),
   status: UserStatusEnum.default("Active"),
   businessCount: z.number().int().nonnegative().default(0),
