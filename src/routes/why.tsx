@@ -18,7 +18,7 @@ import WhyDownloads from "@/components/mymind/why/WhyDownloads";
 export const Route = createFileRoute("/why")({
   head: () => ({
     meta: [
-      { title: "Why mymind exists — mymind" },
+      { title: "Why theOpenAI exists" },
       {
         name: "description",
         content:

@@ -287,14 +287,7 @@ function LoginPage() {
                 disabled={isLoading}
                 className="w-full py-4 bg-mm-orange text-white font-semibold text-sm rounded-[14px] shadow-lg shadow-mm-orange/20 hover:bg-mm-orange/90 active:scale-[0.98] transition-all mt-6 cursor-pointer flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="h-4.5 w-4.5 animate-spin mr-2" />
-                    Logging in...
-                  </>
-                ) : (
-                  "Login"
-                )}
+                Login
               </button>
             </form>
           </div>

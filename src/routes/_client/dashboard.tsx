@@ -1,13 +1,7 @@
+import { useState, useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import {
-  BarChart3,
-  Globe,
-  PenTool,
-  PlusCircle,
-  Search,
-  Sparkles,
-  Upload,
-} from "lucide-react";
+import ClientDashboardDesktop from "@/components/client/ClientDashboardDesktop";
+import ClientDashboardMobile from "@/components/client/ClientDashboardMobile";
 
 export const Route = createFileRoute("/_client/dashboard")({
   component: RouteComponent,
@@ -15,260 +9,247 @@ export const Route = createFileRoute("/_client/dashboard")({
 
 function RouteComponent() {
   return (
-    <div className="max-w-5xl mx-auto space-y-6 py-2 font-sans text-mm-dark select-none">
+    <div className="max-w-6xl mx-auto space-y-12 py-4 font-sans text-mm-dark">
       {/* Top Header Row */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-mm-dark">
-            Welcome back, Raj! 👋
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-mm-dark tracking-tight">
+            Welcome back, John! 👋
           </h2>
           <p className="text-sm text-mm-gray mt-1">
-            Here's your business overview for today.
+            Here's your business growth overview.
           </p>
         </div>
+        <button className="inline-flex items-center gap-2 px-4.5 py-2.5 rounded-xl border border-mm-border bg-white text-sm font-semibold text-mm-dark hover:bg-mm-subtle transition-all active:scale-95 cursor-pointer">
+          <Download className="h-4 w-4 text-mm-gray" />
+          Download Report
+        </button>
       </div>
 
-      {/* Top Section: Business Health Score + 2x2 Scorecards */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Card: Business Health Score */}
-        <div className="lg:col-span-1 bg-white border border-mm-border rounded-[24px] p-6 shadow-[0_4px_20px_rgba(0,0,0,0.015)] flex flex-col justify-between">
-          <h3 className="text-sm font-extrabold text-mm-dark tracking-tight mb-4">
-            Business Health Score
+      {/* Scorecards Row - Premium Card Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Score 1 */}
+        <div className="bg-white border border-mm-border rounded-2xl p-6 shadow-[0_8px_30px_rgba(0,0,0,0.02)] space-y-2.5">
+          <p className="text-xs font-bold text-mm-gray uppercase tracking-wider">
+            Overall Score
+          </p>
+          <div className="flex items-baseline gap-1">
+            <span className="text-4xl sm:text-5xl font-black text-mm-dark">
+              78
+            </span>
+            <span className="text-sm text-mm-gray/60 font-medium">/100</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-md">
+              Good
+            </span>
+            <span className="text-[11px] text-mm-gray">
+              +12% vs last month
+            </span>
+          </div>
+        </div>
+
+        {/* Score 2 */}
+        <div className="bg-white border border-mm-border rounded-2xl p-6 shadow-[0_8px_30px_rgba(0,0,0,0.02)] space-y-2.5">
+          <p className="text-xs font-bold text-mm-gray uppercase tracking-wider">
+            Website Score
+          </p>
+          <div className="flex items-baseline gap-1">
+            <span className="text-4xl sm:text-5xl font-black text-mm-dark">
+              82
+            </span>
+            <span className="text-sm text-mm-gray/60 font-medium">/100</span>
+          </div>
+          <div>
+            <span className="text-xs font-semibold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-md">
+              Good
+            </span>
+          </div>
+        </div>
+
+        {/* Score 3 */}
+        <div className="bg-white border border-mm-border rounded-2xl p-6 shadow-[0_8px_30px_rgba(0,0,0,0.02)] space-y-2.5">
+          <p className="text-xs font-bold text-mm-gray uppercase tracking-wider">
+            Marketing Score
+          </p>
+          <div className="flex items-baseline gap-1">
+            <span className="text-4xl sm:text-5xl font-black text-mm-dark">
+              73
+            </span>
+            <span className="text-sm text-mm-gray/60 font-medium">/100</span>
+          </div>
+          <div>
+            <span className="text-xs font-semibold text-amber-600 bg-amber-500/10 px-2 py-0.5 rounded-md">
+              Fair
+            </span>
+          </div>
+        </div>
+
+        {/* Score 4 */}
+        <div className="bg-white border border-mm-border rounded-2xl p-6 shadow-[0_8px_30px_rgba(0,0,0,0.02)] space-y-2.5">
+          <p className="text-xs font-bold text-mm-gray uppercase tracking-wider">
+            Growth Potential
+          </p>
+          <div className="flex items-baseline gap-1">
+            <span className="text-4xl sm:text-5xl font-black text-mm-dark">
+              85
+            </span>
+            <span className="text-sm text-mm-gray/60 font-medium">/100</span>
+          </div>
+          <div>
+            <span className="text-xs font-semibold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-md">
+              Excellent
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Audit Insights Section - Side-by-Side Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Key Findings Card */}
+        <div className="bg-white border border-mm-border rounded-2xl p-6 shadow-[0_8px_30px_rgba(0,0,0,0.02)] space-y-6">
+          <h3 className="text-lg font-bold text-mm-dark tracking-tight">
+            Key Findings
           </h3>
-          <div className="flex flex-row items-center justify-between gap-4 flex-1">
-            {/* Circular Gauge SVG */}
-            <div className="relative w-28 h-28 shrink-0">
-              <svg className="w-full h-full" viewBox="0 0 128 128">
-                {/* Background track */}
-                <circle
-                  cx="64"
-                  cy="64"
-                  r="48"
-                  className="stroke-mm-subtle"
-                  strokeWidth="8"
-                  fill="transparent"
-                />
-                {/* Progress arc (78%) */}
-                <circle
-                  cx="64"
-                  cy="64"
-                  r="48"
-                  className="stroke-mm-green"
-                  strokeWidth="8"
-                  fill="transparent"
-                  strokeDasharray="301.59"
-                  strokeDashoffset="66.35"
+          <ul className="space-y-4">
+            <li className="flex items-start gap-3">
+              <span className="h-1.5 w-1.5 rounded-full bg-mm-orange mt-2 shrink-0" />
+              <p className="text-sm text-mm-dark/85 leading-relaxed">
+                Your website loads slower than{" "}
+                <span className="font-semibold text-mm-dark">
+                  70% of competitors
+                </span>
+                .
+              </p>
+            </li>
+            <li className="flex items-start gap-3">
+              <span className="h-1.5 w-1.5 rounded-full bg-mm-orange mt-2 shrink-0" />
+              <p className="text-sm text-mm-dark/85 leading-relaxed">
+                SEO opportunities identified in{" "}
+                <span className="font-semibold text-mm-dark">
+                  15 key areas
+                </span>
+                .
+              </p>
+            </li>
+            <li className="flex items-start gap-3">
+              <span className="h-1.5 w-1.5 rounded-full bg-mm-orange mt-2 shrink-0" />
+              <p className="text-sm text-mm-dark/85 leading-relaxed">
+                Low user engagement observed on social media channels.
+              </p>
+            </li>
+            <li className="flex items-start gap-3">
+              <span className="h-1.5 w-1.5 rounded-full bg-mm-orange mt-2 shrink-0" />
+              <p className="text-sm text-mm-dark/85 leading-relaxed">
+                Paid ads campaign ROI can be optimized by up to{" "}
+                <span className="font-semibold text-mm-dark">40%</span>.
+              </p>
+            </li>
+          </ul>
+        </div>
+
+        {/* Top Recommendations Card */}
+        <div className="bg-white border border-mm-border rounded-2xl p-6 shadow-[0_8px_30px_rgba(0,0,0,0.02)] space-y-6">
+          <h3 className="text-lg font-bold text-mm-dark tracking-tight">
+            Top Recommendations
+          </h3>
+          <div className="space-y-4.5">
+            {/* Rec 1 */}
+            <div className="flex items-center gap-4">
+              <span className="text-[10px] font-bold text-mm-orange bg-mm-orange/10 px-2 py-0.5 rounded-md min-w-[50px] text-center animate-pulse">
+                HIGH
+              </span>
+              <p className="text-sm text-mm-dark/85 font-medium">
+                Improve website speed and Core Web Vitals
+              </p>
+            </div>
+            {/* Rec 2 */}
+            <div className="flex items-center gap-4">
+              <span className="text-[10px] font-bold text-mm-orange bg-mm-orange/10 px-2 py-0.5 rounded-md min-w-[50px] text-center animate-pulse">
+                HIGH
+              </span>
+              <p className="text-sm text-mm-dark/85 font-medium">
+                Optimize Google Ads campaigns
+              </p>
+            </div>
+            {/* Rec 3 */}
+            <div className="flex items-center gap-4">
+              <span className="text-[10px] font-bold text-amber-600 bg-amber-500/10 px-2 py-0.5 rounded-md min-w-[50px] text-center">
+                MEDIUM
+              </span>
+              <p className="text-sm text-mm-dark/85 font-medium">
+                Create SEO-focused content strategy
+              </p>
+            </div>
+            {/* Rec 4 */}
+            <div className="flex items-center gap-4">
+              <span className="text-[10px] font-bold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-md min-w-[50px] text-center">
+                LOW
+              </span>
+              <p className="text-sm text-mm-dark/85 font-medium">
+                Improve social media engagement
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Action Plan Block - Large Layout Card */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8 p-8 bg-white border border-mm-border rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.02)]">
+        <div className="flex flex-wrap items-center gap-x-12 gap-y-6">
+          <div>
+            <p className="text-[11px] font-bold text-mm-gray uppercase tracking-wider">
+              Proposed Plan
+            </p>
+            <p className="text-sm text-mm-dark/70 font-medium mt-1">
+              Recommended Budget
+            </p>
+            <p className="text-2xl font-black text-mm-dark mt-0.5">
+              $2,450
+              <span className="text-xs text-mm-gray font-normal">
+                {" "}
+                /month
+              </span>
+            </p>
+          </div>
+
+          <div className="flex items-center gap-6">
+            <div>
+              <p className="text-[11px] font-bold text-mm-gray uppercase tracking-wider">
+                Estimated Growth
+              </p>
+              <div className="flex items-center gap-1.5 mt-1.5">
+                <TrendingUp className="h-4.5 w-4.5 text-emerald-600" />
+                <span className="text-lg font-black text-emerald-600">
+                  +35%
+                </span>
+                <span className="text-xs text-mm-gray">in 6 months</span>
+              </div>
+            </div>
+
+            {/* Inline SVG Sparkline */}
+            <div className="h-8 w-32 ml-2 self-end">
+              <svg
+                className="w-full h-full text-mm-orange"
+                viewBox="0 0 100 30"
+                fill="none"
+              >
+                <path
+                  d="M0,25 Q15,22 30,12 T60,18 T90,2 T100,5"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
                   strokeLinecap="round"
-                  transform="rotate(-90 64 64)"
+                  strokeLinejoin="round"
                 />
               </svg>
-              {/* Text inside */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center leading-none">
-                <span className="text-2xl font-black text-mm-dark">78</span>
-                <span className="text-[10px] font-bold text-mm-gray mt-0.5">/100</span>
-              </div>
-            </div>
-
-            {/* Status and Action Panel */}
-            <div className="flex flex-col items-start gap-1 flex-1 pl-2">
-              <span className="text-sm font-bold text-mm-green">Good</span>
-              <p className="text-xs text-mm-gray leading-relaxed">
-                You're doing great! Keep it up
-              </p>
-              <button className="mt-2 text-[11px] font-bold text-mm-dark px-3 py-1.5 rounded-lg border border-mm-border bg-mm-subtle/40 hover:bg-mm-subtle transition-all cursor-pointer">
-                View Report
-              </button>
             </div>
           </div>
         </div>
 
-        {/* Right Cards: 2x2 Score Grid */}
-        <div className="lg:col-span-2 grid grid-cols-2 gap-4">
-          {/* Card 1: Website Score */}
-          <div className="bg-white border border-mm-border rounded-[18px] p-5 shadow-[0_4px_20px_rgba(0,0,0,0.015)] flex flex-col justify-between">
-            <span className="text-xs font-bold text-mm-gray">Website Score</span>
-            <div className="mt-4">
-              <span className="text-3xl font-black text-mm-dark">82</span>
-              <div className="text-[11px] font-bold text-mm-green mt-1">Good</div>
-            </div>
-          </div>
-
-          {/* Card 2: SEO Score */}
-          <div className="bg-white border border-mm-border rounded-[18px] p-5 shadow-[0_4px_20px_rgba(0,0,0,0.015)] flex flex-col justify-between">
-            <span className="text-xs font-bold text-mm-gray">SEO Score</span>
-            <div className="mt-4">
-              <span className="text-3xl font-black text-mm-dark">76</span>
-              <div className="text-[11px] font-bold text-mm-green mt-1">Good</div>
-            </div>
-          </div>
-
-          {/* Card 3: Marketing Score */}
-          <div className="bg-white border border-mm-border rounded-[18px] p-5 shadow-[0_4px_20px_rgba(0,0,0,0.015)] flex flex-col justify-between">
-            <span className="text-xs font-bold text-mm-gray">Marketing Score</span>
-            <div className="mt-4">
-              <span className="text-3xl font-black text-mm-dark">74</span>
-              <div className="text-[11px] font-bold text-mm-green mt-1">Good</div>
-            </div>
-          </div>
-
-          {/* Card 4: Brand Score */}
-          <div className="bg-white border border-mm-border rounded-[18px] p-5 shadow-[0_4px_20px_rgba(0,0,0,0.015)] flex flex-col justify-between">
-            <span className="text-xs font-bold text-mm-gray">Brand Score</span>
-            <div className="mt-4">
-              <span className="text-3xl font-black text-mm-dark">80</span>
-              <div className="text-[11px] font-bold text-mm-green mt-1">Good</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Middle Section: Active Projects + AI Recommendation */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Active Projects Card */}
-        <div className="bg-white border border-mm-border rounded-[24px] p-6 shadow-[0_4px_20px_rgba(0,0,0,0.015)] flex flex-col justify-between">
-          <div>
-            <h3 className="text-sm font-extrabold text-mm-dark tracking-tight mb-4">
-              Active Projects
-            </h3>
-            <div className="space-y-4">
-              {/* Item 1 */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-mm-blue/10 text-mm-blue">
-                    <Globe className="h-4 w-4" />
-                  </div>
-                  <span className="text-sm font-bold text-mm-dark">Website Redesign</span>
-                </div>
-                <div className="flex items-center gap-4">
-                  <span className="text-xs font-medium text-mm-gray">In Progress</span>
-                  <span className="text-xs font-bold text-mm-green">70% +</span>
-                </div>
-              </div>
-              {/* Item 2 */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-mm-blue/10 text-mm-blue">
-                    <Search className="h-4 w-4" />
-                  </div>
-                  <span className="text-sm font-bold text-mm-dark">SEO Optimization</span>
-                </div>
-                <div className="flex items-center gap-4">
-                  <span className="text-xs font-medium text-mm-gray">In Progress</span>
-                  <span className="text-xs font-bold text-mm-green">60% +</span>
-                </div>
-              </div>
-              {/* Item 3 */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-mm-blue/10 text-mm-blue">
-                    <PenTool className="h-4 w-4" />
-                  </div>
-                  <span className="text-sm font-bold text-mm-dark">Content Creation</span>
-                </div>
-                <div className="flex items-center gap-4">
-                  <span className="text-xs font-medium text-mm-gray">In Progress</span>
-                  <span className="text-xs font-bold text-mm-green">40% +</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          <button className="mt-6 text-xs font-bold text-mm-dark text-center w-full py-2 hover:bg-mm-subtle/50 rounded-xl transition-all cursor-pointer">
-            View All
-          </button>
-        </div>
-
-        {/* AI Recommendation Card */}
-        <div className="bg-white border border-mm-border rounded-[24px] p-6 shadow-[0_4px_20px_rgba(0,0,0,0.015)] flex flex-col justify-between">
-          <div>
-            <h3 className="text-sm font-extrabold text-mm-dark tracking-tight mb-4">
-              AI Recommendation
-            </h3>
-            <div className="space-y-2 mt-2">
-              <span className="text-[10px] font-bold text-mm-gray uppercase tracking-wider">
-                Top Priority for You
-              </span>
-              <p className="text-base font-extrabold text-mm-dark leading-snug">
-                Improve Google rankings <span className="font-medium text-mm-gray">for 15 important keywords.</span>
-              </p>
-            </div>
-          </div>
-          <button className="mt-6 w-full py-3 bg-mm-orange/10 hover:bg-mm-orange/15 active:scale-98 text-mm-orange text-xs font-extrabold rounded-xl transition-all cursor-pointer text-center">
-            View Recommendation
-          </button>
-        </div>
-      </div>
-
-      {/* Bottom Section: Recent Activity + Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Recent Activity Card */}
-        <div className="bg-white border border-mm-border rounded-[24px] p-6 shadow-[0_4px_20px_rgba(0,0,0,0.015)] flex flex-col justify-between">
-          <div>
-            <h3 className="text-sm font-extrabold text-mm-dark tracking-tight mb-4">
-              Recent Activity
-            </h3>
-            <div className="space-y-4">
-              {/* Item 1 */}
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-2.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-mm-blue mt-2 shrink-0" />
-                  <p className="text-xs font-semibold text-mm-dark leading-relaxed">
-                    Keyword rankings improved for "best chocolate"
-                  </p>
-                </div>
-                <span className="text-[10px] font-medium text-mm-gray whitespace-nowrap mt-0.5">2h ago</span>
-              </div>
-              {/* Item 2 */}
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-2.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-mm-blue mt-2 shrink-0" />
-                  <p className="text-xs font-semibold text-mm-dark leading-relaxed">
-                    New lead captured from website
-                  </p>
-                </div>
-                <span className="text-[10px] font-medium text-mm-gray whitespace-nowrap mt-0.5">3h ago</span>
-              </div>
-              {/* Item 3 */}
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-2.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-mm-blue mt-2 shrink-0" />
-                  <p className="text-xs font-semibold text-mm-dark leading-relaxed">
-                    Blog "Healthy Chocolate Benefits" published
-                  </p>
-                </div>
-                <span className="text-[10px] font-medium text-mm-gray whitespace-nowrap mt-0.5">5h ago</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Quick Actions Card */}
-        <div className="bg-white border border-mm-border rounded-[24px] p-6 shadow-[0_4px_20px_rgba(0,0,0,0.015)]">
-          <h3 className="text-sm font-extrabold text-mm-dark tracking-tight mb-4">
-            Quick Actions
-          </h3>
-          <div className="grid grid-cols-2 gap-3">
-            {/* Action 1 */}
-            <button className="flex flex-col items-center justify-center p-4 bg-mm-subtle/40 hover:bg-mm-subtle/80 active:scale-95 border border-mm-border/30 rounded-2xl transition-all cursor-pointer text-center">
-              <Sparkles className="h-5 w-5 text-mm-dark mb-2" />
-              <span className="text-xs font-extrabold text-mm-dark">Ask AI Assistant</span>
-            </button>
-            {/* Action 2 */}
-            <button className="flex flex-col items-center justify-center p-4 bg-mm-subtle/40 hover:bg-mm-subtle/80 active:scale-95 border border-mm-border/30 rounded-2xl transition-all cursor-pointer text-center">
-              <BarChart3 className="h-5 w-5 text-mm-dark mb-2" />
-              <span className="text-xs font-extrabold text-mm-dark">View Full Report</span>
-            </button>
-            {/* Action 3 */}
-            <button className="flex flex-col items-center justify-center p-4 bg-mm-subtle/40 hover:bg-mm-subtle/80 active:scale-95 border border-mm-border/30 rounded-2xl transition-all cursor-pointer text-center">
-              <PlusCircle className="h-5 w-5 text-mm-dark mb-2" />
-              <span className="text-xs font-extrabold text-mm-dark">Create New Project</span>
-            </button>
-            {/* Action 4 */}
-            <button className="flex flex-col items-center justify-center p-4 bg-mm-subtle/40 hover:bg-mm-subtle/80 active:scale-95 border border-mm-border/30 rounded-2xl transition-all cursor-pointer text-center">
-              <Upload className="h-5 w-5 text-mm-dark mb-2" />
-              <span className="text-xs font-extrabold text-mm-dark">Upload Files</span>
-            </button>
-          </div>
-        </div>
+        <button className="w-full lg:w-auto inline-flex items-center justify-center gap-2 bg-mm-orange hover:opacity-95 text-white px-6 py-3 rounded-xl text-sm font-bold shadow-sm transition-all active:scale-95 cursor-pointer shrink-0">
+          View Plan Details
+          <ArrowRight className="h-4 w-4" />
+        </button>
       </div>
     </div>
   );

@@ -1,7 +1,14 @@
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 
+// Configuration for playing video/gif:
+// - "onhover": video starts playing when the card is hovered, and pauses/resets when unhovered
+// - "auto": video autoplays on load and loops continuously
+const VIDEO_PLAY_MODE: "onhover" | "auto" = "onhover";
+
 interface FeatureItem {
-  img: string;
+  img?: string;
+  video?: string;
   title: string;
   body: string;
   narrow?: boolean;
@@ -10,25 +17,29 @@ interface FeatureItem {
 const ROWS: [FeatureItem, FeatureItem][] = [
   [
     {
-      img: "/images/seo.png",
+      // img: "/images/seo.png",
+      video: "/videos/seo.mp4",
       title: "SEO built-in from day one",
       body: "Reach more people without paying for every click. Smart SEO helps your business generate long-term traffic and consistent inquiries.",
       narrow: true,
     },
     {
-      img: "/images/Website.png",
+      // img: "/images/Website.png",
+      video: "/videos/website.mp4",
       title: "Websites - Designed to Grow",
       body: "Build a professional website that earns trust, generates leads, and becomes the foundation of your digital presence.",
     },
   ],
   [
     {
-      img: "/images/posts_reels.png",
+      // img: "/images/posts_reels.png",
+      video:"/videos/content_creation.mp4",
       title: "Content Creation (Reels & Posts)",
       body: "Consistent content keeps your business in front of customers. We create social media content that informs, engages, and converts.  ",
     },
     {
-      img: "/images/business_profile.png",
+      // img: "/images/business_profile.png",
+      video: "/videos/Google_business.mp4",
       title: "Google Business Profile - Build Instant Trust ",
       body: "Strengthen your online credibility with a complete and optimized business profile across Major platforms.",
       narrow: true,
@@ -36,25 +47,29 @@ const ROWS: [FeatureItem, FeatureItem][] = [
   ],
   [
     {
-      img: "/images/marketing.png",
+      // img: "/images/marketing.png",
+      video: "/videos/optimisation.mp4",
       title: "Social Media Optimization",
       body: "Grow your brand with optimized social profiles, engaging content, and strategies that attract the right audience.",
       narrow: true,
     },
     {
-      img: "/images/VoiceBot.png",
+      // img: "/images/VoiceBot.png",
+      video: "/videos/chatbot.mp4",
       title: "Chat & Voice Bot - Your Business Never Sleeps ",
       body: "Provide 24/7 voice support, qualify leads, and book appointments automatically through AI-powered voice technology.",
     },
   ],
   [
     {
-      img: "/images/onground.png",
+      // img: "/images/onground.png",
+      video: "/videos/ongroundshoot.mp4",
       title: "On-Ground Shoot - Professional Visual Storytelling",
       body: "Create premium-quality visuals that reflect your brand and connect with your audience.",
     },
     {
-      img: "/images/3d-Images.png",
+      // img: "/images/3d-Images.png",
+      video: "/videos/3d_website.mp4",
       title: "3D  WEBSITES-Experiences That Impress  ",
       body: "Create immersive 3D experiences that make your business unforgettable and keep visitors engaged.",
       narrow: true,
@@ -64,11 +79,34 @@ const ROWS: [FeatureItem, FeatureItem][] = [
 
 function FeatureCard({
   img,
+  video,
   title,
   body,
   narrow,
   delay = 0,
 }: FeatureItem & { delay?: number }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isHovered, setIsHovered] = useState(false);
+
+  useEffect(() => {
+    if (!videoRef.current || !video) return;
+
+    if (VIDEO_PLAY_MODE === "auto") {
+      videoRef.current.play().catch((err) => {
+        console.warn("Video autoplay was interrupted or failed:", err);
+      });
+    } else if (VIDEO_PLAY_MODE === "onhover") {
+      if (isHovered) {
+        videoRef.current.play().catch((err) => {
+          console.warn("Video play was interrupted or failed:", err);
+        });
+      } else {
+        videoRef.current.pause();
+        videoRef.current.currentTime = 0;
+      }
+    }
+  }, [isHovered, video]);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 24 }}
@@ -76,6 +114,8 @@ function FeatureCard({
       viewport={{ once: true, margin: "-40px" }}
       transition={{ duration: 0.55, delay }}
       whileHover={{ y: -6, boxShadow: "0 20px 60px rgba(0,0,0,0.12)" }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       className={`group overflow-hidden rounded-2xl ${narrow ? "flex-5" : "flex-7"}`}
       style={{
         background: "#F0F2F5",
@@ -84,15 +124,28 @@ function FeatureCard({
       }}
     >
       <div className="overflow-hidden">
-        <img
-          src={img}
-          alt={title}
-          loading="lazy"
-          className="w-full h-auto block object-cover transition-transform duration-500 group-hover:scale-[1.04]"
-          onError={(e) => {
-            (e.currentTarget as HTMLImageElement).style.opacity = "0.3";
-          }}
-        />
+        {video ? (
+          <video
+            ref={videoRef}
+            src={video}
+            muted
+            loop
+            playsInline
+            preload="auto"
+            autoPlay={VIDEO_PLAY_MODE === "auto"}
+            className="w-full h-auto block object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+          />
+        ) : (
+          <img
+            src={img}
+            alt={title}
+            loading="lazy"
+            className="w-full h-auto block object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).style.opacity = "0.3";
+            }}
+          />
+        )}
       </div>
       <div className="p-5 sm:p-7">
         <h3
@@ -119,6 +172,28 @@ function FeatureCard({
 }
 
 export function MymindFeatures() {
+  const emailVideoRef = useRef<HTMLVideoElement>(null);
+  const [isEmailHovered, setIsEmailHovered] = useState(false);
+
+  useEffect(() => {
+    if (!emailVideoRef.current) return;
+
+    if (VIDEO_PLAY_MODE === "auto") {
+      emailVideoRef.current.play().catch((err) => {
+        console.warn("Email video autoplay failed:", err);
+      });
+    } else if (VIDEO_PLAY_MODE === "onhover") {
+      if (isEmailHovered) {
+        emailVideoRef.current.play().catch((err) => {
+          console.warn("Email video play was interrupted or failed:", err);
+        });
+      } else {
+        emailVideoRef.current.pause();
+        emailVideoRef.current.currentTime = 0;
+      }
+    }
+  }, [isEmailHovered]);
+
   return (
     <section
       className="w-full overflow-x-hidden py-20 md:py-28"
@@ -173,19 +248,22 @@ export function MymindFeatures() {
           viewport={{ once: true, margin: "-40px" }}
           transition={{ duration: 0.6 }}
           whileHover={{ scale: 1.01 }}
-          className="mb-5 overflow-x-hidden overflow-hidden rounded-2xl"
+          onMouseEnter={() => setIsEmailHovered(true)}
+          onMouseLeave={() => setIsEmailHovered(false)}
+          className="group mb-5 overflow-x-hidden overflow-hidden rounded-2xl"
           style={{ background: "#24272D" }}
         >
           <div className="relative overflow-hidden" style={{ minHeight: 280 }}>
-            <img
-              src="/images/email_1.png"
-              alt="theopenai on mobile"
-              loading="lazy"
-              className="absolute right-0 top-0 h-full w-auto object-cover object-right opacity-20 sm:opacity-100"
+            <video
+              ref={emailVideoRef}
+              src="/videos/Email_Marketing.mp4"
+              muted
+              loop
+              playsInline
+              preload="auto"
+              autoPlay={VIDEO_PLAY_MODE === "auto"}
+              className="absolute right-0 top-0 h-full w-auto object-cover object-right opacity-20 sm:opacity-100 transition-transform duration-500 group-hover:scale-[1.02]"
               style={{ maxWidth: "40%" }}
-              onError={(e) => {
-                (e.currentTarget as HTMLImageElement).style.display = "none";
-              }}
             />
             <div
               className="relative z-10 flex flex-col justify-center p-8 sm:p-10"

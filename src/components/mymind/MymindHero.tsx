@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { useLightbox } from "./LightboxContext";
 import { MymindIntroVideo } from "./MymindIntroVideo";
+import { Link } from "@tanstack/react-router";
 
 const KEYWORD_PILLS = [
   { label: "website", color: "#FF5924", textColor: "#FF5924" },
@@ -41,7 +42,7 @@ export function MymindHero() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.1 }}
             >
-              AI finds the problem
+              Affordable Digital growth,
             </motion.span>
           </div>
           <div style={{ overflow: "hidden" }}>
@@ -51,7 +52,7 @@ export function MymindHero() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.25 }}
             >
-              Experts deliver the solution
+              Built for your Business
             </motion.span>
           </div>
         </h1>
@@ -131,8 +132,7 @@ export function MymindHero() {
           className="flex flex-wrap items-center justify-center gap-2 sm:gap-5"
           style={{ willChange: "transform, opacity" }}
         >
-          <motion.a
-            href="#"
+          <motion.div
             whileHover={{
               scale: 1.05,
               boxShadow: "0 8px 30px rgba(255,89,36,0.35)",
@@ -140,8 +140,8 @@ export function MymindHero() {
             className="flex items-center gap-2 rounded-full px-7 py-3 text-sm font-bold text-white"
             style={{ background: "#FF5924" }}
           >
-            Get My Free Draft
-          </motion.a>
+            <Link to="/assessment">Get My Free Draft</Link>
+          </motion.div>
         </motion.div>
       </div>
 

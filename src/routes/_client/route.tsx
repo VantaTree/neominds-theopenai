@@ -6,7 +6,9 @@ import {
   useNavigate,
   redirect,
 } from "@tanstack/react-router";
-import ClientAside from "@/components/client/ClientAside";
+import ClientDesktopNav from "../../components/client/ClientDesktopNav";
+import ClientMobileNav from "../../components/client/ClientMobileNav";
+import ClientBottomLinks from "../../components/client/ClientBottomLinks";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, type User } from "firebase/auth";
 
@@ -91,60 +93,34 @@ function PageTransitionWrapper({ children }: { children: React.ReactNode }) {
 }
 
 function RouteComponent() {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [initialized, setInitialized] = useState(false);
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  useEffect(() => {
-    // Check initial auth state synchronously first if possible
-    if (auth && auth.currentUser) {
-      setCurrentUser(auth.currentUser);
-      setInitialized(true);
-    }
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
-      setCurrentUser(u);
-      setInitialized(true);
-    });
-    return unsubscribe;
-  }, []);
-
-  useEffect(() => {
-    // Only redirect if auth has finished checking and no user is found
-    if (initialized && !currentUser) {
-      navigate({
-        to: "/login",
-        search: {
-          redirect: location.href,
-        },
-      });
-    }
-  }, [initialized, currentUser, navigate, location.href]);
-
-  if (typeof window === "undefined" || !initialized || !currentUser) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-[#F9FAFC]">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-3 border-mm-orange/20 border-t-mm-orange rounded-full animate-spin"></div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="flex min-h-screen bg-white text-mm-dark font-sans flex-col md:flex-row">
       {/* Responsive Sidebar & Mobile Header Bar */}
       <ClientAside />
 
       {/* Main Viewport Panel */}
-      <div className="flex-1 flex flex-col min-w-0 bg-mm-bg-wrap">
+      <div className="flex-1 flex flex-col min-w-0">
         {/* Content Area */}
         <main className="flex-1 overflow-y-auto px-6 py-8 md:px-12 md:py-10">
           <PageTransitionWrapper>
             <Outlet />
           </PageTransitionWrapper>
         </main>
+
+        <ClientBottomLinks />
       </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[#F9FAFC] flex flex-col font-sans">
+      <ClientDesktopNav />
+      <div className="h-15 shrink-0" />
+      <main className="flex-1 w-full flex flex-col">
+        <PageTransitionWrapper>
+          <Outlet />
+        </PageTransitionWrapper>
+      </main>
     </div>
   );
 }
