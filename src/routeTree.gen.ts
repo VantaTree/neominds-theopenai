@@ -19,6 +19,7 @@ import { Route as ClientRouteRouteImport } from './routes/_client/route'
 import { Route as AdminRouteRouteImport } from './routes/_admin/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ClientProjectsRouteImport } from './routes/_client/projects'
+import { Route as ClientProfileRouteImport } from './routes/_client/profile'
 import { Route as ClientDashboardRouteImport } from './routes/_client/dashboard'
 import { Route as AdminAdminIndexRouteImport } from './routes/_admin/admin/index'
 import { Route as AdminAdminUsersRouteImport } from './routes/_admin/admin/users'
@@ -77,6 +78,11 @@ const IndexRoute = IndexRouteImport.update({
 const ClientProjectsRoute = ClientProjectsRouteImport.update({
   id: '/projects',
   path: '/projects',
+  getParentRoute: () => ClientRouteRoute,
+} as any)
+const ClientProfileRoute = ClientProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => ClientRouteRoute,
 } as any)
 const ClientDashboardRoute = ClientDashboardRouteImport.update({
@@ -144,6 +150,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/why': typeof WhyRoute
   '/dashboard': typeof ClientDashboardRoute
+  '/profile': typeof ClientProfileRoute
   '/projects': typeof ClientProjectsRoute
   '/admin/blogs': typeof AdminAdminBlogsRoute
   '/admin/payments': typeof AdminAdminPaymentsRoute
@@ -165,6 +172,7 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/why': typeof WhyRoute
   '/dashboard': typeof ClientDashboardRoute
+  '/profile': typeof ClientProfileRoute
   '/projects': typeof ClientProjectsRoute
   '/admin/blogs': typeof AdminAdminBlogsRoute
   '/admin/payments': typeof AdminAdminPaymentsRoute
@@ -189,6 +197,7 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/why': typeof WhyRoute
   '/_client/dashboard': typeof ClientDashboardRoute
+  '/_client/profile': typeof ClientProfileRoute
   '/_client/projects': typeof ClientProjectsRoute
   '/_admin/admin/blogs': typeof AdminAdminBlogsRoute
   '/_admin/admin/payments': typeof AdminAdminPaymentsRoute
@@ -212,6 +221,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/why'
     | '/dashboard'
+    | '/profile'
     | '/projects'
     | '/admin/blogs'
     | '/admin/payments'
@@ -233,6 +243,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/why'
     | '/dashboard'
+    | '/profile'
     | '/projects'
     | '/admin/blogs'
     | '/admin/payments'
@@ -256,6 +267,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/why'
     | '/_client/dashboard'
+    | '/_client/profile'
     | '/_client/projects'
     | '/_admin/admin/blogs'
     | '/_admin/admin/payments'
@@ -351,6 +363,13 @@ declare module '@tanstack/react-router' {
       path: '/projects'
       fullPath: '/projects'
       preLoaderRoute: typeof ClientProjectsRouteImport
+      parentRoute: typeof ClientRouteRoute
+    }
+    '/_client/profile': {
+      id: '/_client/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ClientProfileRouteImport
       parentRoute: typeof ClientRouteRoute
     }
     '/_client/dashboard': {
@@ -465,11 +484,13 @@ const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(
 
 interface ClientRouteRouteChildren {
   ClientDashboardRoute: typeof ClientDashboardRoute
+  ClientProfileRoute: typeof ClientProfileRoute
   ClientProjectsRoute: typeof ClientProjectsRoute
 }
 
 const ClientRouteRouteChildren: ClientRouteRouteChildren = {
   ClientDashboardRoute: ClientDashboardRoute,
+  ClientProfileRoute: ClientProfileRoute,
   ClientProjectsRoute: ClientProjectsRoute,
 }
 
