@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import AnalyticsCard, { CardData, MOCK_DATA, THEME_STYLES, getScaledData } from "./AnalyticsCard";
 import BusinessTaskCard from "./BusinessTaskCard";
 import UpgradeCard from "./UpgradeCard";
@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 export default function ClientDashboardMobile() {
+  const navigate = useNavigate();
   const [activeCategory, setActiveCategory] = useState<"google" | "website" | "social" | "campaign" | null>(null);
   const [selectedFilters, setSelectedFilters] = useState<Record<string, string>>({
     google: "Last 30 Days",
@@ -86,7 +87,7 @@ export default function ClientDashboardMobile() {
 
   return (
     <div className="min-h-screen bg-[#F9FAFC] flex flex-col font-sans select-none relative pb-20">
-      
+
 
 
       {/* 2. Analytics 2x2 Grid */}
@@ -137,9 +138,8 @@ export default function ClientDashboardMobile() {
                           setSelectedFilters(prev => ({ ...prev, [cat]: opt }));
                           setActiveDropdown(null);
                         }}
-                        className={`w-full text-left px-3.5 py-1.5 text-[10px] font-bold transition-colors cursor-pointer ${
-                          selectedFilters[cat] === opt ? "text-mm-orange bg-mm-orange/5" : "text-mm-gray hover:text-mm-dark"
-                        }`}
+                        className={`w-full text-left px-3.5 py-1.5 text-[10px] font-bold transition-colors cursor-pointer ${selectedFilters[cat] === opt ? "text-mm-orange bg-mm-orange/5" : "text-mm-gray hover:text-mm-dark"
+                          }`}
                       >
                         {opt}
                       </button>
@@ -151,12 +151,11 @@ export default function ClientDashboardMobile() {
               {/* View Analytics Button (Light themed colored background) */}
               <button
                 onClick={() => setActiveCategory(cat)}
-                className={`w-full py-1.5 text-[10px] font-black rounded-xl flex items-center justify-center gap-0.5 transition-colors cursor-pointer ${
-                  cat === "google" ? "bg-blue-50/70 text-blue-600 hover:bg-blue-100/70" :
-                  cat === "website" ? "bg-emerald-50/70 text-[#5CB13E] hover:bg-emerald-100/70" :
-                  cat === "social" ? "bg-pink-50/70 text-[#FF7DD3] hover:bg-pink-100/70" :
-                  "bg-indigo-50/70 text-indigo-600 hover:bg-indigo-100/70"
-                }`}
+                className={`w-full py-1.5 text-[10px] font-black rounded-xl flex items-center justify-center gap-0.5 transition-colors cursor-pointer ${cat === "google" ? "bg-blue-50/70 text-blue-600 hover:bg-blue-100/70" :
+                    cat === "website" ? "bg-emerald-50/70 text-[#5CB13E] hover:bg-emerald-100/70" :
+                      cat === "social" ? "bg-pink-50/70 text-[#FF7DD3] hover:bg-pink-100/70" :
+                        "bg-indigo-50/70 text-indigo-600 hover:bg-indigo-100/70"
+                  }`}
               >
                 <span>View Analytics</span>
               </button>
@@ -168,7 +167,7 @@ export default function ClientDashboardMobile() {
       {/* 3. Horizontal Swipable Progress Cards (Carousel) */}
       <section className="w-full overflow-hidden py-3">
         <div className="w-full flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-none px-4.5">
-          
+
           {/* Swipable Card 1: Website and SEO */}
           <div className="w-[84vw] shrink-0 snap-center">
             <BusinessTaskCard
@@ -183,6 +182,7 @@ export default function ClientDashboardMobile() {
                 title: "Technical SEO Audit",
                 description: "Site speed and mobile usability check"
               }}
+              onViewMore={() => navigate({ to: "/projects", search: { activeCard: "seo" } })}
             />
           </div>
 
@@ -200,6 +200,7 @@ export default function ClientDashboardMobile() {
                 title: "Content Calendar",
                 description: "Planning posts for next month"
               }}
+              onViewMore={() => navigate({ to: "/projects", search: { activeCard: "marketing" } })}
             />
           </div>
 
@@ -234,7 +235,7 @@ export default function ClientDashboardMobile() {
 
           {/* Drawer Container Panel */}
           <div className="bg-white border-t border-mm-border rounded-t-3xl shadow-2xl relative z-10 p-6.5 max-h-[82vh] overflow-y-auto space-y-5 animate-in slide-in-from-bottom duration-300 flex flex-col font-sans">
-            
+
             {/* Header Drag Indicator Bar */}
             <div className="w-10 h-1.5 bg-mm-subtle rounded-full mx-auto -mt-2.5 mb-2.5 shrink-0" />
 

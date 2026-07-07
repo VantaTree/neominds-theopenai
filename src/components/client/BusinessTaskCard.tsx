@@ -12,7 +12,11 @@ interface BusinessTaskCardProps {
   progress?: number;
   currentTask?: TaskDetails;
   upcomingTask?: TaskDetails;
+  upcomingTasks?: TaskDetails[];
   locked?: boolean;
+  onViewMore?: () => void;
+  onClick?: () => void;
+  className?: string;
 }
 
 const CATEGORY_CONFIG = {
@@ -48,14 +52,21 @@ export default function BusinessTaskCard({
   progress = 0,
   currentTask,
   upcomingTask,
-  locked = false
+  upcomingTasks,
+  locked = false,
+  onViewMore,
+  onClick,
+  className = ""
 }: BusinessTaskCardProps) {
   const config = CATEGORY_CONFIG[category];
   const Icon = config.icon;
 
   return (
-    <div className="bg-white border border-mm-border rounded-3xl p-6.5 flex flex-col justify-between min-h-[380px] shadow-[0_8px_30px_rgba(0,0,0,0.015)] select-none hover:shadow-[0_12px_40px_rgba(0,0,0,0.03)] transition-all duration-300 relative">
-      
+    <div
+      onClick={onClick}
+      className={`bg-white border border-mm-border rounded-3xl p-6.5 flex flex-col justify-between min-h-[380px] shadow-[0_8px_30px_rgba(0,0,0,0.015)] select-none hover:shadow-[0_12px_40px_rgba(0,0,0,0.03)] transition-all duration-300 relative ${onClick ? "cursor-pointer" : ""} ${className}`}
+    >
+
       {/* Blurred Card Content Wrapper when Locked */}
       <div className={`flex flex-col justify-between flex-1 ${locked ? "mm-card-blur" : ""}`}>
         {/* Header */}
@@ -66,11 +77,6 @@ export default function BusinessTaskCard({
             </div>
             <h3 className="text-[15px] font-bold text-mm-dark tracking-tight">{name}</h3>
           </div>
-          
-          {/* Three dots menu */}
-          <button className="p-1.5 text-mm-gray hover:text-mm-dark hover:bg-mm-subtle rounded-lg transition-colors cursor-pointer">
-            <MoreHorizontal className="h-4 w-4" />
-          </button>
         </div>
 
         {/* Progress & Tasks details */}
@@ -103,24 +109,49 @@ export default function BusinessTaskCard({
               </div>
             </div>
 
-            {/* Upcoming Task */}
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-[10px] font-extrabold text-mm-gray uppercase tracking-wider">
-                <span className="h-1.5 w-1.5 rounded-full bg-mm-gray/50" />
-                <span>Upcoming Task</span>
+            {/* Upcoming Tasks - supports multiple list items or single fallback */}
+            {upcomingTasks && upcomingTasks.length > 0 ? (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-[10px] font-extrabold text-mm-gray uppercase tracking-wider">
+                  <span className="h-1.5 w-1.5 rounded-full bg-mm-gray/50" />
+                  <span>Upcoming Tasks</span>
+                </div>
+                <div className="pl-3.5 space-y-2.5">
+                  {upcomingTasks.map((task, idx) => (
+                    <div key={idx} className="space-y-0.5 border-l-2 border-mm-subtle pl-2.5">
+                      <p className="text-[12px] font-bold text-mm-dark/85 leading-snug">{task.title}</p>
+                      <p className="text-[10px] text-mm-gray leading-snug">{task.description}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="pl-3.5">
-                <p className="text-[13px] font-bold text-mm-dark/85 leading-snug">{upcomingTask?.title || "CRM Synchronize"}</p>
-                <p className="text-[11px] text-mm-gray mt-0.5 leading-snug truncate">{upcomingTask?.description || "Connect custom workspace sync channels"}</p>
+            ) : (
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 text-[10px] font-extrabold text-mm-gray uppercase tracking-wider">
+                  <span className="h-1.5 w-1.5 rounded-full bg-mm-gray/50" />
+                  <span>Upcoming Task</span>
+                </div>
+                <div className="pl-3.5">
+                  <p className="text-[13px] font-bold text-mm-dark/85 leading-snug">{upcomingTask?.title || "CRM Synchronize"}</p>
+                  <p className="text-[11px] text-mm-gray mt-0.5 leading-snug truncate">{upcomingTask?.description || "Connect custom workspace sync channels"}</p>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
-          {/* View More Link */}
-          <button className={`inline-flex items-center gap-1.5 text-xs font-bold cursor-pointer transition-transform duration-200 hover:translate-x-0.5 pt-2 self-start ${config.accentText}`}>
-            <span>View More</span>
-            <ArrowRight className="h-3.5 w-3.5" />
-          </button>
+          {/* View More Link (Only visible when onViewMore is passed as prop) */}
+          {onViewMore && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onViewMore();
+              }}
+              className={`inline-flex items-center gap-1.5 text-xs font-bold cursor-pointer transition-transform duration-200 hover:translate-x-0.5 pt-2 self-start ${config.accentText}`}
+            >
+              <span>View More</span>
+              <ArrowRight className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -132,7 +163,7 @@ export default function BusinessTaskCard({
               <Lock className="h-4.5 w-4.5 text-mm-orange" />
             </div>
           </div>
-          
+
           <div className="space-y-1 mb-4">
             <h4 className="text-sm font-bold text-mm-dark">Upgrade your plan</h4>
             <p className="text-[11px] text-mm-gray leading-relaxed max-w-[195px] mx-auto">
