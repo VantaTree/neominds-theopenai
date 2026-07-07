@@ -1,9 +1,24 @@
 import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
+import { Home, Folder, Building2, User, LogOut } from "lucide-react";
 import { Home, Folder, Building2, User, LogOut } from "lucide-react";
 
 export default function ClientBottomLinks() {
   const location = useLocation();
+  const [profileOpen, setProfileOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setProfileOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
   const [profileOpen, setProfileOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -34,6 +49,7 @@ export default function ClientBottomLinks() {
       {/* Projects */}
       <Link
         to="/projects"
+        search={{ activeCard: undefined }}
         className={`flex flex-col items-center justify-center space-y-1 cursor-pointer transition-colors ${
           location.pathname === "/projects" ? "text-mm-orange" : "text-mm-gray hover:text-mm-dark"
         }`}
@@ -71,10 +87,21 @@ export default function ClientBottomLinks() {
               <p className="text-xs font-black text-mm-dark truncate">John Doe</p>
             </div>
             
+<<<<<<< HEAD
             <button className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-mm-dark hover:bg-mm-subtle transition-colors text-left cursor-pointer">
               <User className="h-3.5 w-3.5 text-mm-gray" />
               <span>My Profile</span>
             </button>
+=======
+            <Link
+              to="/profile"
+              onClick={() => setProfileOpen(false)}
+              className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-mm-dark hover:bg-mm-subtle transition-colors text-left cursor-pointer"
+            >
+              <User className="h-3.5 w-3.5 text-mm-gray" />
+              <span>My Profile</span>
+            </Link>
+>>>>>>> 835cde46f6cc3e3b796af731da61ff42fead1c25
             
             <button className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-[#FF5924] hover:bg-[#FF5924]/5 transition-colors text-left cursor-pointer">
               <LogOut className="h-3.5 w-3.5 text-[#FF5924]/85" />

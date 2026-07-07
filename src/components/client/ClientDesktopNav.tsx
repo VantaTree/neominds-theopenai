@@ -39,6 +39,7 @@ export default function ClientDesktopNav() {
 
           <Link
             to="/projects"
+            search={{ activeCard: undefined }}
             className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-200"
             activeProps={{ className: "bg-mm-orange/10 text-mm-orange" }}
             inactiveProps={{ className: "text-mm-gray hover:text-mm-dark hover:bg-mm-subtle" }}
@@ -92,10 +93,14 @@ export default function ClientDesktopNav() {
                 <p className="text-sm font-bold text-mm-dark truncate">John Doe</p>
               </div>
               
-              <button className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-mm-dark hover:bg-mm-subtle transition-colors text-left cursor-pointer">
+              <Link
+                to="/profile"
+                onClick={() => setDropdownOpen(false)}
+                className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-mm-dark hover:bg-mm-subtle transition-colors text-left cursor-pointer"
+              >
                 <User className="h-4 w-4 text-mm-gray" />
                 <span>My Profile</span>
-              </button>
+              </Link>
               
               <button className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-mm-red hover:bg-mm-red/5 transition-colors text-left cursor-pointer">
                 <LogOut className="h-4 w-4 text-mm-red/70" />
