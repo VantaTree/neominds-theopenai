@@ -33,20 +33,20 @@ export function AdminLayout({ children }: { children: ReactNode }) {
   const matchRoute = useMatchRoute();
 
   return (
-    <div className="min-h-screen flex bg-background">
+    <div className="min-h-screen flex bg-[var(--color-mm-bg-gray)]">
       {/* Sidebar */}
       <aside
         className="hidden md:flex flex-col w-60 fixed inset-y-0 left-0 z-20"
         style={{
-          background: "var(--color-card)",
-          borderRight: "1px solid var(--color-border)",
+          background: "#ffffff",
+          borderRight: "1px solid var(--color-mm-border)",
         }}
       >
         <div className="px-6 py-6 flex items-center gap-2">
-          <Sparkles size={20} style={{ color: "var(--color-primary)" }} />
+          <Sparkles size={20} style={{ color: "var(--color-mm-orange)" }} />
           <span
             className="font-bold text-lg"
-            style={{ color: "var(--color-heading)" }}
+            style={{ color: "var(--color-mm-dark)" }}
           >
             GrowConsult AI
           </span>
@@ -66,25 +66,25 @@ export function AdminLayout({ children }: { children: ReactNode }) {
                 // exact:true on ALL links → Router never auto-highlights ancestors;
                 // our custom `active` boolean controls all visual state exclusively.
                 activeOptions={{ exact: true, includeSearch: false }}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${!active ? "hover:bg-[var(--color-muted)]" : ""}`}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${!active ? "hover:bg-[var(--color-mm-subtle)]" : ""}`}
                 style={{
                   background: active
-                    ? "var(--color-sidebar-primary)"
+                    ? "var(--color-mm-subtle)"
                     : "transparent",
                   borderLeft: active
-                    ? "3px solid var(--color-sidebar-ring)"
+                    ? "3px solid var(--color-mm-orange)"
                     : "3px solid transparent",
                   color: active
-                    ? "var(--color-sidebar-primary-foreground)"
-                    : "var(--color-sidebar-foreground)",
+                    ? "var(--color-mm-orange)"
+                    : "var(--color-mm-gray)",
                 }}
               >
                 <Icon
                   size={18}
                   style={{
                     color: active
-                      ? "var(--color-sidebar-primary-foreground)"
-                      : "var(--color-sidebar-foreground)",
+                      ? "var(--color-mm-orange)"
+                      : "var(--color-mm-gray)",
                   }}
                 />
                 {item.label}
@@ -94,25 +94,25 @@ export function AdminLayout({ children }: { children: ReactNode }) {
         </nav>
 
         <div
-          className="m-3 p-3 rounded-2xl flex items-center gap-3"
-          style={{ background: "var(--color-card-secondary)" }}
+          className="m-3 p-3 rounded-2xl flex items-center gap-3 border border-mm-border"
+          style={{ background: "var(--color-mm-subtle)" }}
         >
           <div
             className="w-9 h-9 rounded-full flex items-center justify-center text-white font-semibold text-sm"
-            style={{ background: "var(--color-primary)", color: "white" }}
+            style={{ background: "var(--color-mm-orange)", color: "white" }}
           >
             AU
           </div>
           <div className="flex-1 min-w-0">
             <div
               className="text-sm font-semibold truncate"
-              style={{ color: "var(--color-heading)" }}
+              style={{ color: "var(--color-mm-dark)" }}
             >
               Admin User
             </div>
             <div
               className="text-[12px]"
-              style={{ color: "var(--color-subtle)" }}
+              style={{ color: "var(--color-mm-gray)" }}
             >
               Super Admin
             </div>
@@ -129,17 +129,17 @@ export function AdminLayout({ children }: { children: ReactNode }) {
 
 export function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { bg: string; text: string }> = {
-    Completed: { bg: "#E8F5E9", text: "#4CAF50" },
-    Paid: { bg: "#E8F5E9", text: "#4CAF50" },
-    Active: { bg: "#E8F5E9", text: "#4CAF50" },
-    "In Progress": { bg: "#EFF6FF", text: "#3B82F6" },
-    Pending: { bg: "#FFFBEB", text: "#F4B942" },
-    "On Hold": { bg: "#FEF2F2", text: "#EF5350" },
-    Overdue: { bg: "#FEF2F2", text: "#EF5350" },
-    Danger: { bg: "#FEF2F2", text: "#EF5350" },
-    Trial: { bg: "#F8F1E7", text: "#A1887F" },
-    Cancelled: { bg: "#F8F1E7", text: "#A1887F" },
-    Inactive: { bg: "#F8F1E7", text: "#A1887F" },
+    Completed: { bg: "rgba(92, 177, 62, 0.1)", text: "var(--color-mm-green)" },
+    Paid: { bg: "rgba(92, 177, 62, 0.1)", text: "var(--color-mm-green)" },
+    Active: { bg: "rgba(92, 177, 62, 0.1)", text: "var(--color-mm-green)" },
+    "In Progress": { bg: "rgba(59, 130, 246, 0.1)", text: "var(--color-mm-blue)" },
+    Pending: { bg: "rgba(224, 86, 36, 0.1)", text: "var(--color-mm-orange)" },
+    "On Hold": { bg: "rgba(239, 83, 80, 0.1)", text: "var(--color-mm-red)" },
+    Overdue: { bg: "rgba(239, 83, 80, 0.1)", text: "var(--color-mm-red)" },
+    Danger: { bg: "rgba(239, 83, 80, 0.1)", text: "var(--color-mm-red)" },
+    Trial: { bg: "var(--color-mm-subtle)", text: "var(--color-mm-gray)" },
+    Cancelled: { bg: "var(--color-mm-subtle)", text: "var(--color-mm-gray)" },
+    Inactive: { bg: "var(--color-mm-subtle)", text: "var(--color-mm-gray)" },
   };
   const c = map[status] ?? map["Pending"];
   return (
@@ -154,9 +154,9 @@ export function StatusBadge({ status }: { status: string }) {
 
 export function PlanBadge({ plan }: { plan: string }) {
   const map: Record<string, { bg: string; text: string; border?: string }> = {
-    Basic: { bg: "#F8F1E7", text: "#6D4C41", border: "#E8DCC8" },
-    Plus: { bg: "#FFF3D6", text: "#E89D18", border: "#FFD98A" },
-    Growth: { bg: "#EFF6FF", text: "#3B82F6", border: "#BFDBFE" },
+    Basic: { bg: "var(--color-mm-subtle)", text: "var(--color-mm-gray)", border: "var(--color-mm-border)" },
+    Plus: { bg: "rgba(224, 86, 36, 0.1)", text: "var(--color-mm-orange)", border: "rgba(224, 86, 36, 0.2)" },
+    Growth: { bg: "rgba(59, 130, 246, 0.1)", text: "var(--color-mm-blue)", border: "rgba(59, 130, 246, 0.2)" },
   };
   const c = map[plan] ?? map["Basic"];
   return (
@@ -186,8 +186,8 @@ export function Avatar({ name, size = 32 }: { name: string; size?: number }) {
       style={{
         width: size,
         height: size,
-        background: "var(--color-primary)",
-        color: "var(--color-primary-foreground)",
+        background: "var(--color-mm-orange)",
+        color: "#ffffff",
         fontSize: size * 0.4,
       }}
     >
@@ -198,7 +198,7 @@ export function Avatar({ name, size = 32 }: { name: string; size?: number }) {
 
 export function ProgressBar({
   value,
-  color = "var(--color-primary)",
+  color = "var(--color-mm-orange)",
 }: {
   value: number;
   color?: string;
@@ -207,7 +207,7 @@ export function ProgressBar({
     <div className="flex items-center gap-2">
       <div
         className="flex-1 h-2 rounded-full overflow-hidden"
-        style={{ background: "var(--color-card-secondary)" }}
+        style={{ background: "var(--color-mm-subtle)" }}
       >
         <div
           className="h-full rounded-full transition-all"
@@ -216,7 +216,7 @@ export function ProgressBar({
       </div>
       <span
         className="text-xs font-semibold w-10 text-right"
-        style={{ color: "var(--color-title)" }}
+        style={{ color: "var(--color-mm-gray)" }}
       >
         {value}%
       </span>
@@ -234,7 +234,7 @@ export function Card({
   style?: React.CSSProperties;
 }) {
   return (
-    <div className={`card-surface p-6 ${className}`} style={style}>
+    <div className={`bg-white border border-mm-border rounded-[24px] shadow-[0_2px_12px_rgba(0,0,0,0.02)] p-6 ${className}`} style={style}>
       {children}
     </div>
   );

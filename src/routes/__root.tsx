@@ -4,13 +4,25 @@ import {
   createRootRouteWithContext,
   HeadContent,
   Scripts,
+  useRouter,
 } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect } from "react";
 import { LightboxProvider } from "@/components/mymind/LightboxContext";
+import { auth as firebaseAuth, isAuthInitialized, waitUntilAuthInitialized } from "@/lib/firebase";
+import { type User, onAuthStateChanged } from "firebase/auth";
 
 import appCss from "../styles.css?url";
 
-export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
+export interface RouterContext {
+  queryClient: QueryClient;
+  auth: {
+    user: User | null;
+    initialized: boolean;
+    waitUntilInitialized: () => Promise<void>;
+  };
+}
+
+export const Route = createRootRouteWithContext<RouterContext>()({
   head: () => ({
     meta: [
       { charSet: "utf-8" },
@@ -48,6 +60,37 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!firebaseAuth) {
+      router.update({
+        context: {
+          ...router.options.context,
+          auth: {
+            user: null,
+            initialized: true,
+            waitUntilInitialized: () => Promise.resolve(),
+          },
+        },
+      });
+      return;
+    }
+    const unsubscribe = onAuthStateChanged(firebaseAuth, (user) => {
+      router.update({
+        context: {
+          ...router.options.context,
+          auth: {
+            user,
+            initialized: true,
+            waitUntilInitialized: () => Promise.resolve(),
+          },
+        },
+      });
+    });
+    return unsubscribe;
+  }, [router]);
+
   return (
     <QueryClientProvider client={queryClient}>
       <LightboxProvider>

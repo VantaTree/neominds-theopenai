@@ -6,7 +6,8 @@ import { X, Check, Crown, Sparkles } from "lucide-react";
 export const Route = createFileRoute("/_client/projects")({
   validateSearch: (search: Record<string, unknown>) => {
     return {
-      activeCard: typeof search.activeCard === "string" ? search.activeCard : undefined,
+      activeCard:
+        typeof search.activeCard === "string" ? search.activeCard : undefined,
     };
   },
   component: RouteComponent,
@@ -48,30 +49,54 @@ function RouteComponent() {
       progress: 80,
       currentTask: {
         title: "On-Page SEO Optimization",
-        description: "Optimizing meta tags and content"
+        description: "Optimizing meta tags and content",
       },
       upcomingTasks: [
         {
           title: "Technical SEO Audit",
-          description: "Site speed and mobile usability check"
+          description: "Site speed and mobile usability check",
         },
         {
           title: "XML Sitemap & Search Console Setup",
-          description: "Submit sitemap.xml to Google index"
+          description: "Submit sitemap.xml to Google index",
         },
         {
           title: "Structured Schema Integration",
-          description: "Implement JSON-LD structured data"
-        }
+          description: "Implement JSON-LD structured data",
+        },
       ],
       tasks: [
-        { id: "seo-1", title: "Run Initial Keyword Research & Audit", completed: true },
-        { id: "seo-2", title: "Optimize Meta Tags & Header Hierarchy", completed: true },
-        { id: "seo-3", title: "Submit XML Sitemap to Search Console", completed: true },
-        { id: "seo-4", title: "Set Up Image Alt Attributes & Internal Links", completed: true },
-        { id: "seo-5", title: "Execute Mobile Page Speed Optimization", completed: false },
-        { id: "seo-6", title: "Implement JSON-LD Schema Markup", completed: false }
-      ]
+        {
+          id: "seo-1",
+          title: "Run Initial Keyword Research & Audit",
+          completed: true,
+        },
+        {
+          id: "seo-2",
+          title: "Optimize Meta Tags & Header Hierarchy",
+          completed: true,
+        },
+        {
+          id: "seo-3",
+          title: "Submit XML Sitemap to Search Console",
+          completed: true,
+        },
+        {
+          id: "seo-4",
+          title: "Set Up Image Alt Attributes & Internal Links",
+          completed: true,
+        },
+        {
+          id: "seo-5",
+          title: "Execute Mobile Page Speed Optimization",
+          completed: false,
+        },
+        {
+          id: "seo-6",
+          title: "Implement JSON-LD Schema Markup",
+          completed: false,
+        },
+      ],
     },
     {
       id: "marketing",
@@ -80,29 +105,49 @@ function RouteComponent() {
       progress: 60,
       currentTask: {
         title: "Social Media Campaign",
-        description: "Running engagement campaign"
+        description: "Running engagement campaign",
       },
       upcomingTasks: [
         {
           title: "Content Calendar",
-          description: "Planning posts for next month"
+          description: "Planning posts for next month",
         },
         {
           title: "Google Ads Set Up",
-          description: "Launch search campaign target keywords"
+          description: "Launch search campaign target keywords",
         },
         {
           title: "Newsletter Template Blast",
-          description: "Build weekly engagement newsletter layouts"
-        }
+          description: "Build weekly engagement newsletter layouts",
+        },
       ],
       tasks: [
-        { id: "mkt-1", title: "Define Target Customer Demographics", completed: true },
-        { id: "mkt-2", title: "Design Social Media Ad Creatives", completed: true },
-        { id: "mkt-3", title: "Build Email Newsletter Template", completed: true },
-        { id: "mkt-4", title: "Draft Copy for Google Ads Campaign", completed: false },
-        { id: "mkt-5", title: "Publish Monthly Content Calendar", completed: false }
-      ]
+        {
+          id: "mkt-1",
+          title: "Define Target Customer Demographics",
+          completed: true,
+        },
+        {
+          id: "mkt-2",
+          title: "Design Social Media Ad Creatives",
+          completed: true,
+        },
+        {
+          id: "mkt-3",
+          title: "Build Email Newsletter Template",
+          completed: true,
+        },
+        {
+          id: "mkt-4",
+          title: "Draft Copy for Google Ads Campaign",
+          completed: false,
+        },
+        {
+          id: "mkt-5",
+          title: "Publish Monthly Content Calendar",
+          completed: false,
+        },
+      ],
     },
     {
       id: "automation",
@@ -111,29 +156,47 @@ function RouteComponent() {
       progress: 0,
       currentTask: {
         title: "Custom Webhook Trigger",
-        description: "Send data hooks on lead conversions"
+        description: "Send data hooks on lead conversions",
       },
       upcomingTasks: [
         {
           title: "CRM Synchronize",
-          description: "Connect custom workspace sync channels"
+          description: "Connect custom workspace sync channels",
         },
         {
           title: "Slack Real-time Webhooks",
-          description: "Send channel alert triggers on custom events"
-        }
+          description: "Send channel alert triggers on custom events",
+        },
       ],
       locked: true,
       tasks: [
-        { id: "auto-1", title: "Configure Lead Capture Form Webhook", completed: false },
-        { id: "auto-2", title: "Connect CRM Integration & Sync Fields", completed: false },
-        { id: "auto-3", title: "Set Up Automated Follow-up Email Sequence", completed: false },
-        { id: "auto-4", title: "Sync Real-Time Slack Notifications", completed: false }
-      ]
-    }
+        {
+          id: "auto-1",
+          title: "Configure Lead Capture Form Webhook",
+          completed: false,
+        },
+        {
+          id: "auto-2",
+          title: "Connect CRM Integration & Sync Fields",
+          completed: false,
+        },
+        {
+          id: "auto-3",
+          title: "Set Up Automated Follow-up Email Sequence",
+          completed: false,
+        },
+        {
+          id: "auto-4",
+          title: "Sync Real-Time Slack Notifications",
+          completed: false,
+        },
+      ],
+    },
   ]);
 
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
+    null,
+  );
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [highlightedCard, setHighlightedCard] = useState<string | null>(null);
 
@@ -149,7 +212,9 @@ function RouteComponent() {
 
       // Scroll the highlighted card into view (centered vertically)
       setTimeout(() => {
-        const cardElement = document.getElementById(`project-card-${activeCard}`);
+        const cardElement = document.getElementById(
+          `project-card-${activeCard}`,
+        );
         if (cardElement) {
           cardElement.scrollIntoView({ behavior: "smooth", block: "center" });
         }
@@ -164,7 +229,7 @@ function RouteComponent() {
     }
   }, [activeCard]);
 
-  const selectedProject = projects.find(p => p.id === selectedProjectId);
+  const selectedProject = projects.find((p) => p.id === selectedProjectId);
 
   const handleCloseDetails = () => {
     setSelectedProjectId(null);

@@ -14,10 +14,10 @@ function RouteComponent() {
     const handleResize = () => {
       setIsMobile(window.innerWidth <= 768);
     };
-    
+
     // Initial check
     handleResize();
-    
+
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
