@@ -6,7 +6,8 @@ import { X, Check, Crown, Sparkles } from "lucide-react";
 export const Route = createFileRoute("/_client/projects")({
   validateSearch: (search: Record<string, unknown>) => {
     return {
-      activeCard: typeof search.activeCard === "string" ? search.activeCard : undefined,
+      activeCard:
+        typeof search.activeCard === "string" ? search.activeCard : undefined,
     };
   },
   component: RouteComponent,
@@ -20,141 +21,275 @@ interface TaskItem {
 
 interface TaskDetails {
   title: string;
-  status: "In Progress" | "Pending" | "Completed";
-  statusClass: string;
-  startDate: string;
-  dueDate: string;
-  progress: number;
-  nextUpdateTitle: string;
-  nextUpdateDate: string;
+  description: string;
 }
 
-const initialProjects: Project[] = [
-  {
-    id: 1,
-    title: "Website Development",
-    status: "In Progress",
-    statusClass: "text-[#3B82F6] bg-[#3B82F6]/10",
-    startDate: "May 15, 2024",
-    dueDate: "Jun 15, 2024",
-    progress: 60,
-    nextUpdateTitle: "Homepage design review",
-    nextUpdateDate: "May 26, 2024",
-  },
-  {
-    id: 2,
-    title: "Marketing Campaign",
-    status: "Pending",
-    statusClass: "text-amber-600 bg-amber-500/10",
-    startDate: "May 25, 2024",
-    dueDate: "Jun 25, 2024",
-    progress: 20,
-    nextUpdateTitle: "Campaign strategy finalization",
-    nextUpdateDate: "May 30, 2024",
-  },
-];
+interface ProjectData {
+  id: string;
+  name: string;
+  category: "seo" | "marketing" | "automation";
+  progress: number;
+  currentTask: { title: string; description: string };
+  upcomingTasks: TaskDetails[];
+  tasks: TaskItem[];
+  locked?: boolean;
+}
 
 function RouteComponent() {
+  const { activeCard } = Route.useSearch();
+  const navigate = useNavigate();
+  const carouselRef = useRef<HTMLDivElement>(null);
+
+  // Manage project tasks checklist state
+  const [projects, setProjects] = useState<ProjectData[]>([
+    {
+      id: "seo",
+      name: "Website and SEO",
+      category: "seo",
+      progress: 80,
+      currentTask: {
+        title: "On-Page SEO Optimization",
+        description: "Optimizing meta tags and content",
+      },
+      upcomingTasks: [
+        {
+          title: "Technical SEO Audit",
+          description: "Site speed and mobile usability check",
+        },
+        {
+          title: "XML Sitemap & Search Console Setup",
+          description: "Submit sitemap.xml to Google index",
+        },
+        {
+          title: "Structured Schema Integration",
+          description: "Implement JSON-LD structured data",
+        },
+      ],
+      tasks: [
+        {
+          id: "seo-1",
+          title: "Run Initial Keyword Research & Audit",
+          completed: true,
+        },
+        {
+          id: "seo-2",
+          title: "Optimize Meta Tags & Header Hierarchy",
+          completed: true,
+        },
+        {
+          id: "seo-3",
+          title: "Submit XML Sitemap to Search Console",
+          completed: true,
+        },
+        {
+          id: "seo-4",
+          title: "Set Up Image Alt Attributes & Internal Links",
+          completed: true,
+        },
+        {
+          id: "seo-5",
+          title: "Execute Mobile Page Speed Optimization",
+          completed: false,
+        },
+        {
+          id: "seo-6",
+          title: "Implement JSON-LD Schema Markup",
+          completed: false,
+        },
+      ],
+    },
+    {
+      id: "marketing",
+      name: "Marketing",
+      category: "marketing",
+      progress: 60,
+      currentTask: {
+        title: "Social Media Campaign",
+        description: "Running engagement campaign",
+      },
+      upcomingTasks: [
+        {
+          title: "Content Calendar",
+          description: "Planning posts for next month",
+        },
+        {
+          title: "Google Ads Set Up",
+          description: "Launch search campaign target keywords",
+        },
+        {
+          title: "Newsletter Template Blast",
+          description: "Build weekly engagement newsletter layouts",
+        },
+      ],
+      tasks: [
+        {
+          id: "mkt-1",
+          title: "Define Target Customer Demographics",
+          completed: true,
+        },
+        {
+          id: "mkt-2",
+          title: "Design Social Media Ad Creatives",
+          completed: true,
+        },
+        {
+          id: "mkt-3",
+          title: "Build Email Newsletter Template",
+          completed: true,
+        },
+        {
+          id: "mkt-4",
+          title: "Draft Copy for Google Ads Campaign",
+          completed: false,
+        },
+        {
+          id: "mkt-5",
+          title: "Publish Monthly Content Calendar",
+          completed: false,
+        },
+      ],
+    },
+    {
+      id: "automation",
+      name: "Automation",
+      category: "automation",
+      progress: 0,
+      currentTask: {
+        title: "Custom Webhook Trigger",
+        description: "Send data hooks on lead conversions",
+      },
+      upcomingTasks: [
+        {
+          title: "CRM Synchronize",
+          description: "Connect custom workspace sync channels",
+        },
+        {
+          title: "Slack Real-time Webhooks",
+          description: "Send channel alert triggers on custom events",
+        },
+      ],
+      locked: true,
+      tasks: [
+        {
+          id: "auto-1",
+          title: "Configure Lead Capture Form Webhook",
+          completed: false,
+        },
+        {
+          id: "auto-2",
+          title: "Connect CRM Integration & Sync Fields",
+          completed: false,
+        },
+        {
+          id: "auto-3",
+          title: "Set Up Automated Follow-up Email Sequence",
+          completed: false,
+        },
+        {
+          id: "auto-4",
+          title: "Sync Real-Time Slack Notifications",
+          completed: false,
+        },
+      ],
+    },
+  ]);
+
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
+    null,
+  );
+  const [showUpgrade, setShowUpgrade] = useState(false);
+  const [highlightedCard, setHighlightedCard] = useState<string | null>(null);
+
+  // If redirected with activeCard from dashboard, highlight and open modal
+  useEffect(() => {
+    if (activeCard) {
+      if (activeCard === "automation") {
+        setShowUpgrade(true);
+      } else {
+        setSelectedProjectId(activeCard);
+      }
+      setHighlightedCard(activeCard);
+
+      // Scroll the highlighted card into view (centered vertically)
+      setTimeout(() => {
+        const cardElement = document.getElementById(
+          `project-card-${activeCard}`,
+        );
+        if (cardElement) {
+          cardElement.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 300);
+
+      const timer = setTimeout(() => {
+        setHighlightedCard(null);
+        handleResetActiveCard();
+      }, 500);
+
+      return () => clearTimeout(timer);
+    }
+  }, [activeCard]);
+
+  const selectedProject = projects.find((p) => p.id === selectedProjectId);
+
+  const handleCloseDetails = () => {
+    setSelectedProjectId(null);
+    handleResetActiveCard();
+  };
+
+  const handleCloseUpgrade = () => {
+    setShowUpgrade(false);
+    handleResetActiveCard();
+  };
+
+  // Reset active card in URL query parameters to avoid double triggers
+  const handleResetActiveCard = () => {
+    navigate({
+      to: "/projects",
+      search: { activeCard: undefined },
+    });
+  };
+
   return (
-    <div className="max-w-6xl mx-auto space-y-12 py-4 select-none font-sans text-mm-dark">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-mm-dark tracking-tight">
-            Your Projects
-          </h2>
-          <p className="text-sm text-mm-gray mt-1">
-            Track your growth initiatives
-          </p>
-        </div>
-        <button className="inline-flex items-center gap-2 bg-mm-orange hover:opacity-95 text-white px-4.5 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-all active:scale-95 cursor-pointer">
-          <Plus className="h-4 w-4" />
-          New Project
-        </button>
-      </div>
+    <div className="flex-1 w-full px-4.5 py-6 min-[769px]:px-8 min-[769px]:py-10 space-y-8 min-[769px]:space-y-10 select-none font-sans text-mm-dark relative pb-24">
+      {/* Cards container:
+          On mobile: vertical stack list (flex flex-col gap-6)
+          On desktop: grid with 3 columns (min-[769px]:grid min-[769px]:grid-cols-3) */}
+      <section
+        ref={carouselRef}
+        className="w-full flex flex-col gap-6 min-[769px]:grid min-[769px]:grid-cols-3 min-[769px]:gap-8 py-2 px-1 min-[769px]:px-0"
+      >
+        {projects.map((project) => {
+          const isHighlighted = highlightedCard === project.id;
+          const highlightStyles = isHighlighted
+            ? "ring-[3px] ring-mm-orange ring-offset-2 min-[769px]:ring-offset-4 shadow-[0_0_25px_rgba(255,89,36,0.22)] min-[769px]:shadow-[0_0_35px_rgba(255,89,36,0.25)] scale-[1.01] min-[769px]:scale-[1.02] transition-all duration-300"
+            : "transition-all duration-1000 ease-out ring-0 ring-transparent ring-offset-0 shadow-none";
 
-      {/* Projects Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {projectsDataMapped.map((project) => (
-          <div
-            key={project.id}
-            className="bg-white border border-mm-border rounded-3xl p-6.5 shadow-[0_8px_30px_rgba(0,0,0,0.02)] flex flex-col justify-between space-y-6"
-          >
-            {/* Title & Status Row */}
-            <div className="flex items-center justify-between gap-4">
-              <h3 className="text-xl font-bold text-mm-dark tracking-tight">
-                {project.title}
-              </h3>
-              <span
-                className={`px-3 py-1 rounded-full text-xs font-bold tracking-wide whitespace-nowrap ${project.statusClass}`}
-              >
-                {project.status}
-              </span>
+          return (
+            <div
+              key={project.id}
+              id={`project-card-${project.id}`}
+              className={`w-full shrink-0 rounded-3xl ${highlightStyles}`}
+              onClick={() => {
+                if (project.locked) {
+                  setShowUpgrade(true);
+                } else {
+                  setSelectedProjectId(project.id);
+                }
+              }}
+            >
+              <BusinessTaskCard
+                name={project.name}
+                category={project.category}
+                progress={project.progress}
+                currentTask={project.currentTask}
+                upcomingTasks={project.upcomingTasks}
+                locked={project.locked}
+                className="cursor-pointer h-full"
+              />
             </div>
-
-            {/* Dates Grid */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <span className="text-[11px] font-bold text-mm-gray uppercase tracking-wider block">
-                  Start Date
-                </span>
-                <div className="flex items-center gap-2 text-mm-dark/80">
-                  <Calendar className="h-4 w-4 text-mm-gray shrink-0" />
-                  <span className="text-sm font-semibold">{project.startDate}</span>
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <span className="text-[11px] font-bold text-mm-gray uppercase tracking-wider block">
-                  Due Date
-                </span>
-                <div className="flex items-center gap-2 text-mm-dark/80">
-                  <Calendar className="h-4 w-4 text-mm-gray shrink-0" />
-                  <span className="text-sm font-semibold">{project.dueDate}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Progress Section */}
-            <div className="space-y-2">
-              <div className="flex justify-between items-baseline">
-                <span className="text-[11px] font-bold text-mm-gray uppercase tracking-wider">
-                  Progress
-                </span>
-                <span className="text-xs font-extrabold text-mm-orange">
-                  {project.progress}%
-                </span>
-              </div>
-              {/* Progress Bar Container */}
-              <div className="h-2 w-full bg-mm-subtle rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-mm-orange rounded-full transition-all duration-500"
-                  style={{ width: `${project.progress}%` }}
-                />
-              </div>
-            </div>
-
-            {/* Next Update - Structured as Plain Content Area (No Nested Cards) */}
-            <div className="border-l-2 border-mm-orange/25 pl-4 py-1 space-y-1">
-              <div className="flex items-center gap-2 text-[11px] font-bold text-mm-gray uppercase tracking-wider">
-                <Bell className="h-3.5 w-3.5 text-mm-orange/70" />
-                Next Update
-              </div>
-              <p className="text-sm font-bold text-mm-dark">
-                {project.nextUpdateTitle}
-              </p>
-              <p className="text-xs text-mm-gray">
-                {project.nextUpdateDate}
-              </p>
-            </div>
-
-            {/* Action Details Button */}
-            <button className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-xl border border-mm-border text-sm font-bold text-mm-dark hover:bg-mm-subtle transition-all active:scale-95 cursor-pointer">
-              View Details
-              <ArrowUpRight className="h-4 w-4 text-mm-gray" />
-            </button>
-          </div>
-        ))}
-      </div>
+          );
+        })}
+      </section>
     </div>
   );
 }
