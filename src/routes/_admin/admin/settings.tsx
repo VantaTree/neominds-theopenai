@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Card } from "@/components/admin/shared";
 import { useState, useEffect } from "react";
 import { CreditCard, Check, Settings as SettingsIcon, Bell, User, CheckCircle2, Database, Loader2, AlertTriangle, Wifi } from "lucide-react";
 import {
@@ -123,61 +122,54 @@ function SettingsPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-white border border-[#E8DCC8]">
-          <SettingsIcon size={20} style={{ color: "#E89D18" }} />
+    <div className="space-y-6 font-sans text-mm-dark select-none">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-mm-orange/10">
+          <SettingsIcon size={20} className="text-mm-orange" />
         </div>
-        <h1 className="text-2xl font-bold" style={{ color: "#4E342E" }}>Settings</h1>
+        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-mm-dark">Settings</h1>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-6">
-        <div className="w-full md:w-64 shrink-0 space-y-1">
+      <div className="flex flex-col md:flex-row gap-6 items-start">
+        <div className="w-full md:w-64 shrink-0 space-y-1 bg-white border border-mm-border rounded-[24px] p-3 shadow-[0_4px_20px_rgba(0,0,0,0.01)]">
           {tabs.map(t => (
             <button
               key={t.id}
               onClick={() => setActiveTab(t.id)}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-colors"
-              style={{
-                background: activeTab === t.id ? "#FFF3D6" : "transparent",
-                color: activeTab === t.id ? "#E89D18" : "#8D6E63"
-              }}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                activeTab === t.id ? "bg-mm-orange/10 text-mm-orange font-extrabold" : "text-mm-gray hover:bg-mm-subtle/50"
+              }`}
             >
               <t.icon size={18} /> {t.id}
             </button>
           ))}
         </div>
 
-        <div className="flex-1">
+        <div className="flex-1 w-full">
           {activeTab === "Billing" && (
             <div className="space-y-6">
-              <Card>
-                <h3 className="font-bold text-lg mb-4" style={{ color: "#4E342E" }}>Billing Plan</h3>
+              <div className="bg-white border border-mm-border rounded-[24px] p-6 shadow-[0_4px_20px_rgba(0,0,0,0.015)]">
+                <h3 className="font-extrabold text-sm text-mm-dark mb-4">Billing Plan</h3>
 
-                <div className="flex items-center justify-center gap-3 mb-6">
-                  <span style={{ color: "#4E342E", fontWeight: 600, fontSize: "14px" }}>Monthly</span>
-                  <div
+                <div className="flex items-center justify-center gap-3 mb-6 select-none">
+                  <span className="text-mm-dark font-extrabold text-xs">Monthly</span>
+                  <button 
                     onClick={() => setIsAnnual(!isAnnual)}
-                    style={{
-                      width: "44px", height: "24px", borderRadius: "999px",
-                      background: "#E89D18", cursor: "pointer", position: "relative"
-                    }}
+                    className={`w-11 h-6 rounded-full cursor-pointer relative transition-all ${
+                      isAnnual ? "bg-mm-orange" : "bg-mm-gray/30"
+                    }`}
                   >
-                    <div style={{
-                      width: "20px", height: "20px", background: "white", borderRadius: "50%",
-                      boxShadow: "0 1px 4px rgba(0,0,0,0.15)", position: "absolute", top: "2px",
-                      transform: isAnnual ? "translateX(22px)" : "translateX(2px)",
-                      transition: "transform 300ms ease"
-                    }} />
-                  </div>
-                  <span style={{ color: "#4E342E", fontWeight: 600, fontSize: "14px" }}>Annual pricing</span>
-                  <span style={{
-                    background: "#E8F5E9", color: "#4CAF50", border: "1px solid #4CAF50",
-                    borderRadius: "999px", fontSize: "11px", fontWeight: 700, padding: "2px 10px"
-                  }}>SAVE 20%</span>
+                    <div 
+                      className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all shadow-sm ${
+                        isAnnual ? "left-[22px]" : "left-0.5"
+                      }`} 
+                    />
+                  </button>
+                  <span className="text-mm-dark font-extrabold text-xs">Annual pricing</span>
+                  <span className="bg-mm-green/10 text-mm-green text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full">SAVE 20%</span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                   {[
                     {
                       name: "Basic Plan",
@@ -201,68 +193,65 @@ function SettingsPage() {
                     <div
                       key={plan.name}
                       onClick={() => setBillingPlan(plan.name)}
-                      className="p-5 rounded-2xl cursor-pointer transition-all border-2"
-                      style={{
-                        background: billingPlan === plan.name ? "#FFFDF8" : "#FCF8F1",
-                        borderColor: billingPlan === plan.name ? "#E89D18" : "transparent",
-                        boxShadow: billingPlan === plan.name ? "0 8px 24px rgba(232,157,24,0.15)" : "none"
-                      }}
+                      className={`p-6 rounded-[24px] cursor-pointer transition-all border-2 flex flex-col justify-between ${
+                        billingPlan === plan.name 
+                          ? "bg-white border-mm-orange shadow-[0_8px_30px_rgba(224,86,36,0.08)]" 
+                          : "bg-white border-mm-border hover:border-mm-gray/40 shadow-[0_4px_20px_rgba(0,0,0,0.01)]"
+                      }`}
                     >
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="font-bold text-lg" style={{ color: "#4E342E" }}>{plan.name}</div>
-                        {billingPlan === plan.name && <CheckCircle2 size={20} style={{ color: "#E89D18" }} />}
-                      </div>
-                      <div style={{ color: "#8D6E63", fontSize: "13px", marginBottom: "16px" }}>{plan.tagline}</div>
+                      <div>
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="font-extrabold text-sm text-mm-dark">{plan.name}</div>
+                          {billingPlan === plan.name && <CheckCircle2 size={20} className="text-mm-orange" />}
+                        </div>
+                        <div className="text-mm-gray text-xs mb-4 font-bold leading-normal">{plan.tagline}</div>
 
-                      <div className="mb-4 flex flex-col justify-end" style={{ minHeight: "90px" }}>
-                        {isAnnual ? (
-                          <div style={{ color: "#A1887F", fontSize: "14px", textDecoration: "line-through" }}>
-                            {plan.priceMonthly}
+                        <div className="mb-4 flex flex-col justify-end min-h-[90px]">
+                          {isAnnual ? (
+                            <div className="text-mm-gray/60 text-xs line-through font-bold">
+                              {plan.priceMonthly}
+                            </div>
+                          ) : (
+                            <div className="h-4" />
+                          )}
+                          <div className="flex items-baseline gap-1">
+                            <span className="text-mm-orange font-black text-3xl">
+                              {isAnnual ? plan.priceAnnual : plan.priceMonthly}
+                            </span>
+                            <span className="text-mm-gray text-sm font-bold">/mth</span>
                           </div>
-                        ) : (
-                          <div style={{ height: "20px" }} />
-                        )}
-                        <div style={{ display: "flex", alignItems: "baseline", gap: "4px" }}>
-                          <span style={{ color: "#E89D18", fontWeight: 700, fontSize: "36px" }}>
-                            {isAnnual ? plan.priceAnnual : plan.priceMonthly}
+                          <span className="text-mm-gray/70 text-[9px] font-black tracking-widest mt-1 block">
+                            {isAnnual ? `BILLED ${plan.billedAnnual}/YEAR` : "BILLED MONTHLY"}
                           </span>
-                          <span style={{ color: "#8D6E63", fontSize: "16px" }}>/mth</span>
                         </div>
-                        <div style={{ color: "#A1887F", fontSize: "11px", fontWeight: 600, letterSpacing: "0.05em", marginTop: "4px", display: "block" }}>
-                          {isAnnual ? `BILLED ${plan.billedAnnual}/YEAR` : "BILLED MONTHLY"}
-                        </div>
-                        {isAnnual ? (
-                          <div style={{ color: "#4CAF50", fontSize: "12px", fontWeight: 600, marginTop: "4px" }}>
-                            SAVE 20%
-                          </div>
-                        ) : (
-                          <div style={{ height: "18px" }} />
-                        )}
                       </div>
 
-                      <ul className="space-y-2" style={{ color: "#6D4C41", fontSize: "14px" }}>
+                      <ul className="space-y-2 mt-4 pt-4 border-t border-mm-border/60 text-xs text-mm-gray font-bold">
                         {plan.features.map(f => (
-                          <li key={f} className="flex items-start gap-2.5">
-                            <Check size={16} className="shrink-0 mt-0.5" style={{ color: "#E89D18" }} /> {f}
+                          <li key={f} className="flex items-start gap-2">
+                            <Check size={14} className="shrink-0 mt-0.5 text-mm-orange" /> {f}
                           </li>
                         ))}
                       </ul>
                     </div>
                   ))}
                 </div>
-                <div className="pt-5 border-t flex justify-end" style={{ borderColor: "#E8DCC8" }}>
-                  <button onClick={handleSavePlan} className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors hover:opacity-90" style={{ background: "#E89D18", color: "white" }}>
+                <div className="pt-5 border-t border-mm-border/60 flex justify-end">
+                  <button 
+                    onClick={handleSavePlan} 
+                    className="px-5 py-2.5 rounded-xl text-xs font-extrabold bg-mm-orange hover:bg-mm-orange/95 text-white transition-all cursor-pointer"
+                  >
                     Save Billing Settings
                   </button>
                 </div>
-              </Card>
+              </div>
             </div>
           )}
 
           {activeTab === "Notifications" && (
-            <Card>
-              <h3 className="font-bold text-lg mb-4" style={{ color: "#4E342E" }}>Notification Settings</h3>
-              <p className="text-xs text-[#8D6E63] mb-6">Configure how you receive alerts and updates from the GrowConsult AI platform.</p>
+            <div className="bg-white border border-mm-border rounded-[24px] p-6 shadow-[0_4px_20px_rgba(0,0,0,0.015)]">
+              <h3 className="font-extrabold text-sm text-mm-dark mb-1">Notification Settings</h3>
+              <p className="text-xs text-mm-gray mb-6 font-bold leading-normal">Configure how you receive alerts and updates from the GrowConsult AI platform.</p>
 
               <div className="space-y-6">
                 {[
@@ -271,31 +260,29 @@ function SettingsPage() {
                   { id: "audit", label: "Audit Log Changes", desc: "Notify when administrators change plans or suspend user accounts.", state: auditNotif, setter: setAuditNotif },
                   { id: "weekly", label: "Weekly Performance Digest", desc: "Receive summary of user reports generated by agents.", state: weeklyNotif, setter: setWeeklyNotif }
                 ].map(n => (
-                  <div key={n.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#E8DCC8]/40 last:border-0 last:pb-0">
+                  <div key={n.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-mm-border/60 last:border-0 last:pb-0">
                     <div>
-                      <div className="font-semibold text-sm" style={{ color: "#4E342E" }}>{n.label}</div>
-                      <div className="text-xs mt-0.5" style={{ color: "#8D6E63" }}>{n.desc}</div>
+                      <div className="font-extrabold text-xs text-mm-dark">{n.label}</div>
+                      <div className="text-[11px] text-mm-gray mt-0.5 leading-normal font-bold">{n.desc}</div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 shrink-0">
                       <button
                         onClick={() => n.setter(true)}
-                        className="px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors"
-                        style={{
-                          background: n.state ? "#E89D18" : "#F8F1E7",
-                          color: n.state ? "white" : "#6D4C41",
-                          border: n.state ? "1px solid #E89D18" : "1px solid #E8DCC8"
-                        }}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          n.state 
+                            ? "bg-mm-orange text-white border border-mm-orange" 
+                            : "bg-white text-mm-gray border border-mm-border hover:bg-mm-subtle/50"
+                        }`}
                       >
                         On
                       </button>
                       <button
                         onClick={() => n.setter(false)}
-                        className="px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors"
-                        style={{
-                          background: !n.state ? "#E89D18" : "#F8F1E7",
-                          color: !n.state ? "white" : "#6D4C41",
-                          border: !n.state ? "1px solid #E89D18" : "1px solid #E8DCC8"
-                        }}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          !n.state 
+                            ? "bg-mm-orange text-white border border-mm-orange" 
+                            : "bg-white text-mm-gray border border-mm-border hover:bg-mm-subtle/50"
+                        }`}
                       >
                         Off
                       </button>
@@ -304,25 +291,28 @@ function SettingsPage() {
                 ))}
               </div>
 
-              <div className="pt-6 border-t mt-6 flex justify-end" style={{ borderColor: "#E8DCC8" }}>
-                <button onClick={handleSaveNotifications} className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors hover:opacity-90" style={{ background: "#E89D18", color: "white" }}>
+              <div className="pt-6 border-t border-mm-border/60 mt-6 flex justify-end">
+                <button 
+                  onClick={handleSaveNotifications} 
+                  className="px-5 py-2.5 rounded-xl text-xs font-extrabold bg-mm-orange hover:bg-mm-orange/95 text-white transition-all cursor-pointer"
+                >
                   Save Notifications
                 </button>
               </div>
-            </Card>
+            </div>
           )}
 
           {activeTab === "Database" && (
-            <div className="space-y-5">
+            <div className="space-y-6">
               {/* Step 1: Connection Status */}
-              <Card>
-                <h3 className="font-bold text-base mb-3" style={{ color: "#4E342E" }}>Step 1 — Test Firebase Connection</h3>
+              <div className="bg-white border border-mm-border rounded-[24px] p-6 shadow-[0_4px_20px_rgba(0,0,0,0.015)]">
+                <h3 className="font-extrabold text-sm text-mm-dark mb-3">Step 1 — Test Firebase Connection</h3>
 
-                <div className="flex items-center gap-2 mb-4 px-3 py-2.5 rounded-xl text-xs font-semibold" style={{
-                  background: isFirebaseConfigured ? "#E8F5E9" : "#FEF2F2",
-                  color: isFirebaseConfigured ? "#4CAF50" : "#EF5350",
-                  border: `1px solid ${isFirebaseConfigured ? "#4CAF50" : "#EF5350"}`
-                }}>
+                <div className={`flex items-center gap-2 mb-4 px-3 py-2.5 rounded-xl text-xs font-bold border ${
+                  isFirebaseConfigured 
+                    ? "bg-mm-green/10 text-mm-green border-transparent" 
+                    : "bg-mm-red/10 text-mm-red border-transparent"
+                }`}>
                   {isFirebaseConfigured
                     ? <><CheckCircle2 size={14} /> Server database connection initialized</>
                     : <><AlertTriangle size={14} /> Server database connection error</>}
@@ -333,15 +323,14 @@ function SettingsPage() {
                     <button
                       onClick={handleTestConnection}
                       disabled={testStatus === "testing"}
-                      className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 disabled:opacity-50 mb-4"
-                      style={{ background: "#4E342E", color: "white" }}
+                      className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-extrabold bg-mm-dark hover:bg-mm-dark/95 text-white disabled:opacity-50 transition-all cursor-pointer mb-4"
                     >
                       {testStatus === "testing" ? <Loader2 size={15} className="animate-spin" /> : <Wifi size={15} />}
                       {testStatus === "testing" ? "Testing..." : "Test Firestore Connection"}
                     </button>
 
                     {testStatus === "ok" && (
-                      <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold" style={{ background: "#E8F5E9", color: "#4CAF50", border: "1px solid #4CAF50" }}>
+                      <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl text-xs font-bold bg-mm-green/10 text-mm-green">
                         <CheckCircle2 size={14} className="mt-0.5 shrink-0" />
                         <span>Firestore is connected and writable! Proceed to Step 2 to seed the database.</span>
                       </div>
@@ -349,7 +338,7 @@ function SettingsPage() {
 
                     {testStatus === "fail" && (
                       <div className="space-y-2">
-                        <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold" style={{ background: "#FEF2F2", color: "#EF5350", border: "1px solid #EF5350" }}>
+                        <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl text-xs font-bold bg-mm-red/10 text-mm-red">
                           <AlertTriangle size={14} className="mt-0.5 shrink-0" />
                           <span>{testError}</span>
                         </div>
@@ -357,52 +346,47 @@ function SettingsPage() {
                     )}
                   </>
                 )}
-              </Card>
+              </div>
 
               {/* Step 2: Seed */}
-              <Card>
-                <h3 className="font-bold text-base mb-1" style={{ color: "#4E342E" }}>Step 2 — Seed Collections</h3>
-                <p className="text-xs mb-4" style={{ color: "#8D6E63" }}>
+              <div className="bg-white border border-mm-border rounded-[24px] p-6 shadow-[0_4px_20px_rgba(0,0,0,0.015)]">
+                <h3 className="font-extrabold text-sm text-mm-dark mb-1">Step 2 — Seed Collections</h3>
+                <p className="text-xs text-mm-gray mb-4 font-bold leading-normal">
                   Writes plans, admin config, notifications, and users to Firestore. Run once.
                 </p>
 
                 <button
                   onClick={handleSeedDatabase}
                   disabled={seeding || !isFirebaseConfigured || testStatus !== "ok"}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed mb-4"
-                  style={{ background: "#E89D18", color: "white" }}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-extrabold bg-mm-orange hover:bg-mm-orange/95 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer mb-4"
                 >
                   {seeding ? <Loader2 size={15} className="animate-spin" /> : <Database size={15} />}
                   {seeding ? "Seeding..." : testStatus !== "ok" ? "Test connection first ↑" : "Seed Firebase Now"}
                 </button>
 
                 {seedLog.length > 0 && (
-                  <div className="rounded-xl p-4 font-mono text-xs space-y-1 max-h-64 overflow-y-auto"
-                    style={{ background: "#1C1C1E", color: "#E8E8E8" }}>
+                  <div className="rounded-xl p-4 font-mono text-xs space-y-1 max-h-64 overflow-y-auto bg-mm-dark text-white border border-mm-border">
                     {seedLog.map((line, i) => (
-                      <div key={i} style={{ color: line.startsWith("✓") ? "#4CAF50" : line.startsWith("✗") ? "#EF5350" : line.startsWith("🎉") ? "#E89D18" : "#E8E8E8" }}>
+                      <div key={i} style={{ color: line.startsWith("✓") ? "var(--color-mm-green)" : line.startsWith("✗") ? "var(--color-mm-red)" : line.startsWith("🎉") ? "var(--color-mm-orange)" : "white" }}>
                         {line || "\u00A0"}
                       </div>
                     ))}
                   </div>
                 )}
-              </Card>
+              </div>
             </div>
           )}
 
-
           {activeTab === "General" && (
-            <Card>
-              <div className="py-12 text-center" style={{ color: "#8D6E63" }}>
-                General settings coming soon.
-              </div>
-            </Card>
+            <div className="bg-white border border-mm-border rounded-[24px] p-12 shadow-[0_4px_20px_rgba(0,0,0,0.015)] text-center text-xs text-mm-gray font-bold">
+              General settings coming soon.
+            </div>
           )}
         </div>
       </div>
 
       {toast && (
-        <div className="fixed bottom-6 right-6 z-100 px-5 py-3 rounded-xl shadow-lg transition-all animate-in slide-in-from-bottom-5" style={{ background: "#E8F5E9", border: "1px solid #4CAF50", color: "#4CAF50", fontWeight: 600 }}>
+        <div className="fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl shadow-lg font-bold text-xs bg-mm-green/10 border border-mm-green text-mm-green">
           {toast}
         </div>
       )}

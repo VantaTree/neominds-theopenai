@@ -131,20 +131,20 @@ export default function BlogForm({ initialBlog, onSave, onCancel, isSaving }: Bl
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Header Panel */}
-      <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-[#E8DCC8]/40">
+      <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-mm-border/40">
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={onCancel}
-            className="p-2 hover:bg-[#F8F1E7] rounded-xl transition-colors text-[#6D4C41]"
+            className="p-2 hover:bg-mm-subtle rounded-xl transition-colors text-mm-gray"
           >
             <ArrowLeft size={16} />
           </button>
           <div>
-            <h1 className="text-xl font-bold" style={{ color: "var(--color-heading)" }}>
+            <h1 className="text-xl font-bold" style={{ color: "var(--color-mm-dark)" }}>
               {initialBlog ? "Edit Blog Post" : "Create New Post"}
             </h1>
-            <p className="text-xs text-[#8D6E63]">
+            <p className="text-xs text-mm-gray">
               Write and customize rich posts for GrowConsult AI platform
             </p>
           </div>
@@ -154,7 +154,7 @@ export default function BlogForm({ initialBlog, onSave, onCancel, isSaving }: Bl
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 border border-[#E8DCC8] hover:bg-[#F8F1E7] rounded-xl text-sm font-semibold text-[#6D4C41]"
+            className="px-4 py-2 border border-mm-border hover:bg-mm-subtle rounded-xl text-sm font-semibold text-mm-gray"
           >
             Cancel
           </button>
@@ -162,7 +162,7 @@ export default function BlogForm({ initialBlog, onSave, onCancel, isSaving }: Bl
             type="submit"
             disabled={isSaving}
             className="px-5 py-2 rounded-xl text-sm font-semibold text-white flex items-center gap-2 hover:opacity-90 transition-opacity"
-            style={{ background: "var(--color-primary)" }}
+            style={{ background: "var(--color-mm-orange)" }}
           >
             {isSaving && <Loader2 size={14} className="animate-spin" />}
             {initialBlog ? "Save Changes" : "Publish Post"}
@@ -173,79 +173,79 @@ export default function BlogForm({ initialBlog, onSave, onCancel, isSaving }: Bl
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Editor Fields */}
         <div className="lg:col-span-2 space-y-5">
-          <div className="bg-[#FCF8F1] border border-[#E8DCC8] p-5 rounded-[24px] space-y-4">
+          <div className="bg-white border border-mm-border p-5 rounded-[24px] space-y-4">
             <div>
-              <label className="block text-xs font-bold text-[#8D6E63] uppercase tracking-wider mb-1.5">Post Title*</label>
+              <label className="block text-xs font-bold text-mm-gray uppercase tracking-wider mb-1.5">Post Title*</label>
               <input
                 type="text"
                 placeholder="e.g. Scaling Your Business with AI Strategy"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full text-sm rounded-xl px-4 py-2.5 outline-none bg-white border border-[#E8DCC8] text-[#4E342E]"
-                style={{ borderColor: formErrors.title ? "#EF5350" : undefined }}
+                className="w-full text-sm rounded-xl px-4 py-2.5 outline-none bg-white border border-mm-border text-mm-dark"
+                style={{ borderColor: formErrors.title ? "var(--color-mm-red)" : undefined }}
               />
-              {formErrors.title && <p className="text-xs text-[#EF5350] mt-1">{formErrors.title}</p>}
+              {formErrors.title && <p className="text-xs text-mm-red mt-1">{formErrors.title}</p>}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold text-[#8D6E63] uppercase tracking-wider mb-1.5">URL Slug*</label>
+                <label className="block text-xs font-bold text-mm-gray uppercase tracking-wider mb-1.5">URL Slug*</label>
                 <input
                   type="text"
                   placeholder="auto-generated-slug"
                   value={slug}
                   onChange={(e) => setSlug(e.target.value)}
-                  className="w-full text-sm rounded-xl px-4 py-2.5 outline-none bg-white border border-[#E8DCC8] text-[#4E342E]"
-                  style={{ borderColor: formErrors.slug ? "#EF5350" : undefined }}
+                  className="w-full text-sm rounded-xl px-4 py-2.5 outline-none bg-white border border-mm-border text-mm-dark"
+                  style={{ borderColor: formErrors.slug ? "var(--color-mm-red)" : undefined }}
                 />
-                {formErrors.slug && <p className="text-xs text-[#EF5350] mt-1">{formErrors.slug}</p>}
+                {formErrors.slug && <p className="text-xs text-mm-red mt-1">{formErrors.slug}</p>}
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#8D6E63] uppercase tracking-wider mb-1.5">Author Name</label>
+                <label className="block text-xs font-bold text-mm-gray uppercase tracking-wider mb-1.5">Author Name</label>
                 <input
                   type="text"
                   value={author}
                   onChange={(e) => setAuthor(e.target.value)}
-                  className="w-full text-sm rounded-xl px-4 py-2.5 outline-none bg-white border border-[#E8DCC8] text-[#4E342E]"
+                  className="w-full text-sm rounded-xl px-4 py-2.5 outline-none bg-white border border-mm-border text-mm-dark"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-[#8D6E63] uppercase tracking-wider mb-1.5">Post Summary / Excerpt*</label>
+              <label className="block text-xs font-bold text-mm-gray uppercase tracking-wider mb-1.5">Post Summary / Excerpt*</label>
               <textarea
                 rows={3}
                 placeholder="Write a brief, catchy summary of what this post is about..."
                 value={summary}
                 onChange={(e) => setSummary(e.target.value)}
-                className="w-full text-sm rounded-xl px-4 py-2.5 outline-none bg-white border border-[#E8DCC8] text-[#4E342E] resize-none"
-                style={{ borderColor: formErrors.summary ? "#EF5350" : undefined }}
+                className="w-full text-sm rounded-xl px-4 py-2.5 outline-none bg-white border border-mm-border text-mm-dark resize-none"
+                style={{ borderColor: formErrors.summary ? "var(--color-mm-red)" : undefined }}
               />
-              {formErrors.summary && <p className="text-xs text-[#EF5350] mt-1">{formErrors.summary}</p>}
+              {formErrors.summary && <p className="text-xs text-mm-red mt-1">{formErrors.summary}</p>}
             </div>
           </div>
 
           {/* Premium Rich Text Editor */}
-          <div className="bg-[#FCF8F1] border border-[#E8DCC8] rounded-[24px] overflow-hidden flex flex-col" style={{ minHeight: "400px" }}>
-            <div className="p-3 bg-[#FFFDF8] border-b border-[#E8DCC8] flex flex-wrap gap-1.5 items-center">
-              <button type="button" onClick={() => applyStyle("bold")} className="p-2 hover:bg-[#F8F1E7] rounded-lg transition-colors text-[#6D4C41]" title="Bold"><Bold size={15} /></button>
-              <button type="button" onClick={() => applyStyle("italic")} className="p-2 hover:bg-[#F8F1E7] rounded-lg transition-colors text-[#6D4C41]" title="Italic"><Italic size={15} /></button>
-              <button type="button" onClick={() => applyStyle("underline")} className="p-2 hover:bg-[#F8F1E7] rounded-lg transition-colors text-[#6D4C41]" title="Underline"><Underline size={15} /></button>
-              <div className="w-px h-5 bg-[#E8DCC8] mx-1"></div>
-              <button type="button" onClick={() => applyStyle("formatBlock", "h2")} className="p-2 hover:bg-[#F8F1E7] rounded-lg transition-colors text-[#6D4C41]" title="H2"><Heading1 size={15} /></button>
-              <button type="button" onClick={() => applyStyle("formatBlock", "h3")} className="p-2 hover:bg-[#F8F1E7] rounded-lg transition-colors text-[#6D4C41]" title="H3"><Heading2 size={15} /></button>
-              <div className="w-px h-5 bg-[#E8DCC8] mx-1"></div>
-              <button type="button" onClick={() => applyStyle("insertUnorderedList")} className="p-2 hover:bg-[#F8F1E7] rounded-lg transition-colors text-[#6D4C41]" title="Bullet List"><List size={15} /></button>
-              <button type="button" onClick={() => applyStyle("insertOrderedList")} className="p-2 hover:bg-[#F8F1E7] rounded-lg transition-colors text-[#6D4C41]" title="Numbered List"><ListOrdered size={15} /></button>
-              <div className="w-px h-5 bg-[#E8DCC8] mx-1"></div>
+          <div className="bg-white border border-mm-border rounded-[24px] overflow-hidden flex flex-col" style={{ minHeight: "400px" }}>
+            <div className="p-3 bg-white border-b border-mm-border flex flex-wrap gap-1.5 items-center">
+              <button type="button" onClick={() => applyStyle("bold")} className="p-2 hover:bg-mm-subtle rounded-lg transition-colors text-mm-gray" title="Bold"><Bold size={15} /></button>
+              <button type="button" onClick={() => applyStyle("italic")} className="p-2 hover:bg-mm-subtle rounded-lg transition-colors text-mm-gray" title="Italic"><Italic size={15} /></button>
+              <button type="button" onClick={() => applyStyle("underline")} className="p-2 hover:bg-mm-subtle rounded-lg transition-colors text-mm-gray" title="Underline"><Underline size={15} /></button>
+              <div className="w-px h-5 bg-[var(--color-mm-border)] mx-1"></div>
+              <button type="button" onClick={() => applyStyle("formatBlock", "h2")} className="p-2 hover:bg-mm-subtle rounded-lg transition-colors text-mm-gray" title="H2"><Heading1 size={15} /></button>
+              <button type="button" onClick={() => applyStyle("formatBlock", "h3")} className="p-2 hover:bg-mm-subtle rounded-lg transition-colors text-mm-gray" title="H3"><Heading2 size={15} /></button>
+              <div className="w-px h-5 bg-[var(--color-mm-border)] mx-1"></div>
+              <button type="button" onClick={() => applyStyle("insertUnorderedList")} className="p-2 hover:bg-mm-subtle rounded-lg transition-colors text-mm-gray" title="Bullet List"><List size={15} /></button>
+              <button type="button" onClick={() => applyStyle("insertOrderedList")} className="p-2 hover:bg-mm-subtle rounded-lg transition-colors text-mm-gray" title="Numbered List"><ListOrdered size={15} /></button>
+              <div className="w-px h-5 bg-[var(--color-mm-border)] mx-1"></div>
               <button
                 type="button"
                 onClick={() => {
                   const url = prompt("Enter link URL:");
                   if (url) applyStyle("createLink", url);
                 }}
-                className="p-2 hover:bg-[#F8F1E7] rounded-lg transition-colors text-[#6D4C41]"
+                className="p-2 hover:bg-mm-subtle rounded-lg transition-colors text-mm-gray"
                 title="Insert Link"
               >
                 <Link size={15} />
@@ -257,11 +257,11 @@ export default function BlogForm({ initialBlog, onSave, onCancel, isSaving }: Bl
                 ref={editorRef}
                 contentEditable
                 onInput={handleEditorChange}
-                className="prose max-w-none w-full h-full outline-none text-[#4E342E] text-sm overflow-y-auto"
+                className="prose max-w-none w-full h-full outline-none text-mm-dark text-sm overflow-y-auto"
                 style={{ minHeight: "300px" }}
                 data-placeholder="Write your article content here..."
               />
-              {formErrors.content && <p className="text-xs text-[#EF5350] mt-1">{formErrors.content}</p>}
+              {formErrors.content && <p className="text-xs text-mm-red mt-1">{formErrors.content}</p>}
             </div>
           </div>
         </div>
@@ -269,11 +269,11 @@ export default function BlogForm({ initialBlog, onSave, onCancel, isSaving }: Bl
         {/* Sidebar Controls */}
         <div className="space-y-5">
           {/* Post Image Upload */}
-          <div className="bg-[#FCF8F1] border border-[#E8DCC8] p-5 rounded-[24px] space-y-4">
-            <label className="block text-xs font-bold text-[#8D6E63] uppercase tracking-wider">Cover Image</label>
+          <div className="bg-white border border-mm-border p-5 rounded-[24px] space-y-4">
+            <label className="block text-xs font-bold text-mm-gray uppercase tracking-wider">Cover Image</label>
             
             {coverImageUrl ? (
-              <div className="relative group rounded-xl overflow-hidden aspect-video border border-[#E8DCC8]">
+              <div className="relative group rounded-xl overflow-hidden aspect-video border border-mm-border">
                 <img src={coverImageUrl} alt="Cover Preview" className="w-full h-full object-cover" />
                 <button
                   type="button"
@@ -284,7 +284,7 @@ export default function BlogForm({ initialBlog, onSave, onCancel, isSaving }: Bl
                 </button>
               </div>
             ) : (
-              <div className="border-2 border-dashed border-[#E8DCC8] hover:border-[#E89D18] transition-colors rounded-xl p-6 text-center cursor-pointer relative bg-white">
+              <div className="border-2 border-dashed border-mm-border hover:border-[var(--color-mm-orange)] transition-colors rounded-xl p-6 text-center cursor-pointer relative bg-white">
                 <input
                   type="file"
                   accept="image/*"
@@ -292,30 +292,30 @@ export default function BlogForm({ initialBlog, onSave, onCancel, isSaving }: Bl
                   className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
                   disabled={isUploading}
                 />
-                <UploadCloud size={24} className="mx-auto text-[#A1887F] mb-2" />
-                <p className="text-xs font-semibold text-[#6D4C41]">
+                <UploadCloud size={24} className="mx-auto text-mm-gray mb-2" />
+                <p className="text-xs font-semibold text-mm-gray">
                   {isUploading ? "Uploading..." : "Click or drag image to upload"}
                 </p>
-                <p className="text-[10px] text-[#A1887F] mt-1">PNG, JPG, or WEBP up to 5MB</p>
+                <p className="text-[10px] text-mm-gray mt-1">PNG, JPG, or WEBP up to 5MB</p>
               </div>
             )}
-            {uploadError && <p className="text-xs text-[#EF5350]">{uploadError}</p>}
+            {uploadError && <p className="text-xs text-mm-red">{uploadError}</p>}
           </div>
 
           {/* Visibility / Status */}
-          <div className="bg-[#FCF8F1] border border-[#E8DCC8] p-5 rounded-[24px] space-y-4">
-            <label className="block text-xs font-bold text-[#8D6E63] uppercase tracking-wider">Publishing Status</label>
+          <div className="bg-white border border-mm-border p-5 rounded-[24px] space-y-4">
+            <label className="block text-xs font-bold text-mm-gray uppercase tracking-wider">Publishing Status</label>
             
-            <div className="flex items-center justify-between pb-3 border-b border-[#E8DCC8]/40">
+            <div className="flex items-center justify-between pb-3 border-b border-mm-border/40">
               <div>
-                <p className="text-xs font-bold text-[#4E342E]">Visible to Clients</p>
-                <p className="text-[11px] text-[#8D6E63]">Make this post public instantly</p>
+                <p className="text-xs font-bold text-mm-dark">Visible to Clients</p>
+                <p className="text-[11px] text-mm-gray">Make this post public instantly</p>
               </div>
               <button
                 type="button"
                 onClick={() => setPublished(!published)}
                 className="w-12 h-6 rounded-full relative transition-colors"
-                style={{ background: published ? "var(--color-primary)" : "#E8DCC8" }}
+                style={{ background: published ? "var(--color-mm-orange)" : "var(--color-mm-border)" }}
               >
                 <span
                   className="w-4 h-4 bg-white rounded-full absolute top-1 transition-all"
@@ -326,9 +326,9 @@ export default function BlogForm({ initialBlog, onSave, onCancel, isSaving }: Bl
 
             <div className="flex items-center gap-2 p-3.5 rounded-xl text-xs font-medium" 
               style={{ 
-                background: published ? "#E8F5E9" : "#FFF3E0", 
-                color: published ? "#4CAF50" : "#E89D18",
-                border: `1px solid ${published ? "#4CAF50" : "#E89D18"}`
+                background: published ? "rgba(92, 177, 62, 0.1)" : "#FFF3E0", 
+                color: published ? "var(--color-mm-green)" : "var(--color-mm-orange)",
+                border: `1px solid ${published ? "var(--color-mm-green)" : "var(--color-mm-orange)"}`
               }}
             >
               {published ? <CheckCircle2 size={15} /> : <ShieldAlert size={15} />}

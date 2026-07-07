@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Card } from "@/components/admin/shared";
 import { useState, useEffect, useMemo } from "react";
-import { Shield, Search, RefreshCw, SearchX, ChevronDown, Clock } from "lucide-react";
+import { Shield, Search, RefreshCw, SearchX, ChevronDown, Clock, Loader2 } from "lucide-react";
 import type { AuditLog } from "@/lib/schemas";
 import { getAuditLogFn } from "@/lib/server-functions";
 
@@ -11,13 +10,13 @@ export const Route = createFileRoute("/_admin/admin/support")({
 });
 
 const ACTION_COLORS: Record<string, { bg: string; text: string }> = {
-  plan_changed:     { bg: "#E8F5E9", text: "#4CAF50" },
-  user_suspended:   { bg: "#FEF2F2", text: "#EF5350" },
-  user_deleted:     { bg: "#FEF2F2", text: "#EF5350" },
-  report_deleted:   { bg: "#FFF3E0", text: "#E89D18" },
-  report_generated: { bg: "#E3F2FD", text: "#1E88E5" },
-  user_created:     { bg: "#E8F5E9", text: "#4CAF50" },
-  settings_changed: { bg: "#F3E5F5", text: "#8E24AA" },
+  plan_changed:     { bg: "rgba(92, 177, 62, 0.1)", text: "var(--color-mm-green)" },
+  user_suspended:   { bg: "rgba(224, 86, 36, 0.1)", text: "var(--color-mm-red)" },
+  user_deleted:     { bg: "rgba(224, 86, 36, 0.1)", text: "var(--color-mm-red)" },
+  report_deleted:   { bg: "rgba(224, 86, 36, 0.1)", text: "var(--color-mm-red)" },
+  report_generated: { bg: "rgba(133, 211, 255, 0.1)", text: "var(--color-mm-blue)" },
+  user_created:     { bg: "rgba(92, 177, 62, 0.1)", text: "var(--color-mm-green)" },
+  settings_changed: { bg: "rgba(168, 85, 247, 0.1)", text: "var(--color-mm-plans-accent)" },
 };
 
 function AuditLogPage() {
@@ -29,8 +28,12 @@ function AuditLogPage() {
 
   const loadLogs = async () => {
     setIsLoading(true);
-    const data = await getAuditLogFn({ data: 200 });
-    setLogs(data);
+    try {
+      const data = await getAuditLogFn({ data: 200 });
+      setLogs(data);
+    } catch (e) {
+      console.error(e);
+    }
     setIsLoading(false);
   };
 
@@ -60,119 +63,138 @@ function AuditLogPage() {
     action.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 font-sans text-mm-dark select-none">
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "#FFF3D6", border: "1px solid #E8DCC8" }}>
-          <Shield size={20} style={{ color: "#E89D18" }} />
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-mm-orange/10">
+          <Shield size={20} className="text-mm-orange" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: "#4E342E" }}>Audit Log</h1>
-          <p className="text-sm" style={{ color: "#8D6E63" }}>Track all admin actions and system events across the platform</p>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-mm-dark">Audit Log</h1>
+          <p className="text-sm text-mm-gray mt-1">Track all admin actions and system events across the platform</p>
         </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: "Total Events", value: logs.length, color: "#E89D18" },
-          { label: "Today", value: logs.filter(l => new Date(l.timestamp).toDateString() === new Date().toDateString()).length, color: "#4CAF50" },
-          { label: "Plan Changes", value: logs.filter(l => l.action === "plan_changed").length, color: "#1E88E5" },
-          { label: "Deletions", value: logs.filter(l => l.action.includes("deleted")).length, color: "#EF5350" },
+          { label: "Total Events", value: logs.length, color: "var(--color-mm-orange)" },
+          { label: "Today", value: logs.filter(l => new Date(l.timestamp).toDateString() === new Date().toDateString()).length, color: "var(--color-mm-green)" },
+          { label: "Plan Changes", value: logs.filter(l => l.action === "plan_changed").length, color: "var(--color-mm-blue)" },
+          { label: "Deletions", value: logs.filter(l => l.action.includes("deleted")).length, color: "var(--color-mm-red)" },
         ].map(s => (
-          <Card key={s.label} className="!p-4">
-            <div className="text-xs font-semibold mb-1" style={{ color: "#8D6E63" }}>{s.label}</div>
-            <div className="text-2xl font-bold" style={{ color: s.color }}>{s.value}</div>
-          </Card>
+          <div key={s.label} className="bg-white border border-mm-border rounded-[24px] p-5 shadow-[0_4px_20px_rgba(0,0,0,0.015)] flex flex-col justify-between select-none">
+            <div className="text-xs font-bold text-mm-gray uppercase tracking-wider truncate">{s.label}</div>
+            <div className="text-2xl font-black text-mm-dark tracking-tight mt-2 truncate" style={{ color: s.color }}>{s.value}</div>
+          </div>
         ))}
       </div>
 
-      <div className="flex flex-wrap gap-3 items-center">
+      <div className="flex flex-wrap gap-3 items-center relative">
         <div className="relative flex-1 min-w-[220px] max-w-xs">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "#8D6E63" }} />
-          <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search by user, action…"
-            className="w-full pl-9 pr-3 py-2.5 rounded-xl text-sm outline-none"
-            style={{ background: "#FDF6ED", border: "1.5px solid #E8DCC8", color: "#4E342E" }} />
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-mm-gray" />
+          <input 
+            value={searchQuery} 
+            onChange={e => setSearchQuery(e.target.value)} 
+            placeholder="Search by user, action…"
+            className="w-full pl-9 pr-3 py-2.5 rounded-xl text-xs outline-none bg-white border border-mm-border text-mm-dark focus:border-mm-orange transition-all font-bold placeholder:text-mm-gray/50" 
+          />
         </div>
         <div className="relative">
-          <button onClick={() => setIsActionOpen(v => !v)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold"
-            style={{ background: "#FDF6ED", border: "1.5px solid #E8DCC8", color: "#4E342E" }}>
-            {actionFilter === "All Actions" ? "All Actions" : formatAction(actionFilter)} <ChevronDown size={14} />
+          <button 
+            onClick={() => setIsActionOpen(v => !v)} 
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold border border-mm-border bg-white text-mm-dark hover:bg-mm-subtle/50 transition-all cursor-pointer"
+          >
+            {actionFilter === "All Actions" ? "All Actions" : formatAction(actionFilter)} <ChevronDown size={14} className="text-mm-gray" />
           </button>
           {isActionOpen && (
-            <div className="absolute top-full mt-1 left-0 z-50 rounded-xl shadow-xl overflow-hidden"
-              style={{ background: "#FDF6ED", border: "1px solid #E8DCC8", minWidth: "180px", maxHeight: "240px", overflowY: "auto" }}>
-              {actionTypes.map(a => (
-                <button key={a} onClick={() => { setActionFilter(a); setIsActionOpen(false); }}
-                  className="w-full text-left px-4 py-2.5 text-sm hover:bg-[#FFF3D6] transition-colors"
-                  style={{ color: actionFilter === a ? "#E89D18" : "#4E342E", fontWeight: actionFilter === a ? 700 : 400 }}>
-                  {a === "All Actions" ? a : formatAction(a)}
-                </button>
-              ))}
-            </div>
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setIsActionOpen(false)} />
+              <div className="absolute top-full mt-2 left-0 z-50 rounded-xl shadow-xl bg-white border border-mm-border min-w-[180px] max-h-[240px] overflow-y-auto">
+                {actionTypes.map(a => (
+                  <button 
+                    key={a} 
+                    onClick={() => { setActionFilter(a); setIsActionOpen(false); }}
+                    className={`w-full text-left px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer ${
+                      actionFilter === a ? "bg-mm-orange/10 text-mm-orange" : "hover:bg-mm-subtle/40 text-mm-dark"
+                    }`}
+                  >
+                    {a === "All Actions" ? a : formatAction(a)}
+                  </button>
+                ))}
+              </div>
+            </>
           )}
         </div>
-        <button onClick={loadLogs} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold hover:opacity-80"
-          style={{ background: "#FFF3D6", border: "1px solid #E8DCC8", color: "#E89D18" }}>
+        <button 
+          onClick={loadLogs} 
+          className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-extrabold bg-mm-orange/10 hover:bg-mm-orange/15 text-mm-orange transition-all cursor-pointer"
+        >
           <RefreshCw size={14} /> Refresh
         </button>
       </div>
 
-      <Card className="!p-0 overflow-hidden">
+      <div className="bg-white border border-mm-border rounded-[24px] shadow-[0_4px_20px_rgba(0,0,0,0.015)] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr style={{ background: "var(--color-card-secondary)" }}>
+              <tr className="border-b border-mm-border/60 bg-mm-subtle/20 select-none">
                 {["Timestamp", "User", "Action", "Details"].map(h => (
-                  <th key={h} className="text-left font-semibold px-4 py-3 whitespace-nowrap" style={{ color: "var(--color-title)" }}>{h}</th>
+                  <th key={h} className="text-left font-extrabold px-4 py-3 whitespace-nowrap text-xs text-mm-dark uppercase tracking-wider">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan={4} className="px-4 py-16 text-center">
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="w-6 h-6 border-2 border-[#E89D18] border-t-transparent rounded-full animate-spin"></div>
-                    <span className="text-xs font-semibold" style={{ color: "#8D6E63" }}>Loading audit log...</span>
-                  </div>
-                </td></tr>
+                <tr>
+                  <td colSpan={4} className="px-4 py-16 text-center">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <Loader2 className="animate-spin text-mm-orange" size={24} />
+                      <span className="text-xs font-bold text-mm-gray">Loading audit log...</span>
+                    </div>
+                  </td>
+                </tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={4} className="px-4 py-16 text-center">
-                  <div className="flex flex-col items-center gap-2">
-                    <SearchX size={28} style={{ color: "#D7C3A8" }} />
-                    <span className="text-sm font-semibold" style={{ color: "#8D6E63" }}>No audit events found</span>
-                  </div>
-                </td></tr>
-              ) : filtered.map(log => {
-                const colors = ACTION_COLORS[log.action] || { bg: "#F8F1E7", text: "#8D6E63" };
-                return (
-                  <tr key={log.id} style={{ borderTop: "1px solid var(--color-border)" }} className="hover:[background:var(--color-row-hover)] transition-colors">
-                    <td className="px-4 py-3 text-xs whitespace-nowrap" style={{ color: "#8D6E63" }}>
-                      <div className="flex items-center gap-1.5">
-                        <Clock size={11} style={{ color: "#D7C3A8" }} />
-                        {formatDate(log.timestamp)}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="font-semibold text-sm" style={{ color: "#4E342E" }}>{log.userName || "Admin"}</div>
-                      <div className="text-xs font-mono" style={{ color: "#8D6E63" }}>{log.uid}</div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="px-2.5 py-1 rounded-full text-xs font-semibold"
-                        style={{ background: colors.bg, color: colors.text }}>
-                        {formatAction(log.action)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-xs max-w-[320px]">
-                      <code className="block truncate rounded px-2 py-1" style={{ background: "#F8F1E7", color: "#6D4C41" }}>
-                        {JSON.stringify(log.payload)}
-                      </code>
-                    </td>
-                  </tr>
-                );
-              })}
+                <tr>
+                  <td colSpan={4} className="px-4 py-16 text-center">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <SearchX size={28} className="text-mm-gray/60" />
+                      <span className="text-xs font-bold text-mm-gray">No audit events found</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filtered.map(log => {
+                  const colors = ACTION_COLORS[log.action] || { bg: "rgba(109, 76, 65, 0.1)", text: "var(--color-mm-gray)" };
+                  return (
+                    <tr key={log.id} className="border-b border-mm-border/40 hover:bg-mm-subtle/10 transition-colors">
+                      <td className="px-4 py-4 text-xs whitespace-nowrap text-mm-gray font-semibold">
+                        <div className="flex items-center gap-1.5">
+                          <Clock size={11} className="text-mm-gray/60" />
+                          {formatDate(log.timestamp)}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="font-extrabold text-xs text-mm-dark">{log.userName || "Admin"}</div>
+                        <div className="text-[10px] font-mono text-mm-gray mt-0.5">{log.uid}</div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider"
+                          style={{ background: colors.bg, color: colors.text }}>
+                          {formatAction(log.action)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 text-xs max-w-[320px]">
+                        <code className="block truncate rounded-xl px-3 py-1.5 bg-mm-subtle/40 border border-mm-border text-mm-dark font-mono text-[10px]">
+                          {JSON.stringify(log.payload)}
+                        </code>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
-      </Card>
+      </div>
     </div>
   );
 }

@@ -61,7 +61,8 @@ function LoginPage() {
       const token = await user.getIdToken();
       
       // Set session cookie for SSR
-      document.cookie = `__session=${token}; path=/; max-age=3600; Secure; SameSite=Lax`;
+      const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+      document.cookie = `__session=${token}; path=/; max-age=3600;${isLocalhost ? "" : " Secure;"} SameSite=Lax`;
 
       // Ensure user document exists in database via server function
       await ensureUserDocumentFn({
@@ -100,7 +101,8 @@ function LoginPage() {
       const token = await user.getIdToken();
 
       // Set session cookie for SSR
-      document.cookie = `__session=${token}; path=/; max-age=3600; Secure; SameSite=Lax`;
+      const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+      document.cookie = `__session=${token}; path=/; max-age=3600;${isLocalhost ? "" : " Secure;"} SameSite=Lax`;
 
       // Ensure user document exists in database via server function
       await ensureUserDocumentFn({

@@ -123,16 +123,16 @@ export default function BlogManagement() {
       {/* Delete Confirmation Modal */}
       {confirmDelete && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 animate-in fade-in duration-200" style={{ background: "rgba(0,0,0,0.3)" }}>
-          <div className="w-full max-w-sm rounded-2xl p-6 space-y-4 shadow-2xl" style={{ background: "#FCF8F1", border: "1px solid #E8DCC8" }}>
-            <h3 className="font-bold text-lg text-[#4E342E]">Delete Post?</h3>
-            <p className="text-sm text-[#8D6E63]">
+          <div className="w-full max-w-sm rounded-2xl p-6 space-y-4 shadow-2xl" style={{ background: "white", border: "1px solid var(--color-mm-border)" }}>
+            <h3 className="font-bold text-lg text-mm-dark">Delete Post?</h3>
+            <p className="text-sm text-mm-gray">
               Are you sure you want to delete post <strong>"{confirmDelete.title}"</strong>? This will permanently delete the post from database.
             </p>
             <div className="flex gap-3 justify-end pt-2">
               <button 
                 onClick={() => setConfirmDelete(null)} 
-                className="px-4 py-2 rounded-xl text-sm font-semibold border border-[#E8DCC8] hover:bg-[#F8F1E7]" 
-                style={{ background: "white", color: "#8D6E63" }}
+                className="px-4 py-2 rounded-xl text-sm font-semibold border border-mm-border hover:bg-mm-subtle" 
+                style={{ background: "white", color: "var(--color-mm-gray)" }}
               >
                 Cancel
               </button>
@@ -140,7 +140,7 @@ export default function BlogManagement() {
                 onClick={handleDeleteConfirm} 
                 disabled={deleteMutation.isPending}
                 className="px-4 py-2 rounded-xl text-sm font-semibold hover:opacity-95 text-white flex items-center gap-1.5" 
-                style={{ background: "#EF5350" }}
+                style={{ background: "var(--color-mm-red)" }}
               >
                 {deleteMutation.isPending && <X size={12} className="animate-spin" />}
                 Delete
@@ -154,9 +154,9 @@ export default function BlogManagement() {
       {toast && (
         <div className="fixed bottom-6 right-6 z-[100] px-5 py-3 rounded-xl shadow-lg transition-all animate-in slide-in-from-bottom-5" 
           style={{ 
-            background: toast.startsWith("✗") ? "#FEF2F2" : "#E8F5E9", 
-            border: `1px solid ${toast.startsWith("✗") ? "#EF5350" : "#4CAF50"}`, 
-            color: toast.startsWith("✗") ? "#EF5350" : "#4CAF50", 
+            background: toast.startsWith("✗") ? "rgba(239, 83, 80, 0.1)" : "rgba(92, 177, 62, 0.1)", 
+            border: `1px solid ${toast.startsWith("✗") ? "var(--color-mm-red)" : "var(--color-mm-green)"}`, 
+            color: toast.startsWith("✗") ? "var(--color-mm-red)" : "var(--color-mm-green)", 
             fontWeight: 600 
           }}
         >

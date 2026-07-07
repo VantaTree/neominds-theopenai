@@ -10,14 +10,36 @@ export const TimestampSchema = z.union([
   z.date(),
   z.number().transform((val) => new Date(val)),
   z.string().transform((val) => new Date(val)),
-  z.object({
-    seconds: z.number(),
-    nanoseconds: z.number(),
-  }).transform((val) => new Date(val.seconds * 1000)),
+  z
+    .object({
+      seconds: z.number(),
+      nanoseconds: z.number(),
+    })
+    .transform((val) => new Date(val.seconds * 1000)),
 ]);
 
-// Default auto-populated date field builder
-const DateField = TimestampSchema.default(() => new Date());
+// Default auto-populated date field builder (coerces null to undefined so that default value kicks in)
+const DateField = z.preprocess(
+  (val) => (val === null ? undefined : val),
+  TimestampSchema.default(() => new Date())
+);
+
+// Helper schema to support reference fields which can be either a string ID, a Firestore DocumentReference, or the fully populated object
+export const Reference = <T extends z.ZodTypeAny>(schema: T, requiredMessage?: string) =>
+  z.preprocess(
+    (val) => {
+      if (val && typeof val === "object") {
+        if ("id" in val && "path" in val && typeof (val as any).path === "string") {
+          return (val as any).id;
+        }
+      }
+      return val;
+    },
+    z.union([
+      requiredMessage ? z.string().min(1, requiredMessage) : z.string(),
+      schema
+    ])
+  );
 
 // ============================================================================
 // 1. USER SCHEMA
@@ -41,7 +63,7 @@ export type User = z.infer<typeof UserSchema>;
 // ============================================================================
 // 2. BUSINESS SCHEMA
 // ============================================================================
-export const BusinessPlanEnum = z.enum(["None", "Basic", "Plus", "Enterprise"]);
+export const BusinessPlanEnum = z.enum(["None", "Basic", "Plus", "Enterprise", "Pro", "pro"]);
 export type BusinessPlan = z.infer<typeof BusinessPlanEnum>;
 
 export const BusinessAddonEnum = z.enum([
@@ -52,19 +74,24 @@ export const BusinessAddonEnum = z.enum([
 ]);
 export type BusinessAddon = z.infer<typeof BusinessAddonEnum>;
 
-export const PaymentStatusEnum = z.enum(["Pending", "Paid", "Failed", "Refunded"]);
+export const PaymentStatusEnum = z.enum([
+  "Pending",
+  "Paid",
+  "Failed",
+  "Refunded",
+]);
 export type PaymentStatus = z.infer<typeof PaymentStatusEnum>;
 
 export const BusinessSchema = z.object({
   id: z.string().min(1, "Business ID is required"),
-  userId: z.string().min(1, "User ID reference is required"),
+  userId: Reference(UserSchema, "User ID reference is required"),
   plan: BusinessPlanEnum.default("None"),
   addons: z.array(BusinessAddonEnum).default([]),
   businessName: z.string().min(1, "Business name is required"),
   businessType: z.string().default(""),
   contactEmail: z.string().email("Invalid contact email").optional().nullable(),
   contactPhone: z.string().default(""),
-  websiteUrl: z.string().url("Invalid website URL").or(z.literal("")).default(""),
+  websiteUrl: z.string().default(""),
   paymentStatus: PaymentStatusEnum.default("Pending"),
   createdAt: DateField,
   updatedAt: DateField,
@@ -84,7 +111,7 @@ export type ProjectUpdate = z.infer<typeof ProjectUpdateSchema>;
 
 export const ProjectSchema = z.object({
   id: z.string().min(1, "Project ID is required"),
-  businessId: z.string().min(1, "Business ID reference is required"),
+  businessId: Reference(BusinessSchema, "Business ID reference is required"),
   name: z.string().min(1, "Project name is required"),
   description: z.string().default(""),
   domain: z.string().default(""),
@@ -112,7 +139,11 @@ export const BlogSchema = z.object({
   author: z.string().default("Admin"),
   summary: z.string().default(""),
   content: z.string().default(""),
-  coverImageUrl: z.string().url("Invalid cover image URL").or(z.literal("")).default(""),
+  coverImageUrl: z
+    .string()
+    .url("Invalid cover image URL")
+    .or(z.literal(""))
+    .default(""),
   status: BlogStatusEnum.default("Draft"),
   featured: z.boolean().default(false),
   createdAt: DateField,
@@ -124,7 +155,14 @@ export type Blog = z.infer<typeof BlogSchema>;
 // ============================================================================
 // 5. PAYMENT SCHEMA
 // ============================================================================
-export const PaymentMethodEnum = z.enum(["Card", "UPI", "Netbanking", "Wallet", "BankTransfer", "Other"]);
+export const PaymentMethodEnum = z.enum([
+  "Card",
+  "UPI",
+  "Netbanking",
+  "Wallet",
+  "BankTransfer",
+  "Other",
+]);
 export type PaymentMethod = z.infer<typeof PaymentMethodEnum>;
 
 export const RazorpayInfoSchema = z.object({
@@ -135,8 +173,8 @@ export const RazorpayInfoSchema = z.object({
 
 export const PaymentSchema = z.object({
   id: z.string().min(1, "Payment ID is required"),
-  userId: z.string().min(1, "User ID reference is required"),
-  businessId: z.string().optional().nullable(),
+  userId: Reference(UserSchema, "User ID reference is required"),
+  businessId: Reference(BusinessSchema).optional().nullable(),
   status: PaymentStatusEnum.default("Pending"),
   amount: z.number().positive("Amount must be a positive number"), // stored as standard decimal
   currency: z.string().default("INR"),
@@ -145,8 +183,6 @@ export const PaymentSchema = z.object({
   gatewayInfo: RazorpayInfoSchema.optional().nullable(),
   purchaseItem: z.string().min(1, "Purchase item is required"),
   timestamp: DateField,
-  createdAt: DateField,
-  updatedAt: DateField,
 });
 
 export type Payment = z.infer<typeof PaymentSchema>;
@@ -172,8 +208,8 @@ export type AuditLog = z.infer<typeof AuditLogSchema>;
 // ============================================================================
 export const ReportSchema = z.object({
   id: z.string().min(1, "Report ID is required"),
-  userId: z.string().min(1, "User ID reference is required"),
-  businessId: z.string().optional().nullable(),
+  // userId: Reference(UserSchema, "User ID reference is required"),
+  businessId: Reference(BusinessSchema).optional().nullable(),
   title: z.string().min(1, "Report title is required"),
   createdAt: DateField,
   updatedAt: DateField,
@@ -191,18 +227,24 @@ export const ProfileSchema = z.object({
   planId: z.string().default("none"),
   planStart: z.number().default(() => Date.now()),
   planEnd: z.number().nullable().default(null),
-  quota: z.object({
-    reports: z.number().default(5),
-    storageGb: z.number().default(2),
-  }).default({}),
-  used: z.object({
-    reports: z.number().default(0),
-    storageGb: z.number().default(0),
-  }).default({}),
-  preferences: z.object({
-    language: z.string().default("en"),
-    darkMode: z.boolean().default(false),
-  }).default({}),
+  quota: z
+    .object({
+      reports: z.number().default(5),
+      storageGb: z.number().default(2),
+    })
+    .default({}),
+  used: z
+    .object({
+      reports: z.number().default(0),
+      storageGb: z.number().default(0),
+    })
+    .default({}),
+  preferences: z
+    .object({
+      language: z.string().default("en"),
+      darkMode: z.boolean().default(false),
+    })
+    .default({}),
 });
 
 export type Profile = z.infer<typeof ProfileSchema>;
@@ -230,13 +272,18 @@ export type Plan = z.infer<typeof PlanSchema>;
 // ============================================================================
 // 10. SUBSCRIPTION SCHEMA
 // ============================================================================
-export const SubscriptionStatusEnum = z.enum(["active", "canceled", "past_due", "trialing"]);
+export const SubscriptionStatusEnum = z.enum([
+  "active",
+  "canceled",
+  "past_due",
+  "trialing",
+]);
 export type SubscriptionStatus = z.infer<typeof SubscriptionStatusEnum>;
 
 export const SubscriptionSchema = z.object({
   id: z.string().min(1, "Subscription ID is required"),
-  uid: z.string().min(1, "User ID reference is required"),
-  planId: z.string().min(1, "Plan ID reference is required"),
+  uid: Reference(UserSchema, "User ID reference is required"),
+  planId: Reference(PlanSchema, "Plan ID reference is required"),
   status: SubscriptionStatusEnum.default("trialing"),
   startDate: z.number().default(() => Date.now()),
   endDate: z.number().nullable().default(null),

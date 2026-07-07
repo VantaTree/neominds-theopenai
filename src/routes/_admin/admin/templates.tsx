@@ -1,11 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Card } from "@/components/admin/shared";
 
 export const Route = createFileRoute("/_admin/admin/templates")({
+  head: () => ({ meta: [{ title: "Templates — GrowConsult AI" }] }),
   component: () => (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold" style={{ color: "var(--color-heading)" }}>Templates</h1>
-      <Card><p style={{ color: "var(--color-body)" }}>Templates module — coming soon.</p></Card>
+    <div className="space-y-6 font-sans text-mm-dark select-none">
+      <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-mm-dark">Templates</h1>
+      <div className="bg-white border border-mm-border rounded-[24px] p-6 shadow-[0_4px_20px_rgba(0,0,0,0.015)]">
+        <p className="text-sm font-medium text-mm-gray">Templates module — coming soon.</p>
+      </div>
     </div>
   ),
 });

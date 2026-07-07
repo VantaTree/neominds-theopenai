@@ -1,18 +1,67 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
-  Users as UsersIcon, FolderKanban, Briefcase, DollarSign, CheckSquare,
-  Bell, BellRing, Calendar, FileCheck, FileBarChart, LifeBuoy, TrendingUp, ChevronDown, AlertCircle, UserPlus, Clock, Settings, X, FileText, Loader2
+  Users as UsersIcon,
+  FolderKanban,
+  Briefcase,
+  DollarSign,
+  CheckSquare,
+  Bell,
+  BellRing,
+  Calendar,
+  FileCheck,
+  FileBarChart,
+  LifeBuoy,
+  TrendingUp,
+  ChevronDown,
+  AlertCircle,
+  UserPlus,
+  Clock,
+  Settings,
+  X,
+  FileText,
+  Loader2,
 } from "lucide-react";
+import { useState, useRef, useEffect, useMemo, lazy, Suspense } from "react";
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  Area, AreaChart, PieChart, Pie, Cell,
-} from "recharts";
-import { useState, useRef, useEffect, useMemo } from "react";
-import { Card } from "@/components/admin/shared";
-import { getUsersFn, getProjectsFn, getPaymentsFn, getReportsFn } from "@/lib/server-functions";
+  getUsersFn,
+  getProjectsFn,
+  getPaymentsFn,
+  getReportsFn,
+} from "@/lib/server-functions";
+
+const DashboardCharts = lazy(() =>
+  import("@/components/admin/DashboardCharts").then((mod) => ({
+    default: mod.DashboardCharts,
+  })),
+);
 
 export const Route = createFileRoute("/_admin/admin/")({
   head: () => ({ meta: [{ title: "Dashboard — GrowConsult AI" }] }),
+  loader: async () => {
+    try {
+      const [users, projects, payments, reports] = await Promise.all([
+        getUsersFn(),
+        getProjectsFn(),
+        getPaymentsFn(),
+        getReportsFn(),
+      ]);
+      // console.log(users, projects, payments, reports);
+      return {
+        users,
+        projects,
+        payments,
+        reports,
+      };
+    } catch (err) {
+      console.error("Loader failed to fetch admin dashboard data:", err);
+      return {
+        users: [],
+        projects: [],
+        payments: [],
+        reports: [],
+      };
+    }
+  },
   component: Dashboard,
 });
 
@@ -20,48 +69,65 @@ interface KpiProps {
   label: string;
   value: string;
   delta: string;
-  icon: React.ComponentType<{ size?: number; style?: React.CSSProperties }>;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
   subLabel?: string;
   valueSize?: string;
 }
 
-function Kpi({ label, value, delta, icon: Icon, subLabel, valueSize }: KpiProps) {
+function Kpi({
+  label,
+  value,
+  delta,
+  icon: Icon,
+  subLabel,
+  valueSize,
+}: KpiProps) {
   return (
-    <Card className="p-5!">
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="text-sm font-semibold" style={{ color: "var(--color-title)" }}>{label}</div>
-          <div className="font-bold mt-2" style={{ color: "var(--color-heading)", fontSize: valueSize || "1.875rem", lineHeight: valueSize ? "1.2" : "2.25rem" }}>{value}</div>
-          {subLabel && <div className="mt-1" style={{ color: "#A1887F", fontSize: "11px" }}>{subLabel}</div>}
+    <div className="bg-white border border-mm-border rounded-[24px] p-5 shadow-[0_4px_20px_rgba(0,0,0,0.015)] flex flex-col justify-between select-none">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <div className="text-xs font-bold text-mm-gray uppercase tracking-wider truncate">
+            {label}
+          </div>
+          <div
+            className="font-black text-mm-dark tracking-tight mt-2 truncate"
+            style={{
+              fontSize: valueSize || "1.875rem",
+              lineHeight: valueSize ? "1.2" : "2.25rem",
+            }}
+          >
+            {value}
+          </div>
+          {subLabel && (
+            <div className="mt-1 text-[11px] font-medium text-mm-gray truncate">
+              {subLabel}
+            </div>
+          )}
         </div>
-        <div
-          className="w-10 h-10 rounded-xl flex items-center justify-center"
-          style={{ background: "color-mix(in oklch, var(--color-primary) 18%, white)" }}
-        >
-          <Icon size={20} style={{ color: "var(--color-primary)" }} />
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-mm-orange/10">
+          <Icon size={20} className="text-mm-orange" />
         </div>
       </div>
       <div className="mt-3">
-        <span
-          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold"
-          style={{
-            background: "color-mix(in oklch, var(--color-success) 15%, white)",
-            color: "var(--color-success)",
-          }}
-        >
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-extrabold bg-mm-green/10 text-mm-green">
           <TrendingUp size={12} />
           {delta}
         </span>
       </div>
-    </Card>
+    </div>
   );
 }
 
 function Dashboard() {
-  const [revenueView, setRevenueView] = useState<"This Year" | "This Month">("This Year");
+  const { users, projects, payments, reports } = Route.useLoaderData();
+  const [revenueView, setRevenueView] = useState<"This Year" | "This Month">(
+    "This Year",
+  );
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [dateRangeText, setDateRangeText] = useState("May 20 – May 26, 2024");
-  const [appliedDateFilter, setAppliedDateFilter] = useState<string | null>(null);
+  const [appliedDateFilter, setAppliedDateFilter] = useState<string | null>(
+    null,
+  );
   const datePickerRef = useRef<HTMLDivElement>(null);
   const [quickDate, setQuickDate] = useState("This Week");
 
@@ -69,48 +135,71 @@ function Dashboard() {
   const [notifTab, setNotifTab] = useState("All");
   const navigate = useNavigate();
 
-  const [users, setUsers] = useState<any[]>([]);
-  const [projects, setProjects] = useState<any[]>([]);
-  const [payments, setPayments] = useState<any[]>([]);
-  const [reports, setReports] = useState<any[]>([]);
-  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [isClient, setIsClient] = useState(false);
 
-  // Initialize notifications to an empty list
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // Dynamically initialize notifications from the actual database items
+  const initialNotifications = useMemo(() => {
+    const list: any[] = [];
+
+    // Add dynamic payment notifications
+    payments.slice(0, 3).forEach((p, idx) => {
+      let amt = "Amount";
+      if (typeof p.amount === "number") amt = `$${p.amount.toLocaleString()}`;
+      else if (typeof p.amount === "string") amt = p.amount;
+      list.push({
+        id: `pay-${p.id || idx}`,
+        title: "Payment Received",
+        message: `Payment of ${amt} is ${p.status || "Paid"}.`,
+        time: p.timestamp
+          ? new Date(p.timestamp).toLocaleDateString()
+          : "Recent",
+        category: "Payments",
+        read: false,
+        icon: DollarSign,
+        bg: "rgba(92, 177, 62, 0.1)",
+        color: "var(--color-mm-green)",
+        path: "/admin/payments",
+      });
+    });
+
+    // Add dynamic project notifications
+    projects.slice(0, 3).forEach((p, idx) => {
+      list.push({
+        id: `proj-${p.id || idx}`,
+        title: "Project Updated",
+        message: `Project ${p.name || "Status"} is currently at ${p.progress || 0}% progress.`,
+        time: p.createdAt
+          ? new Date(p.createdAt).toLocaleDateString()
+          : "Recent",
+        category: "Projects",
+        read: false,
+        icon: FolderKanban,
+        bg: "rgba(133, 211, 255, 0.1)",
+        color: "var(--color-mm-blue)",
+        path: `/admin/projects`,
+      });
+    });
+
+    return list;
+  }, [payments, projects]);
+
   const [notifications, setNotifications] = useState<any[]>([]);
 
   useEffect(() => {
-    const loadAllData = async () => {
-      try {
-        const [u, p, pay, r] = await Promise.all([
-          getUsersFn(),
-          getProjectsFn(),
-          getPaymentsFn(),
-          getReportsFn()
-        ]);
-        setUsers(u);
-        setProjects(p);
-        setPayments(pay);
-        setReports(r);
-      } catch (err) {
-        console.error("Dashboard failed to fetch data from Firestore:", err);
-      } finally {
-        setIsLoadingData(false);
-      }
-    };
-    loadAllData();
-  }, []);
+    setNotifications(initialNotifications);
+  }, [initialNotifications]);
 
   const totalRevenue = useMemo(() => {
-    const sum = payments.reduce((acc, p) => {
-      let amt = 0;
-      if (typeof p.amount === "string") {
-        amt = parseFloat(p.amount.replace(/[^0-9.]/g, "")) || 0;
-      } else if (typeof p.amount === "number") {
-        amt = p.amount;
-      }
-      return acc + amt;
-    }, 0);
-    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(sum);
+    const sum = payments.reduce((acc, p) => acc + (p.amount || 0), 0);
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 0,
+    }).format(sum);
   }, [payments]);
 
   const thisMonthRevenue = useMemo(() => {
@@ -118,66 +207,75 @@ function Dashboard() {
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
     const sum = payments.reduce((acc, p) => {
-      if (p.date) {
+      if (p.timestamp) {
         try {
-          const dateObj = new Date(p.date);
-          if (dateObj.getMonth() === currentMonth && dateObj.getFullYear() === currentYear) {
-            let amt = 0;
-            if (typeof p.amount === "string") {
-              amt = parseFloat(p.amount.replace(/[^0-9.]/g, "")) || 0;
-            } else if (typeof p.amount === "number") {
-              amt = p.amount;
-            }
-            return acc + amt;
+          const dateObj = new Date(p.timestamp);
+          if (
+            dateObj.getMonth() === currentMonth &&
+            dateObj.getFullYear() === currentYear
+          ) {
+            return acc + (p.amount || 0);
           }
         } catch (e) {}
       }
       return acc;
     }, 0);
-    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(sum);
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 0,
+    }).format(sum);
   }, [payments]);
 
   const taskStats = useMemo(() => {
     let total = 0;
     let completed = 0;
-    projects.forEach(p => {
-      if (p.serviceGroups) {
-        p.serviceGroups.forEach((sg: any) => {
-          if (sg.tasks) {
-            sg.tasks.forEach((t: any) => {
-              total++;
-              if (t.status === "Completed") completed++;
-            });
-          }
-        });
+    projects.forEach((p) => {
+      if (p.updates) {
+        total += p.updates.length;
+        // Assume completed if progress is 100
+        if (p.progress === 100) {
+          completed += p.updates.length;
+        } else {
+          completed += Math.round(p.updates.length * (p.progress / 100));
+        }
       }
     });
+    if (total === 0) return "0 / 0";
     return `${total} / ${completed}`;
   }, [projects]);
 
   const conversionRate = useMemo(() => {
     if (users.length === 0) return "0.0%";
-    const active = users.filter(u => u.status === "Active").length;
+    const active = users.filter((u) => u.status === "Active").length;
     return `${((active / users.length) * 100).toFixed(1)}%`;
   }, [users]);
 
   const auditsCompleted = useMemo(() => {
-    return projects.filter(p => p.status === "Completed").length;
+    return projects.filter((p) => p.progress === 100).length;
   }, [projects]);
 
   const computedRevenueData = useMemo(() => {
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    const monthlySum = months.map(m => ({ name: m, value: 0 }));
-    payments.forEach(p => {
-      let amt = 0;
-      if (typeof p.amount === "string") {
-        amt = parseFloat(p.amount.replace(/[^0-9.]/g, "")) || 0;
-      } else if (typeof p.amount === "number") {
-        amt = p.amount;
-      }
-      if (p.date) {
+    const months = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
+    const monthlySum = months.map((m) => ({ name: m, value: 0 }));
+    payments.forEach((p) => {
+      const amt = p.amount || 0;
+      if (p.timestamp) {
         try {
-          const dateObj = new Date(p.date);
+          const dateObj = new Date(p.timestamp);
           const monthIdx = dateObj.getMonth();
           if (monthIdx >= 0 && monthIdx < 12) {
             monthlySum[monthIdx].value += amt;
@@ -190,21 +288,19 @@ function Dashboard() {
 
   const computedRevenueDataMonth = useMemo(() => {
     const weeks = ["Week 1", "Week 2", "Week 3", "Week 4"];
-    const weeklySum = weeks.map(w => ({ name: w, value: 0 }));
+    const weeklySum = weeks.map((w) => ({ name: w, value: 0 }));
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
-    payments.forEach(p => {
-      let amt = 0;
-      if (typeof p.amount === "string") {
-        amt = parseFloat(p.amount.replace(/[^0-9.]/g, "")) || 0;
-      } else if (typeof p.amount === "number") {
-        amt = p.amount;
-      }
-      if (p.date) {
+    payments.forEach((p) => {
+      const amt = p.amount || 0;
+      if (p.timestamp) {
         try {
-          const dateObj = new Date(p.date);
-          if (dateObj.getMonth() === currentMonth && dateObj.getFullYear() === currentYear) {
+          const dateObj = new Date(p.timestamp);
+          if (
+            dateObj.getMonth() === currentMonth &&
+            dateObj.getFullYear() === currentYear
+          ) {
             const day = dateObj.getDate();
             const weekIdx = Math.min(Math.floor((day - 1) / 7), 3);
             weeklySum[weekIdx].value += amt;
@@ -219,38 +315,61 @@ function Dashboard() {
     const total = projects.length;
     if (total === 0) {
       return [
-        { name: "Completed", value: 0, color: "var(--color-success)" },
-        { name: "In Progress", value: 0, color: "var(--color-info)" },
-        { name: "Pending", value: 0, color: "var(--color-pending)" },
-        { name: "On Hold", value: 0, color: "var(--color-danger)" },
-        { name: "Cancelled", value: 0, color: "var(--color-subtle)" },
+        { name: "Completed", value: 0, color: "var(--color-mm-green)" },
+        { name: "In Progress", value: 0, color: "var(--color-mm-blue)" },
+        { name: "Pending", value: 0, color: "var(--color-mm-orange)" },
+        { name: "On Hold", value: 0, color: "var(--color-mm-gray)" },
       ];
     }
-    const counts: Record<string, number> = {};
-    projects.forEach(p => {
-      counts[p.status] = (counts[p.status] || 0) + 1;
+    let completed = 0;
+    let inProgress = 0;
+    let pending = 0;
+    let onHold = 0;
+
+    projects.forEach((p) => {
+      if (p.progress === 100) completed++;
+      else if (p.progress === 0) pending++;
+      else inProgress++;
     });
+
     return [
-      { name: "Completed", value: Math.round(((counts["Completed"] || 0) / total) * 100), color: "var(--color-success)" },
-      { name: "In Progress", value: Math.round(((counts["In Progress"] || 0) / total) * 100), color: "var(--color-info)" },
-      { name: "Pending", value: Math.round(((counts["Pending"] || 0) / total) * 100), color: "var(--color-pending)" },
-      { name: "On Hold", value: Math.round(((counts["On Hold"] || 0) / total) * 100), color: "var(--color-danger)" },
-      { name: "Cancelled", value: Math.round(((counts["Cancelled"] || 0) / total) * 100), color: "var(--color-subtle)" },
+      {
+        name: "Completed",
+        value: Math.round((completed / total) * 100),
+        color: "var(--color-mm-green)",
+      },
+      {
+        name: "In Progress",
+        value: Math.round((inProgress / total) * 100),
+        color: "var(--color-mm-blue)",
+      },
+      {
+        name: "Pending",
+        value: Math.round((pending / total) * 100),
+        color: "var(--color-mm-orange)",
+      },
+      {
+        name: "On Hold",
+        value: Math.round((onHold / total) * 100),
+        color: "var(--color-mm-gray)",
+      },
     ];
   }, [projects]);
 
-  const [showAllNotificationsModal, setShowAllNotificationsModal] = useState(false);
+  const [showAllNotificationsModal, setShowAllNotificationsModal] =
+    useState(false);
   const [modalTab, setModalTab] = useState("All");
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
-  const filteredNotifications = notifications.filter(n => {
+  const unreadCount = notifications.filter((n) => !n.read).length;
+  const filteredNotifications = notifications.filter((n) => {
     if (notifTab === "Unread") return !n.read;
-    if (notifTab === "Alerts") return n.category === "Payments" || n.category === "System";
+    if (notifTab === "Alerts")
+      return n.category === "Payments" || n.category === "System";
     return true;
   });
 
-  const fullModalFilteredNotifications = notifications.filter(n => {
+  const fullModalFilteredNotifications = notifications.filter((n) => {
     if (modalTab === "Unread") return !n.read;
     if (modalTab === "Payments") return n.category === "Payments";
     if (modalTab === "Projects") return n.category === "Projects";
@@ -259,16 +378,24 @@ function Dashboard() {
   });
 
   const markAllRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, read: true })));
+    setNotifications(notifications.map((n) => ({ ...n, read: true })));
   };
 
   const handleNotifClick = (n: any) => {
-    setNotifications(notifications.map(notif => notif.id === n.id ? { ...notif, read: true } : notif));
+    setNotifications(
+      notifications.map((notif) =>
+        notif.id === n.id ? { ...notif, read: true } : notif,
+      ),
+    );
     if (n.path) navigate({ to: n.path });
   };
+
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (datePickerRef.current && !datePickerRef.current.contains(event.target as Node)) {
+      if (
+        datePickerRef.current &&
+        !datePickerRef.current.contains(event.target as Node)
+      ) {
         setDatePickerOpen(false);
       }
     }
@@ -293,86 +420,50 @@ function Dashboard() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 font-sans text-mm-dark select-none">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: "var(--color-heading)" }}>Dashboard</h1>
-          <p className="text-sm mt-1" style={{ color: "var(--color-body)" }}>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-mm-dark">
+            Dashboard
+          </h1>
+          <p className="text-sm text-mm-gray mt-1">
             Here's what's happening with your platform
           </p>
         </div>
         <div className="flex items-center gap-3 relative" ref={datePickerRef}>
           <button
             onClick={() => setDatePickerOpen(!datePickerOpen)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm transition-colors"
-            style={{
-              background: "#FCF8F1",
-              border: "1px solid #E8DCC8",
-              color: "#6D4C41",
-              cursor: "pointer",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = "#D4B483";
-              e.currentTarget.style.background = "#F8F1E7";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = "#E8DCC8";
-              e.currentTarget.style.background = "#FCF8F1";
-            }}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold border border-mm-border bg-white text-mm-dark hover:bg-mm-subtle/50 transition-all cursor-pointer"
           >
-            <Calendar size={16} style={{ color: "#E89D18" }} />
+            <Calendar size={16} className="text-mm-orange" />
             {dateRangeText}
-            <ChevronDown size={14} style={{ color: "#A1887F", marginLeft: "4px" }} />
+            <ChevronDown size={14} className="text-mm-gray ml-1" />
           </button>
 
           {datePickerOpen && (
-            <div
-              style={{
-                background: "#FCF8F1",
-                border: "1px solid #E8DCC8",
-                borderRadius: "16px",
-                padding: "16px",
-                boxShadow: "0 8px 24px rgba(78,52,46,0.12)",
-                zIndex: 100,
-                minWidth: "300px",
-                position: "absolute",
-                top: "100%",
-                right: 0,
-                marginTop: "8px"
-              }}
-            >
-              <div style={{ color: "#6D4C41", fontWeight: 600, fontSize: "14px", marginBottom: "12px" }}>Select Date Range</div>
-              
+            <div className="bg-white border border-mm-border rounded-[20px] p-5 shadow-[0_8px_30px_rgba(0,0,0,0.06)] min-w-[320px] absolute top-full right-0 mt-2 z-50">
+              <div className="text-mm-dark font-extrabold text-sm mb-3">
+                Select Date Range
+              </div>
+
               <div className="flex flex-wrap gap-2 mb-3">
-                {["Today", "This Week", "This Month", "Last Month", "This Year"].map((opt) => {
+                {[
+                  "Today",
+                  "This Week",
+                  "This Month",
+                  "Last Month",
+                  "This Year",
+                ].map((opt) => {
                   const isActive = quickDate === opt;
                   return (
                     <button
                       key={opt}
                       onClick={() => setQuickDate(opt)}
-                      style={{
-                        background: isActive ? "#FFF3D6" : "#F8F1E7",
-                        border: isActive ? "1px solid #E89D18" : "1px solid #E8DCC8",
-                        color: isActive ? "#E89D18" : "#6D4C41",
-                        borderRadius: "8px",
-                        padding: "4px 12px",
-                        fontSize: "12px",
-                        cursor: "pointer",
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!isActive) {
-                          e.currentTarget.style.background = "#FFF3D6";
-                          e.currentTarget.style.borderColor = "#E89D18";
-                          e.currentTarget.style.color = "#E89D18";
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!isActive) {
-                          e.currentTarget.style.background = "#F8F1E7";
-                          e.currentTarget.style.borderColor = "#E8DCC8";
-                          e.currentTarget.style.color = "#6D4C41";
-                        }
-                      }}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer border ${
+                        isActive
+                          ? "bg-mm-orange text-white border-mm-orange"
+                          : "bg-mm-subtle/40 hover:bg-mm-subtle text-mm-dark border-mm-border/50"
+                      }`}
                     >
                       {opt}
                     </button>
@@ -382,55 +473,35 @@ function Dashboard() {
 
               <div className="flex gap-2">
                 <div className="flex-1">
-                  <label style={{ color: "#A1887F", fontSize: "12px", display: "block", marginBottom: "4px" }}>From</label>
+                  <label className="text-mm-gray text-xs block mb-1">
+                    From
+                  </label>
                   <input
                     type="date"
                     defaultValue="2024-05-20"
-                    style={{
-                      background: "#FFFDF8",
-                      border: "1px solid #E8DCC8",
-                      borderRadius: "10px",
-                      padding: "8px 12px",
-                      color: "#4E342E",
-                      width: "140px",
-                      outline: "none"
-                    }}
-                    onFocus={(e) => e.target.style.borderColor = "#E89D18"}
-                    onBlur={(e) => e.target.style.borderColor = "#E8DCC8"}
+                    className="bg-white border border-mm-border rounded-xl px-3 py-2 text-xs font-bold text-mm-dark w-full outline-none focus:border-mm-orange transition-all"
                   />
                 </div>
                 <div className="flex-1">
-                  <label style={{ color: "#A1887F", fontSize: "12px", display: "block", marginBottom: "4px" }}>To</label>
+                  <label className="text-mm-gray text-xs block mb-1">To</label>
                   <input
                     type="date"
                     defaultValue="2024-05-26"
-                    style={{
-                      background: "#FFFDF8",
-                      border: "1px solid #E8DCC8",
-                      borderRadius: "10px",
-                      padding: "8px 12px",
-                      color: "#4E342E",
-                      width: "140px",
-                      outline: "none"
-                    }}
-                    onFocus={(e) => e.target.style.borderColor = "#E89D18"}
-                    onBlur={(e) => e.target.style.borderColor = "#E8DCC8"}
+                    className="bg-white border border-mm-border rounded-xl px-3 py-2 text-xs font-bold text-mm-dark w-full outline-none focus:border-mm-orange transition-all"
                   />
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 mt-3 pt-3" style={{ borderTop: "1px solid #E8DCC8" }}>
+              <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-mm-border/60">
                 <button
                   onClick={() => setDatePickerOpen(false)}
-                  style={{ padding: "6px 14px", fontSize: "13px", borderRadius: "10px", border: "1px solid #E8DCC8", background: "#FCF8F1", color: "#6D4C41" }}
-                  className="hover:opacity-80 transition-opacity font-semibold"
+                  className="px-4 py-2 text-xs font-bold rounded-xl border border-mm-border text-mm-dark bg-white hover:bg-mm-subtle/50 transition-all"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleApplyDate}
-                  style={{ padding: "6px 14px", fontSize: "13px", borderRadius: "10px", background: "#E89D18", color: "white" }}
-                  className="hover:opacity-90 transition-opacity font-semibold"
+                  className="px-4 py-2 text-xs font-extrabold rounded-xl bg-mm-orange hover:bg-mm-orange/95 text-white transition-all"
                 >
                   Apply
                 </button>
@@ -440,32 +511,20 @@ function Dashboard() {
           <div className="relative inline-flex">
             <button
               onClick={() => setIsNotificationOpen(!isNotificationOpen)}
-              className="relative rounded-xl flex items-center justify-center transition-colors"
-              style={{ 
-                background: isNotificationOpen ? "#FFF3D6" : "var(--color-card)", 
-                border: "1px solid var(--color-border)",
-                padding: "8px",
-                cursor: "pointer"
-              }}
-              onMouseEnter={(e) => { if (!isNotificationOpen) e.currentTarget.style.background = "#F8F1E7" }}
-              onMouseLeave={(e) => { if (!isNotificationOpen) e.currentTarget.style.background = "var(--color-card)" }}
+              className={`relative rounded-xl flex items-center justify-center border border-mm-border p-2 cursor-pointer transition-all ${
+                isNotificationOpen
+                  ? "bg-mm-orange/10"
+                  : "bg-white hover:bg-mm-subtle/50"
+              }`}
             >
-              {isNotificationOpen ? (
-                <BellRing size={22} style={{ color: "#E89D18" }} />
-              ) : (
-                <BellRing size={22} style={{ color: "#6D4C41" }} />
-              )}
+              <BellRing
+                size={20}
+                className={
+                  isNotificationOpen ? "text-mm-orange" : "text-mm-dark"
+                }
+              />
               {unreadCount > 0 && (
-                <span
-                  className="absolute"
-                  style={{ 
-                    top: "4px", right: "4px", background: "#E89D18", color: "white", 
-                    fontSize: "10px", fontWeight: 700, borderRadius: "999px", 
-                    minWidth: "18px", height: "18px", display: "flex", 
-                    alignItems: "center", justifyContent: "center", 
-                    border: "2px solid #FFFDF8" 
-                  }}
-                >
+                <span className="absolute -top-1 -right-1 bg-mm-orange text-white text-[9px] font-black rounded-full w-4.5 h-4.5 flex items-center justify-center border-2 border-white">
                   {unreadCount}
                 </span>
               )}
@@ -473,94 +532,104 @@ function Dashboard() {
 
             {isNotificationOpen && (
               <>
-                <div className="fixed inset-0 z-190" onClick={() => setIsNotificationOpen(false)} />
-                <div className="absolute right-0 z-200" style={{ top: "calc(100% + 8px)" }}>
-                  <div style={{ background: "#FCF8F1", border: "1px solid #E8DCC8", borderRadius: "20px", width: "380px", boxShadow: "0 8px 32px rgba(78,52,46,0.12)", overflow: "hidden" }}>
-                    <div className="flex justify-between items-center" style={{ padding: "16px 20px", borderBottom: "1px solid #E8DCC8" }}>
-                      <div className="font-bold text-[16px]" style={{ color: "#4E342E" }}>Notifications</div>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setIsNotificationOpen(false)}
+                />
+                <div className="absolute right-0 top-full mt-2 z-50">
+                  <div className="bg-white border border-mm-border rounded-[20px] w-[380px] shadow-[0_8px_30px_rgba(0,0,0,0.06)] overflow-hidden">
+                    <div className="flex justify-between items-center border-b border-mm-border/60 px-5 py-4 bg-white">
+                      <div className="font-extrabold text-sm text-mm-dark">
+                        Notifications
+                      </div>
                       <div className="flex gap-4 items-center">
-                        <button 
-                          onClick={markAllRead} 
+                        <button
+                          onClick={markAllRead}
                           disabled={unreadCount === 0}
-                          className="text-[13px] hover:underline cursor-pointer" 
-                          style={{ color: unreadCount === 0 ? "#A1887F" : "#E89D18" }}
+                          className="text-xs font-bold text-mm-orange hover:underline cursor-pointer disabled:text-mm-gray/40 disabled:no-underline"
                         >
                           Mark all read
                         </button>
-                        <button onClick={() => setIsNotificationOpen(false)} className="cursor-pointer">
-                          <X size={18} style={{ color: "#A1887F" }} onMouseEnter={(e) => e.currentTarget.style.color = "#6D4C41"} onMouseLeave={(e) => e.currentTarget.style.color = "#A1887F"} />
+                        <button
+                          onClick={() => setIsNotificationOpen(false)}
+                          className="cursor-pointer"
+                        >
+                          <X
+                            size={18}
+                            className="text-mm-gray hover:text-mm-dark"
+                          />
                         </button>
                       </div>
                     </div>
-                    <div className="flex px-5" style={{ borderBottom: "1px solid #E8DCC8" }}>
-                      {["All", "Unread", "Alerts"].map(tab => (
+                    <div className="flex px-5 border-b border-mm-border/60 bg-white">
+                      {["All", "Unread", "Alerts"].map((tab) => (
                         <button
                           key={tab}
                           onClick={() => setNotifTab(tab)}
-                          className="cursor-pointer"
-                          style={{
-                            padding: "10px 16px 13px",
-                            fontWeight: notifTab === tab ? 700 : 400,
-                            color: notifTab === tab ? "#4E342E" : "#8D6E63",
-                            borderBottom: notifTab === tab ? "2px solid #E89D18" : "2px solid transparent",
-                            fontSize: "13px"
-                          }}
-                          onMouseEnter={(e) => { if (notifTab !== tab) e.currentTarget.style.color = "#6D4C41" }}
-                          onMouseLeave={(e) => { if (notifTab !== tab) e.currentTarget.style.color = "#8D6E63" }}
+                          className={`cursor-pointer pb-3 pt-2.5 px-3 text-xs font-bold transition-all border-b-2 ${
+                            notifTab === tab
+                              ? "border-mm-orange text-mm-dark font-extrabold"
+                              : "border-transparent text-mm-gray hover:text-mm-dark"
+                          }`}
                         >
                           {tab}
                         </button>
                       ))}
                     </div>
-                    <div style={{ maxHeight: "380px", overflowY: "auto" }}>
-                      {filteredNotifications.map(n => (
-                        <div 
-                          key={n.id} 
+                    <div className="max-h-[380px] overflow-y-auto bg-white">
+                      {filteredNotifications.map((n) => (
+                        <div
+                          key={n.id}
                           onClick={() => handleNotifClick(n)}
-                          className="flex items-start gap-3 cursor-pointer"
-                          style={{
-                            padding: "14px 20px",
-                            borderBottom: "1px solid #E8DCC8",
-                            background: n.read ? "#FFFDF8" : "#FFF3D6",
-                            transition: "background 150ms"
-                          }}
-                          onMouseEnter={(e) => e.currentTarget.style.background = n.read ? "#F8F1E7" : "#FFE9A0"}
-                          onMouseLeave={(e) => e.currentTarget.style.background = n.read ? "#FFFDF8" : "#FFF3D6"}
+                          className={`flex items-start gap-3 cursor-pointer p-4 border-b border-mm-border/40 transition-colors ${
+                            n.read
+                              ? "bg-white hover:bg-mm-subtle/20"
+                              : "bg-mm-orange/5 hover:bg-mm-orange/10"
+                          }`}
                         >
-                          <div 
-                            className="mt-1.5 rounded-full shrink-0" 
-                            style={{ 
-                              width: "8px", height: "8px", 
-                              background: n.read ? "transparent" : "#E89D18", 
-                              border: n.read ? "1.5px solid #E8DCC8" : "none" 
-                            }} 
+                          <div
+                            className={`mt-1.5 rounded-full shrink-0 w-2 h-2 ${
+                              n.read
+                                ? "bg-transparent border border-mm-border"
+                                : "bg-mm-orange"
+                            }`}
                           />
-                          <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: n.bg }}>
-                            <n.icon size={18} style={{ color: n.color }} />
+                          <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 bg-mm-subtle">
+                            <n.icon size={18} className="text-mm-dark" />
                           </div>
-                          <div className="flex-1">
-                            <div className="font-semibold text-[13px]" style={{ color: "#4E342E" }}>{n.title}</div>
-                            <div className="text-[12px] mt-0.5" style={{ color: "#8D6E63" }}>{n.message}</div>
-                            <div className="flex justify-between items-center mt-1.5">
-                              <div className="text-[11px]" style={{ color: "#A1887F" }}>{n.time}</div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-bold text-xs text-mm-dark truncate">
+                              {n.title}
+                            </div>
+                            <div className="text-[11px] text-mm-gray mt-0.5 leading-normal">
+                              {n.message}
+                            </div>
+                            <div className="flex justify-between items-center mt-2">
+                              <div className="text-[10px] text-mm-gray">
+                                {n.time}
+                              </div>
                               {n.action && (
-                                <div className="text-[12px] font-medium" style={{ color: "#E89D18" }}>{n.action}</div>
+                                <div className="text-[11px] font-bold text-mm-orange">
+                                  {n.action}
+                                </div>
                               )}
                             </div>
                           </div>
                         </div>
                       ))}
                       {filteredNotifications.length === 0 && (
-                        <div className="p-8 text-center text-[13px]" style={{ color: "#8D6E63" }}>
+                        <div className="p-8 text-center text-xs text-mm-gray font-medium bg-white">
                           No notifications found.
                         </div>
                       )}
                     </div>
-                    <div className="text-center" style={{ padding: "12px 20px", borderTop: "1px solid #E8DCC8" }}>
-                      <button 
-                        onClick={() => { setShowAllNotificationsModal(true); setIsNotificationOpen(false); }}
-                        className="text-[13px] font-semibold hover:underline cursor-pointer" 
-                        style={{ color: "#E89D18" }}
+                    <div className="text-center p-3 border-t border-mm-border/60 bg-white">
+                      <button
+                        onClick={() => {
+                          setShowAllNotificationsModal(true);
+                          setIsNotificationOpen(false);
+                        }}
+                        className="text-xs font-extrabold text-mm-orange hover:underline cursor-pointer"
                       >
                         View All Notifications
                       </button>
@@ -573,242 +642,212 @@ function Dashboard() {
         </div>
       </div>
 
-      {isLoadingData ? (
-        <div className="flex flex-col items-center justify-center min-h-[400px] w-full gap-2">
-          <Loader2 size={32} className="animate-spin text-[#E89D18]" />
-          <span className="text-sm font-semibold" style={{ color: "#8D6E63" }}>Loading dashboard stats...</span>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <Kpi
+          label="Total Users"
+          value={users.length.toLocaleString()}
+          delta="+0%"
+          icon={UsersIcon}
+          subLabel={appliedDateFilter || undefined}
+        />
+        <Kpi
+          label="Total Projects"
+          value={projects.length.toLocaleString()}
+          delta="+0%"
+          icon={FolderKanban}
+          subLabel={appliedDateFilter || undefined}
+        />
+        <Kpi
+          label="Active Projects"
+          value={projects
+            .filter((p) => p.progress > 0 && p.progress < 100)
+            .length.toLocaleString()}
+          delta="+0%"
+          icon={Briefcase}
+          subLabel={appliedDateFilter || undefined}
+        />
+        <Kpi
+          label="Total Revenue"
+          value={totalRevenue}
+          delta="+0%"
+          icon={DollarSign}
+          subLabel={appliedDateFilter || "All time cumulative"}
+        />
+        <Kpi
+          label="Total Tasks"
+          value={taskStats}
+          delta="+0%"
+          icon={CheckSquare}
+          subLabel={appliedDateFilter || "Assigned / Completed"}
+          valueSize="22px"
+        />
+      </div>
+
+      {isClient ? (
+        <Suspense
+          fallback={
+            <div className="bg-white border border-mm-border rounded-[24px] p-12 flex items-center justify-center h-[340px]">
+              <Loader2 className="animate-spin text-mm-orange" size={32} />
+            </div>
+          }
+        >
+          <DashboardCharts
+            revenueView={revenueView}
+            setRevenueView={setRevenueView}
+            totalRevenue={totalRevenue}
+            thisMonthRevenue={thisMonthRevenue}
+            computedRevenueData={computedRevenueData}
+            computedRevenueDataMonth={computedRevenueDataMonth}
+            computedProjectStatusData={computedProjectStatusData}
+            projectsCount={projects.length}
+          />
+        </Suspense>
       ) : (
-        <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-            <Kpi label="Total Users" value={users.length.toLocaleString()} delta="+0%" icon={UsersIcon} subLabel={appliedDateFilter || undefined} />
-            <Kpi label="Total Projects" value={projects.length.toLocaleString()} delta="+0%" icon={FolderKanban} subLabel={appliedDateFilter || undefined} />
-            <Kpi label="Active Projects" value={projects.filter(p => p.status === "In Progress").length.toLocaleString()} delta="+0%" icon={Briefcase} subLabel={appliedDateFilter || undefined} />
-            <Kpi label="Total Revenue" value={totalRevenue} delta="+0%" icon={DollarSign} subLabel={appliedDateFilter || "All time cumulative"} />
-            <Kpi label="Total Tasks" value={taskStats} delta="+0%" icon={CheckSquare} subLabel={appliedDateFilter || "Assigned / Completed"} valueSize="22px" />
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="font-semibold" style={{ color: "var(--color-title)" }}>Revenue Overview</h3>
-                  <div style={{ color: "#4E342E", fontWeight: 700, fontSize: "14px", marginTop: "2px", transition: "all 150ms ease" }}>
-                    {revenueView === "This Year" ? `Total Revenue: ${totalRevenue}` : `This Month Revenue: ${thisMonthRevenue}`}
-                  </div>
-                </div>
-                <div className="relative">
-                  <select
-                    value={revenueView}
-                    onChange={(e) => setRevenueView(e.target.value as any)}
-                    style={{
-                      appearance: "none",
-                      background: "#F8F1E7",
-                      border: "1px solid #E8DCC8",
-                      borderRadius: "8px",
-                      padding: "6px 28px 6px 12px",
-                      color: "#6D4C41",
-                      fontSize: "13px",
-                      fontWeight: 600,
-                      cursor: "pointer",
-                      outline: "none",
-                    }}
-                    onFocus={(e) => e.target.style.borderColor = "#E89D18"}
-                    onBlur={(e) => e.target.style.borderColor = "#E8DCC8"}
-                  >
-                    <option value="This Year">This Year</option>
-                    <option value="This Month">This Month</option>
-                  </select>
-                  <ChevronDown size={14} style={{ color: "#A1887F", position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
-                </div>
-              </div>
-              <div style={{ width: "100%", height: 260 }}>
-                <ResponsiveContainer>
-                  <AreaChart data={revenueView === "This Year" ? computedRevenueData : computedRevenueDataMonth} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="rev" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="rgba(232,157,24,0.2)" />
-                        <stop offset="100%" stopColor="transparent" />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid stroke="#E8DCC8" strokeDasharray="3 3" vertical={false} opacity={0.5} />
-                    <XAxis dataKey="name" stroke="#A1887F" fontSize={11} tickLine={false} axisLine={false} />
-                    <YAxis
-                      domain={revenueView === "This Year" ? [0, 'auto'] : [0, 'auto']}
-                      stroke="#A1887F" fontSize={11} tickLine={false} axisLine={false}
-                      tickFormatter={(v) => `$${v}`}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        background: "#4E342E",
-                        border: "none",
-                        borderRadius: "8px",
-                        color: "white",
-                        padding: "8px 12px"
-                      }}
-                      itemStyle={{ color: "white" }}
-                      formatter={(v: number) => [`$${v.toLocaleString()}`, ""]}
-                      labelFormatter={(label) => `${label} —`}
-                      animationDuration={400}
-                    />
-                    <Area
-                      type="monotone" dataKey="value"
-                      stroke="#E89D18" strokeWidth={3}
-                      fill="url(#rev)"
-                      animationDuration={400}
-                    />
-                    <Line type="monotone" dataKey="value" stroke="#E89D18" strokeWidth={3} dot={{ r: 4, fill: "#E89D18", strokeWidth: 0 }} animationDuration={400} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </Card>
-
-            <Card>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold" style={{ color: "var(--color-title)" }}>Projects by Status</h3>
-              </div>
-              <div className="flex flex-col md:flex-row items-center gap-6">
-                <div style={{ width: 220, height: 220, position: "relative" }}>
-                  <ResponsiveContainer>
-                    <PieChart>
-                      <Pie data={computedProjectStatusData} dataKey="value" innerRadius={65} outerRadius={95} paddingAngle={2}>
-                        {computedProjectStatusData.map((d) => <Cell key={d.name} fill={d.color} />)}
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <div className="text-2xl font-bold" style={{ color: "var(--color-heading)" }}>{projects.length}</div>
-                    <div className="text-xs" style={{ color: "var(--color-body)" }}>Total Projects</div>
-                  </div>
-                </div>
-                <div className="flex-1 space-y-2 w-full">
-                  {computedProjectStatusData.map((d) => (
-                    <div key={d.name} className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-2" style={{ color: "var(--color-title)" }}>
-                        <span className="w-2.5 h-2.5 rounded-full" style={{ background: d.color }} />
-                        {d.name}
-                      </div>
-                      <span className="font-semibold" style={{ color: "var(--color-heading)" }}>{d.value}%</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </Card>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <Kpi label="Audits Completed" value={auditsCompleted.toLocaleString()} delta="+0%" icon={FileCheck} />
-            <Kpi label="Reports Generated" value={reports.length.toLocaleString()} delta="+0%" icon={FileBarChart} />
-            <Kpi label="Conversion Rate" value={conversionRate} delta="+0%" icon={TrendingUp} />
-          </div>
-        </>
+        <div className="bg-white border border-mm-border rounded-[24px] p-12 flex items-center justify-center h-[340px]">
+          <Loader2 className="animate-spin text-mm-orange" size={32} />
+        </div>
       )}
 
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <Kpi
+          label="Audits Completed"
+          value={auditsCompleted.toLocaleString()}
+          delta="+0%"
+          icon={FileCheck}
+        />
+        <Kpi
+          label="Reports Generated"
+          value={reports.length.toLocaleString()}
+          delta="+0%"
+          icon={FileBarChart}
+        />
+        <Kpi
+          label="Conversion Rate"
+          value={conversionRate}
+          delta="+0%"
+          icon={TrendingUp}
+        />
+      </div>
+
       {showAllNotificationsModal && (
-        <div className="fixed inset-0 z-300 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-[#4E342E]/60 backdrop-blur-sm" onClick={() => setShowAllNotificationsModal(false)} />
-          <div 
-            className="relative w-full max-w-4xl max-h-[85vh] flex flex-col rounded-2xl overflow-hidden shadow-2xl" 
-            style={{ background: "#FCF8F1", border: "1px solid #E8DCC8" }}
-          >
+        <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-mm-dark/40 backdrop-blur-sm"
+            onClick={() => setShowAllNotificationsModal(false)}
+          />
+          <div className="relative w-full max-w-4xl max-h-[85vh] flex flex-col bg-white border border-mm-border rounded-[24px] overflow-hidden shadow-2xl z-50">
             {/* Header */}
-            <div className="px-6 py-4 flex items-center justify-between border-b" style={{ borderColor: "#E8DCC8", background: "#FFFDF8" }}>
+            <div className="px-6 py-5 flex items-center justify-between border-b border-mm-border bg-white">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "#FFF3D6" }}>
-                  <BellRing size={20} style={{ color: "#E89D18" }} />
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-mm-orange/10">
+                  <BellRing size={20} className="text-mm-orange" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold" style={{ color: "#4E342E" }}>All Notifications</h2>
-                  <p className="text-sm" style={{ color: "#8D6E63" }}>Manage your alerts, updates, and reminders</p>
+                  <h2 className="text-base font-extrabold text-mm-dark">
+                    All Notifications
+                  </h2>
+                  <p className="text-xs text-mm-gray mt-0.5">
+                    Manage your alerts, updates, and reminders
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-4">
-                <button 
+                <button
                   onClick={() => setClearConfirmOpen(true)}
                   disabled={notifications.length === 0}
-                  className="text-sm font-semibold hover:underline" 
-                  style={{ color: notifications.length === 0 ? "#D7CCC8" : "#EF5350", opacity: notifications.length === 0 ? 0.5 : 1 }}
+                  className="text-xs font-bold text-mm-red hover:underline disabled:opacity-50 disabled:no-underline"
                 >
                   Clear all
                 </button>
-                <button 
-                  onClick={markAllRead} 
+                <button
+                  onClick={markAllRead}
                   disabled={unreadCount === 0}
-                  className="text-sm font-semibold hover:underline" 
-                  style={{ color: unreadCount === 0 ? "#D7CCC8" : "#E89D18", opacity: unreadCount === 0 ? 0.5 : 1 }}
+                  className="text-xs font-bold text-mm-orange hover:underline disabled:opacity-50 disabled:no-underline"
                 >
                   Mark all read
                 </button>
-                <div className="h-6 w-px" style={{ background: "#E8DCC8" }} />
-                <button 
+                <div className="h-6 w-px bg-mm-border" />
+                <button
                   onClick={() => setShowAllNotificationsModal(false)}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F8F1E7] transition-colors"
+                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-mm-subtle transition-colors cursor-pointer"
                 >
-                  <X size={20} style={{ color: "#8D6E63" }} />
+                  <X size={20} className="text-mm-gray" />
                 </button>
               </div>
             </div>
 
             {/* Tabs */}
-            <div className="px-6 border-b flex items-center gap-6" style={{ borderColor: "#E8DCC8", background: "#FFFDF8" }}>
-              {["All", "Unread", "Payments", "Projects", "System"].map(tab => (
-                <button
-                  key={tab}
-                  onClick={() => setModalTab(tab)}
-                  className="py-3 text-sm font-semibold relative transition-colors"
-                  style={{ 
-                    color: modalTab === tab ? "#4E342E" : "#8D6E63" 
-                  }}
-                >
-                  {tab}
-                  {modalTab === tab && (
-                    <div className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t-full" style={{ background: "#E89D18" }} />
-                  )}
-                </button>
-              ))}
+            <div className="px-6 border-b border-mm-border flex items-center gap-6 bg-white">
+              {["All", "Unread", "Payments", "Projects", "System"].map(
+                (tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setModalTab(tab)}
+                    className={`py-3 text-xs font-bold relative transition-colors cursor-pointer ${
+                      modalTab === tab
+                        ? "text-mm-dark font-extrabold"
+                        : "text-mm-gray"
+                    }`}
+                  >
+                    {tab}
+                    {modalTab === tab && (
+                      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-mm-orange rounded-t-full" />
+                    )}
+                  </button>
+                ),
+              )}
             </div>
 
             {/* List */}
-            <div className="flex-1 overflow-y-auto p-6" style={{ background: "#FCF8F1" }}>
+            <div className="flex-1 overflow-y-auto p-6 bg-mm-subtle/20">
               <div className="space-y-3">
-                {fullModalFilteredNotifications.map(n => (
-                  <div 
+                {fullModalFilteredNotifications.map((n) => (
+                  <div
                     key={n.id}
-                    className="group relative flex items-start gap-4 p-4 rounded-xl border transition-all hover:shadow-sm"
-                    style={{ 
-                      borderColor: "#E8DCC8", 
-                      background: n.read ? "#FFFDF8" : "#FFF3D6",
-                    }}
+                    className={`group relative flex items-start gap-4 p-4 rounded-xl border transition-all hover:shadow-sm ${
+                      n.read
+                        ? "bg-white border-mm-border"
+                        : "bg-mm-orange/5 border-mm-orange/20"
+                    }`}
                   >
                     {!n.read && (
-                      <div className="absolute top-4 left-4 w-2 h-2 rounded-full" style={{ background: "#E89D18" }} />
+                      <div className="absolute top-4 left-4 w-2 h-2 rounded-full bg-mm-orange" />
                     )}
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ml-4" style={{ background: n.bg }}>
-                      <n.icon size={20} style={{ color: n.color }} />
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ml-4 bg-mm-subtle">
+                      <n.icon size={20} className="text-mm-dark" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-4">
                         <div>
-                          <h3 className="font-semibold text-sm truncate" style={{ color: "#4E342E" }}>{n.title}</h3>
-                          <p className="text-sm mt-0.5" style={{ color: "#8D6E63" }}>{n.message}</p>
+                          <h3 className="font-bold text-xs text-mm-dark truncate">
+                            {n.title}
+                          </h3>
+                          <p className="text-xs text-mm-gray mt-0.5 leading-normal">
+                            {n.message}
+                          </p>
                         </div>
-                        <span className="text-xs shrink-0 font-medium px-2.5 py-1 rounded-md" style={{ background: "#F8F1E7", color: "#6D4C41" }}>
+                        <span className="text-[10px] shrink-0 font-bold px-2.5 py-1 rounded-md bg-mm-subtle text-mm-dark">
                           {n.time}
                         </span>
                       </div>
                       <div className="flex items-center gap-4 mt-3">
-                        <span className="text-xs font-semibold px-2 py-0.5 rounded" style={{ background: "#E8DCC8", color: "#4E342E" }}>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-mm-subtle text-mm-dark">
                           {n.category}
                         </span>
                         {n.action && (
-                          <button 
+                          <button
                             onClick={() => {
-                              setNotifications(notifications.map(notif => notif.id === n.id ? { ...notif, read: true } : notif));
+                              setNotifications(
+                                notifications.map((notif) =>
+                                  notif.id === n.id
+                                    ? { ...notif, read: true }
+                                    : notif,
+                                ),
+                              );
                               setShowAllNotificationsModal(false);
                               if (n.path) navigate({ to: n.path });
                             }}
-                            className="text-xs font-bold hover:underline" 
-                            style={{ color: "#E89D18" }}
+                            className="text-xs font-bold text-mm-orange hover:underline"
                           >
                             {n.action}
                           </button>
@@ -819,41 +858,49 @@ function Dashboard() {
                 ))}
                 {fullModalFilteredNotifications.length === 0 && (
                   <div className="py-12 flex flex-col items-center justify-center text-center">
-                    <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4" style={{ background: "#F8F1E7" }}>
-                      <CheckSquare size={32} style={{ color: "#D7CCC8" }} />
+                    <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4 bg-mm-subtle">
+                      <CheckSquare size={32} className="text-mm-gray" />
                     </div>
-                    <h3 className="font-semibold" style={{ color: "#4E342E" }}>You're all caught up!</h3>
-                    <p className="text-sm mt-1" style={{ color: "#8D6E63" }}>No {modalTab.toLowerCase()} notifications found.</p>
+                    <h3 className="font-extrabold text-sm text-mm-dark">
+                      You're all caught up!
+                    </h3>
+                    <p className="text-xs text-mm-gray mt-1 font-medium">
+                      No {modalTab.toLowerCase()} notifications found.
+                    </p>
                   </div>
                 )}
               </div>
             </div>
           </div>
-          
+
           {/* Clear Confirm Sub-modal */}
           {clearConfirmOpen && (
-            <div className="fixed inset-0 z-400 flex items-center justify-center p-4">
-              <div className="absolute inset-0 bg-[#4E342E]/40 backdrop-blur-sm" onClick={() => setClearConfirmOpen(false)} />
-              <div className="relative p-6 rounded-2xl shadow-xl max-w-sm w-full" style={{ background: "#FCF8F1", border: "1px solid #E8DCC8" }}>
-                <h3 className="font-bold text-lg mb-2" style={{ color: "#4E342E" }}>Clear All Notifications?</h3>
-                <p className="text-sm mb-6" style={{ color: "#8D6E63" }}>
-                  This action cannot be undone. All your notifications will be permanently removed.
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <div
+                className="absolute inset-0 bg-mm-dark/40 backdrop-blur-sm"
+                onClick={() => setClearConfirmOpen(false)}
+              />
+              <div className="relative p-6 rounded-[20px] shadow-xl max-w-sm w-full bg-white border border-mm-border z-50">
+                <h3 className="font-extrabold text-sm text-mm-dark mb-2">
+                  Clear All Notifications?
+                </h3>
+                <p className="text-xs text-mm-gray font-medium mb-6 leading-relaxed">
+                  This action cannot be undone. All your notifications will be
+                  permanently removed.
                 </p>
                 <div className="flex justify-end gap-3">
-                  <button 
+                  <button
                     onClick={() => setClearConfirmOpen(false)}
-                    className="px-4 py-2 text-sm font-semibold rounded-xl"
-                    style={{ background: "#F8F1E7", color: "#6D4C41" }}
+                    className="px-4 py-2 text-xs font-bold rounded-xl border border-mm-border text-mm-dark bg-white hover:bg-mm-subtle/50 transition-all"
                   >
                     Cancel
                   </button>
-                  <button 
+                  <button
                     onClick={() => {
                       setNotifications([]);
                       setClearConfirmOpen(false);
                     }}
-                    className="px-4 py-2 text-sm font-semibold rounded-xl"
-                    style={{ background: "#EF5350", color: "white" }}
+                    className="px-4 py-2 text-xs font-extrabold rounded-xl bg-mm-red text-white transition-all hover:bg-mm-red/90"
                   >
                     Yes, Clear All
                   </button>
