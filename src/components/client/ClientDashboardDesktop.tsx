@@ -1,8 +1,11 @@
+import { useNavigate } from "@tanstack/react-router";
 import AnalyticsCard from "./AnalyticsCard";
 import BusinessTaskCard from "./BusinessTaskCard";
 import UpgradeCard from "./UpgradeCard";
 
 export default function ClientDashboardDesktop() {
+  const navigate = useNavigate();
+
   return (
     <div className="flex-1 w-full px-6 py-8 md:px-8 md:py-10 space-y-8">
       {/* Analytics Section - 4 Columns */}
@@ -29,6 +32,7 @@ export default function ClientDashboardDesktop() {
             title: "Technical SEO Audit",
             description: "Site speed and mobile usability check"
           }}
+          onViewMore={() => navigate({ to: "/projects", search: { activeCard: "seo" } })}
         />
 
         {/* Card 2: Marketing */}
@@ -44,6 +48,7 @@ export default function ClientDashboardDesktop() {
             title: "Content Calendar",
             description: "Planning posts for next month"
           }}
+          onViewMore={() => navigate({ to: "/projects", search: { activeCard: "marketing" } })}
         />
 
         {/* Card 3: Automation (Locked) */}
