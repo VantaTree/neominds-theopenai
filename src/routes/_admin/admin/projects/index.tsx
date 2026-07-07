@@ -1,22 +1,45 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Search, Plus, Eye, Edit2, Trash2 } from "lucide-react";
 import { statusColors } from "@/lib/mock-data";
-import type { Project } from "@/lib/mock-data";
+import type { Project } from "@/lib/schemas";
 import { Avatar, ProgressBar, StatusBadge, Card } from "@/components/admin/shared";
 import { CheckCircle2, ArrowRight, X, ChevronDown, SearchX } from "lucide-react";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { getProjectsFn, saveProjectFn, getUsersFn, deleteProjectFn, logAuditEventFn, getBusinessesFn } from "@/lib/server-functions";
+import { AdminLoader } from "@/components/AdminLoader";
 
 export const Route = createFileRoute("/_admin/admin/projects/")({
   head: () => ({ meta: [{ title: "Projects — GrowConsult AI" }] }),
+  loader: async () => {
+    try {
+      const [projects, users, businesses] = await Promise.all([
+        getProjectsFn(),
+        getUsersFn(),
+        getBusinessesFn(),
+      ]);
+      return { projects, users, businesses };
+    } catch (err) {
+      console.error("Loader failed to fetch projects data:", err);
+      return { projects: [], users: [], businesses: [] };
+    }
+  },
+  pendingComponent: AdminLoader,
+  pendingMs: 0,
   component: ProjectsPage,
 });
 
 function ProjectsPage() {
-  const [projectList, setProjectList] = useState<Project[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
-  const [businesses, setBusinesses] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { projects: initialProjects, users: initialUsers, businesses: initialBusinesses } = Route.useLoaderData();
+  const [projectList, setProjectList] = useState<Project[]>(initialProjects);
+  const [users, setUsers] = useState<any[]>(initialUsers);
+  const [businesses, setBusinesses] = useState<any[]>(initialBusinesses);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    setProjectList(initialProjects);
+    setUsers(initialUsers);
+    setBusinesses(initialBusinesses);
+  }, [initialProjects, initialUsers, initialBusinesses]);
 
   const refreshProjects = async () => {
     const [pData, uData, bData] = await Promise.all([
@@ -24,64 +47,11 @@ function ProjectsPage() {
       getUsersFn(),
       getBusinessesFn()
     ]);
+    setProjectList(pData);
+    setUsers(uData);
     setBusinesses(bData);
-
-    const mapped = pData.map(p => {
-      const biz = bData.find(b => b.id === p.businessId);
-      const usr = uData.find(u => u.id === (biz ? (typeof biz.userId === "string" ? biz.userId : biz.userId?.id) : ""));
-      
-      let status: "Pending" | "In Progress" | "Completed" = "In Progress";
-      if (p.progress === 0) status = "Pending";
-      else if (p.progress === 100) status = "Completed";
-
-      return {
-        id: p.id,
-        client: biz?.businessName || "No business",
-        services: [p.type],
-        manager: "John Smith",
-        status: status,
-        progress: p.progress,
-        deadline: p.deadline ? new Date(p.deadline).toLocaleDateString() : "",
-        startDate: p.createdAt ? new Date(p.createdAt).toLocaleDateString() : "",
-        priority: "Medium" as const,
-        email: usr?.email || "",
-        phone: usr?.phone || "",
-        industry: biz?.businessType || "Consulting",
-        website: biz?.websiteUrl || "",
-        joinedOn: usr?.createdAt ? new Date(usr.createdAt).toLocaleDateString() : "",
-        plan: (biz?.plan || "None") + " Plan",
-        description: p.description,
-        notes: "",
-        serviceGroups: [
-          { 
-            name: p.type, 
-            progress: p.progress,
-            color: "var(--color-mm-orange)",
-            tasks: p.updates.map((u, i) => ({
-              id: `t-${i}`,
-              name: u.message,
-              assignee: u.designation,
-              status: p.progress === 100 ? ("Completed" as const) : ("In Progress" as const),
-              progress: p.progress
-            }))
-          }
-        ]
-      };
-    });
-    setProjectList(mapped);
-    setUsers(uData.map(u => {
-      const biz = bData.find(b => (typeof b.userId === "string" ? b.userId : b.userId?.id) === u.id);
-      return {
-        ...u,
-        name: u.fullName,
-        business: biz ? biz.businessName : ""
-      };
-    }));
   };
 
-  useEffect(() => {
-    refreshProjects().then(() => setIsLoading(false));
-  }, []);
   const [isNewProjectOpen, setIsNewProjectOpen] = useState(false);
   const [newProjectForm, setNewProjectForm] = useState({
     name: "", client: "", services: [] as string[], manager: "John Smith",
@@ -93,8 +63,13 @@ function ProjectsPage() {
   const [confirmDelete, setConfirmDelete] = useState<Project | null>(null);
 
   const handleDelete = async (p: Project) => {
+    const biz = typeof p.businessId === "object" && p.businessId !== null
+      ? p.businessId
+      : businesses.find(b => b.id === p.businessId);
+    const client = biz?.businessName || "No business";
+    const manager = "John Smith";
     await deleteProjectFn({ data: p.id });
-    await logAuditEventFn({ data: { uid: "admin", action: "project_deleted", payload: { projectId: p.id, client: p.client, manager: p.manager }, userName: "Admin" } });
+    await logAuditEventFn({ data: { uid: "admin", action: "project_deleted", payload: { projectId: p.id, client, manager }, userName: "Admin" } });
     setProjectList(prev => prev.filter(x => x.id !== p.id));
     setConfirmDelete(null);
     setToast(`✓ Project "${p.id}" deleted successfully.`);
@@ -151,7 +126,10 @@ function ProjectsPage() {
     }
 
     const selectedUserObj = users.find(u => {
-      const label = u.business ? `${u.name} — ${u.business}` : u.name;
+      const biz = businesses.find(b => (typeof b.userId === "string" ? b.userId : b.userId?.id) === u.id);
+      const name = u.fullName;
+      const businessName = biz ? biz.businessName : "";
+      const label = businessName ? `${name} — ${businessName}` : name;
       return label === newProjectForm.client;
     });
     const matchedBiz = businesses.find(b => (typeof b.userId === "string" ? b.userId : b.userId?.id) === selectedUserObj?.id);
@@ -163,7 +141,7 @@ function ProjectsPage() {
       name: newProjectForm.name,
       description: newProjectForm.description,
       domain: "",
-      type: newProjectForm.services.join(" + "),
+      services: newProjectForm.services,
       progress: 0,
       updates: [],
       deadline: newProjectForm.deadline ? new Date(newProjectForm.deadline) : null,
@@ -186,15 +164,25 @@ function ProjectsPage() {
 
   const filteredProjects = useMemo(() => {
     return projectList.filter(p => {
+      const biz = typeof p.businessId === "object" && p.businessId !== null
+        ? p.businessId
+        : businesses.find(b => b.id === p.businessId);
+      const client = biz?.businessName || "No business";
+      const manager = "John Smith";
+      
+      let status: "Pending" | "In Progress" | "Completed" = "In Progress";
+      if (p.progress === 0) status = "Pending";
+      else if (p.progress === 100) status = "Completed";
+
       let matchType = true;
-      if (typeFilter === "My Projects") matchType = p.manager === "John Smith";
+      if (typeFilter === "My Projects") matchType = manager === "John Smith";
       else if (typeFilter === "AI Projects") matchType = true;
       else if (typeFilter === "Website Projects") matchType = p.services.includes("Website");
       else if (typeFilter === "Marketing Projects") matchType = p.services.includes("Marketing");
       else if (typeFilter === "SEO Projects") matchType = p.services.includes("SEO");
 
       let matchStatus = true;
-      if (statusFilter !== "All Status") matchStatus = p.status === statusFilter;
+      if (statusFilter !== "All Status") matchStatus = status === statusFilter;
 
       let matchService = true;
       if (serviceFilter !== "All Services") {
@@ -208,12 +196,12 @@ function ProjectsPage() {
       let matchSearch = true;
       const term = searchQuery.toLowerCase();
       if (term) {
-        matchSearch = p.id.toLowerCase().includes(term) || p.client.toLowerCase().includes(term) || p.manager.toLowerCase().includes(term);
+        matchSearch = p.id.toLowerCase().includes(term) || client.toLowerCase().includes(term) || manager.toLowerCase().includes(term);
       }
 
       return matchType && matchStatus && matchService && matchSearch;
     });
-  }, [projectList, typeFilter, statusFilter, serviceFilter, searchQuery]);
+  }, [projectList, typeFilter, statusFilter, serviceFilter, searchQuery, businesses]);
 
   const clearAllFilters = () => {
     setSearchQuery("");
@@ -276,7 +264,7 @@ function ProjectsPage() {
               <div style={{ background: "white", border: "1px solid var(--color-mm-border)", borderRadius: "16px", padding: "8px", boxShadow: "0 8px 24px rgba(0,0,0,0.10)", minWidth: "220px", position: "absolute", zIndex: 100, marginTop: "4px" }}>
                 {[
                   { label: "All Projects", count: projectList.length },
-                  { label: "My Projects", count: projectList.filter(p => p.manager === "John Smith").length },
+                  { label: "My Projects", count: projectList.filter(() => true).length },
                   { label: "AI Projects", count: projectList.length },
                   { label: "Website Projects", count: projectList.filter(p => p.services.includes("Website")).length },
                   { label: "Marketing Projects", count: projectList.filter(p => p.services.includes("Marketing")).length },
@@ -317,7 +305,14 @@ function ProjectsPage() {
                   { label: "Completed", bg: "rgba(92, 177, 62, 0.1)", color: "var(--color-mm-green)" },
                   { label: "Cancelled", bg: "var(--color-mm-subtle)", color: "var(--color-mm-gray)" }
                 ].map(opt => {
-                  const count = opt.label === "All Status" ? projectList.length : projectList.filter(p => p.status === opt.label).length;
+                  const count = opt.label === "All Status" 
+                    ? projectList.length 
+                    : projectList.filter(p => {
+                        let status: "Pending" | "In Progress" | "Completed" = "In Progress";
+                        if (p.progress === 0) status = "Pending";
+                        else if (p.progress === 100) status = "Completed";
+                        return status === opt.label;
+                      }).length;
                   return (
                     <div 
                       key={opt.label} onClick={() => { setStatusFilter(opt.label); setIsStatusOpen(false); }}
@@ -408,45 +403,59 @@ function ProjectsPage() {
                   </td>
                 </tr>
               ) : filteredProjects.length > 0 ? (
-                filteredProjects.map((p) => (
-                  <tr key={p.id} style={{ borderTop: "1px solid var(--color-mm-border)" }} className="hover:bg-mm-subtle transition-colors">
-                    <td className="px-4 py-3 text-xs" style={{ color: "var(--color-mm-gray)" }}>{p.id}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <Avatar name={p.client} size={28} />
-                        <span className="font-semibold" style={{ color: "var(--color-mm-dark)" }}>{p.client}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-1">
-                        {p.services.map((s) => (
-                          <span key={s} className="px-2.5 py-0.5 rounded-full text-xs border border-mm-border bg-mm-subtle text-mm-gray">
-                            {s}
-                          </span>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3" style={{ color: "var(--color-mm-gray)" }}>{p.manager}</td>
-                    <td className="px-4 py-3"><StatusBadge status={p.status} /></td>
-                    <td className="px-4 py-3 min-w-[160px]">
-                      <ProgressBar value={p.progress} color={statusColors[p.status as keyof typeof statusColors]} />
-                    </td>
-                    <td className="px-4 py-3 text-xs whitespace-nowrap" style={{ color: "var(--color-mm-gray)" }}>{p.deadline}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <Link to="/admin/projects/$id" params={{ id: p.id }} search={{ edit: false }} className="hover:opacity-70" title="View">
-                          <Eye size={16} style={{ color: "var(--color-mm-gray)" }} />
-                        </Link>
-                        <Link to="/admin/projects/$id" params={{ id: p.id }} search={{ edit: true }} className="hover:opacity-70" title="Edit">
-                          <Edit2 size={16} style={{ color: "var(--color-mm-gray)" }} />
-                        </Link>
-                        <button onClick={() => setConfirmDelete(p)} className="hover:opacity-70 text-mm-red" title="Delete">
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                filteredProjects.map((p) => {
+                  const biz = typeof p.businessId === "object" && p.businessId !== null
+                    ? p.businessId
+                    : businesses.find(b => b.id === p.businessId);
+                  const client = biz?.businessName || "No business";
+                  const manager = "John Smith";
+                  
+                  let status: "Pending" | "In Progress" | "Completed" = "In Progress";
+                  if (p.progress === 0) status = "Pending";
+                  else if (p.progress === 100) status = "Completed";
+
+                  const deadlineStr = p.deadline ? new Date(p.deadline).toLocaleDateString() : "";
+
+                  return (
+                    <tr key={p.id} style={{ borderTop: "1px solid var(--color-mm-border)" }} className="hover:bg-mm-subtle transition-colors">
+                      <td className="px-4 py-3 text-xs" style={{ color: "var(--color-mm-gray)" }}>{p.id}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <Avatar name={client} size={28} />
+                          <span className="font-semibold" style={{ color: "var(--color-mm-dark)" }}>{client}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-1">
+                          {p.services.map((s) => (
+                            <span key={s} className="px-2.5 py-0.5 rounded-full text-xs border border-mm-border bg-mm-subtle text-mm-gray">
+                              {s}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3" style={{ color: "var(--color-mm-gray)" }}>{manager}</td>
+                      <td className="px-4 py-3"><StatusBadge status={status} /></td>
+                      <td className="px-4 py-3 min-w-[160px]">
+                        <ProgressBar value={p.progress} color={statusColors[status as keyof typeof statusColors]} />
+                      </td>
+                      <td className="px-4 py-3 text-xs whitespace-nowrap" style={{ color: "var(--color-mm-gray)" }}>{deadlineStr}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <Link to="/admin/projects/$id" params={{ id: p.id }} search={{ edit: false }} className="hover:opacity-70" title="View">
+                            <Eye size={16} style={{ color: "var(--color-mm-gray)" }} />
+                          </Link>
+                          <Link to="/admin/projects/$id" params={{ id: p.id }} search={{ edit: true }} className="hover:opacity-70" title="Edit">
+                            <Edit2 size={16} style={{ color: "var(--color-mm-gray)" }} />
+                          </Link>
+                          <button onClick={() => setConfirmDelete(p)} className="hover:opacity-70 text-mm-red" title="Delete">
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               ) : (
                 <tr>
                   <td colSpan={8} className="px-4 py-12">
@@ -483,7 +492,10 @@ function ProjectsPage() {
                 <select value={newProjectForm.client} onChange={(e) => setNewProjectForm({...newProjectForm, client: e.target.value})} style={{ background: "white", border: newProjectErrors.client ? "1px solid var(--color-mm-red)" : "1px solid var(--color-mm-border)", borderRadius: "12px", padding: "10px 14px", color: "var(--color-mm-dark)", width: "100%", outline: "none" }} onFocus={(e) => { if (!newProjectErrors.client) e.target.style.borderColor = "var(--color-mm-orange)" }} onBlur={(e) => { if (!newProjectErrors.client) e.target.style.borderColor = "var(--color-mm-border)" }}>
                   <option value="" disabled>Select a client</option>
                   {users.map(u => {
-                    const label = u.business ? `${u.name} — ${u.business}` : u.name;
+                    const biz = businesses.find(b => (typeof b.userId === "string" ? b.userId : b.userId?.id) === u.id);
+                    const name = u.fullName;
+                    const businessName = biz ? biz.businessName : "";
+                    const label = businessName ? `${name} — ${businessName}` : name;
                     return (
                       <option key={u.id} value={label}>{label}</option>
                     );
@@ -573,32 +585,38 @@ function ProjectsPage() {
         </div>
       )}
 
-      {confirmDelete && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 animate-in fade-in duration-200" style={{ background: "rgba(0,0,0,0.3)" }}>
-          <div className="w-full max-w-sm rounded-2xl p-6 space-y-4 shadow-2xl" style={{ background: "white", border: "1px solid var(--color-mm-border)" }}>
-            <h3 className="font-bold text-lg" style={{ color: "var(--color-mm-dark)" }}>Delete Project?</h3>
-            <p className="text-sm" style={{ color: "var(--color-mm-gray)" }}>
-              Are you sure you want to delete project <strong>"{confirmDelete.id}"</strong> for client <strong>{confirmDelete.client}</strong>? This action is permanent.
-            </p>
-            <div className="flex gap-3 justify-end pt-2">
-              <button 
-                onClick={() => setConfirmDelete(null)} 
-                className="px-4 py-2 rounded-xl text-sm font-semibold border border-mm-border hover:bg-mm-subtle" 
-                style={{ background: "white", color: "var(--color-mm-gray)" }}
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={() => handleDelete(confirmDelete)} 
-                className="px-4 py-2 rounded-xl text-sm font-semibold hover:opacity-95 text-white" 
-                style={{ background: "var(--color-mm-red)" }}
-              >
-                Delete
-              </button>
+      {confirmDelete && (() => {
+        const biz = typeof confirmDelete.businessId === "object" && confirmDelete.businessId !== null
+          ? confirmDelete.businessId
+          : businesses.find(b => b.id === confirmDelete.businessId);
+        const client = biz?.businessName || "No business";
+        return (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 animate-in fade-in duration-200" style={{ background: "rgba(0,0,0,0.3)" }}>
+            <div className="w-full max-w-sm rounded-2xl p-6 space-y-4 shadow-2xl" style={{ background: "white", border: "1px solid var(--color-mm-border)" }}>
+              <h3 className="font-bold text-lg" style={{ color: "var(--color-mm-dark)" }}>Delete Project?</h3>
+              <p className="text-sm" style={{ color: "var(--color-mm-gray)" }}>
+                Are you sure you want to delete project <strong>"{confirmDelete.id}"</strong> for client <strong>{client}</strong>? This action is permanent.
+              </p>
+              <div className="flex gap-3 justify-end pt-2">
+                <button 
+                  onClick={() => setConfirmDelete(null)} 
+                  className="px-4 py-2 rounded-xl text-sm font-semibold border border-mm-border hover:bg-mm-subtle" 
+                  style={{ background: "white", color: "var(--color-mm-gray)" }}
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={() => handleDelete(confirmDelete)} 
+                  className="px-4 py-2 rounded-xl text-sm font-semibold hover:opacity-95 text-white" 
+                  style={{ background: "var(--color-mm-red)" }}
+                >
+                  Delete
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {toast && (
         <div className="fixed bottom-6 right-6 z-[100] px-5 py-3 rounded-xl shadow-lg transition-all animate-in slide-in-from-bottom-5" style={{ background: "rgba(92, 177, 62, 0.1)", border: "1px solid var(--color-mm-green)", color: "var(--color-mm-green)", fontWeight: 600 }}>

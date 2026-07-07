@@ -28,6 +28,7 @@ import {
   getPaymentsFn,
   getReportsFn,
 } from "@/lib/server-functions";
+import { AdminLoader } from "@/components/AdminLoader";
 
 const DashboardCharts = lazy(() =>
   import("@/components/admin/DashboardCharts").then((mod) => ({
@@ -62,6 +63,8 @@ export const Route = createFileRoute("/_admin/admin/")({
       };
     }
   },
+  pendingComponent: AdminLoader,
+  pendingMs: 0,
   component: Dashboard,
 });
 

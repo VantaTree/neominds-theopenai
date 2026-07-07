@@ -36,8 +36,14 @@ function ProjectDetail() {
     setBusinesses(bData);
 
     const mapped = pData.map(p => {
-      const biz = bData.find(b => b.id === p.businessId);
-      const usr = uData.find(u => u.id === (biz ? (typeof biz.userId === "string" ? biz.userId : biz.userId?.id) : ""));
+      const biz = typeof p.businessId === "object" && p.businessId !== null
+        ? p.businessId
+        : bData.find(b => b.id === p.businessId);
+      const usr = biz
+        ? (typeof biz.userId === "object" && biz.userId !== null
+          ? biz.userId
+          : uData.find(u => u.id === (typeof biz.userId === "string" ? biz.userId : biz.userId?.id)))
+        : null;
       
       let status: "Pending" | "In Progress" | "Completed" = "In Progress";
       if (p.progress === 0) status = "Pending";
