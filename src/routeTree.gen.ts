@@ -18,7 +18,11 @@ import { Route as AssessmentRouteImport } from './routes/assessment'
 import { Route as ClientRouteRouteImport } from './routes/_client/route'
 import { Route as AdminRouteRouteImport } from './routes/_admin/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ClientSettingsRouteImport } from './routes/_client/settings'
+import { Route as ClientReportRouteImport } from './routes/_client/report'
 import { Route as ClientProjectsRouteImport } from './routes/_client/projects'
+import { Route as ClientPlanRouteImport } from './routes/_client/plan'
+import { Route as ClientMessageRouteImport } from './routes/_client/message'
 import { Route as ClientDashboardRouteImport } from './routes/_client/dashboard'
 import { Route as AdminAdminIndexRouteImport } from './routes/_admin/admin/index'
 import { Route as AdminAdminUsersRouteImport } from './routes/_admin/admin/users'
@@ -74,9 +78,29 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ClientSettingsRoute = ClientSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => ClientRouteRoute,
+} as any)
+const ClientReportRoute = ClientReportRouteImport.update({
+  id: '/report',
+  path: '/report',
+  getParentRoute: () => ClientRouteRoute,
+} as any)
 const ClientProjectsRoute = ClientProjectsRouteImport.update({
   id: '/projects',
   path: '/projects',
+  getParentRoute: () => ClientRouteRoute,
+} as any)
+const ClientPlanRoute = ClientPlanRouteImport.update({
+  id: '/plan',
+  path: '/plan',
+  getParentRoute: () => ClientRouteRoute,
+} as any)
+const ClientMessageRoute = ClientMessageRouteImport.update({
+  id: '/message',
+  path: '/message',
   getParentRoute: () => ClientRouteRoute,
 } as any)
 const ClientDashboardRoute = ClientDashboardRouteImport.update({
@@ -144,7 +168,11 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/why': typeof WhyRoute
   '/dashboard': typeof ClientDashboardRoute
+  '/message': typeof ClientMessageRoute
+  '/plan': typeof ClientPlanRoute
   '/projects': typeof ClientProjectsRoute
+  '/report': typeof ClientReportRoute
+  '/settings': typeof ClientSettingsRoute
   '/admin/blogs': typeof AdminAdminBlogsRoute
   '/admin/payments': typeof AdminAdminPaymentsRoute
   '/admin/reports': typeof AdminAdminReportsRoute
@@ -165,7 +193,11 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/why': typeof WhyRoute
   '/dashboard': typeof ClientDashboardRoute
+  '/message': typeof ClientMessageRoute
+  '/plan': typeof ClientPlanRoute
   '/projects': typeof ClientProjectsRoute
+  '/report': typeof ClientReportRoute
+  '/settings': typeof ClientSettingsRoute
   '/admin/blogs': typeof AdminAdminBlogsRoute
   '/admin/payments': typeof AdminAdminPaymentsRoute
   '/admin/reports': typeof AdminAdminReportsRoute
@@ -189,7 +221,11 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/why': typeof WhyRoute
   '/_client/dashboard': typeof ClientDashboardRoute
+  '/_client/message': typeof ClientMessageRoute
+  '/_client/plan': typeof ClientPlanRoute
   '/_client/projects': typeof ClientProjectsRoute
+  '/_client/report': typeof ClientReportRoute
+  '/_client/settings': typeof ClientSettingsRoute
   '/_admin/admin/blogs': typeof AdminAdminBlogsRoute
   '/_admin/admin/payments': typeof AdminAdminPaymentsRoute
   '/_admin/admin/reports': typeof AdminAdminReportsRoute
@@ -212,7 +248,11 @@ export interface FileRouteTypes {
     | '/signup'
     | '/why'
     | '/dashboard'
+    | '/message'
+    | '/plan'
     | '/projects'
+    | '/report'
+    | '/settings'
     | '/admin/blogs'
     | '/admin/payments'
     | '/admin/reports'
@@ -233,7 +273,11 @@ export interface FileRouteTypes {
     | '/signup'
     | '/why'
     | '/dashboard'
+    | '/message'
+    | '/plan'
     | '/projects'
+    | '/report'
+    | '/settings'
     | '/admin/blogs'
     | '/admin/payments'
     | '/admin/reports'
@@ -256,7 +300,11 @@ export interface FileRouteTypes {
     | '/signup'
     | '/why'
     | '/_client/dashboard'
+    | '/_client/message'
+    | '/_client/plan'
     | '/_client/projects'
+    | '/_client/report'
+    | '/_client/settings'
     | '/_admin/admin/blogs'
     | '/_admin/admin/payments'
     | '/_admin/admin/reports'
@@ -346,11 +394,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_client/settings': {
+      id: '/_client/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof ClientSettingsRouteImport
+      parentRoute: typeof ClientRouteRoute
+    }
+    '/_client/report': {
+      id: '/_client/report'
+      path: '/report'
+      fullPath: '/report'
+      preLoaderRoute: typeof ClientReportRouteImport
+      parentRoute: typeof ClientRouteRoute
+    }
     '/_client/projects': {
       id: '/_client/projects'
       path: '/projects'
       fullPath: '/projects'
       preLoaderRoute: typeof ClientProjectsRouteImport
+      parentRoute: typeof ClientRouteRoute
+    }
+    '/_client/plan': {
+      id: '/_client/plan'
+      path: '/plan'
+      fullPath: '/plan'
+      preLoaderRoute: typeof ClientPlanRouteImport
+      parentRoute: typeof ClientRouteRoute
+    }
+    '/_client/message': {
+      id: '/_client/message'
+      path: '/message'
+      fullPath: '/message'
+      preLoaderRoute: typeof ClientMessageRouteImport
       parentRoute: typeof ClientRouteRoute
     }
     '/_client/dashboard': {
@@ -465,12 +541,20 @@ const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(
 
 interface ClientRouteRouteChildren {
   ClientDashboardRoute: typeof ClientDashboardRoute
+  ClientMessageRoute: typeof ClientMessageRoute
+  ClientPlanRoute: typeof ClientPlanRoute
   ClientProjectsRoute: typeof ClientProjectsRoute
+  ClientReportRoute: typeof ClientReportRoute
+  ClientSettingsRoute: typeof ClientSettingsRoute
 }
 
 const ClientRouteRouteChildren: ClientRouteRouteChildren = {
   ClientDashboardRoute: ClientDashboardRoute,
+  ClientMessageRoute: ClientMessageRoute,
+  ClientPlanRoute: ClientPlanRoute,
   ClientProjectsRoute: ClientProjectsRoute,
+  ClientReportRoute: ClientReportRoute,
+  ClientSettingsRoute: ClientSettingsRoute,
 }
 
 const ClientRouteRouteWithChildren = ClientRouteRoute._addFileChildren(
