@@ -15,7 +15,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 export const Route = createFileRoute("/signup")({
   head: () => ({
     meta: [
-      { title: "Sign Up — theopenai" },
+      { title: "Sign Up" },
       { name: "description", content: "Create your account on theopenai" },
     ],
   }),
@@ -54,7 +54,9 @@ function SignupPage() {
       const token = await user.getIdToken();
 
       // Set session cookie for SSR
-      const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+      const isLocalhost =
+        window.location.hostname === "localhost" ||
+        window.location.hostname === "127.0.0.1";
       document.cookie = `__session=${token}; path=/; max-age=3600;${isLocalhost ? "" : " Secure;"} SameSite=Lax`;
 
       // Create new user row/document referencing the auth user uid via server function
@@ -65,8 +67,8 @@ function SignupPage() {
             displayName: user.displayName,
             email: user.email,
             phoneNumber: user.phoneNumber,
-          }
-        }
+          },
+        },
       });
 
       localStorage.setItem("audit_unlocked", "true");
@@ -97,7 +99,9 @@ function SignupPage() {
       const token = await user.getIdToken();
 
       // Set session cookie for SSR
-      const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+      const isLocalhost =
+        window.location.hostname === "localhost" ||
+        window.location.hostname === "127.0.0.1";
       document.cookie = `__session=${token}; path=/; max-age=3600;${isLocalhost ? "" : " Secure;"} SameSite=Lax`;
 
       // Ensure user document exists in database via server function
@@ -108,8 +112,8 @@ function SignupPage() {
             displayName: user.displayName,
             email: user.email,
             phoneNumber: user.phoneNumber,
-          }
-        }
+          },
+        },
       });
 
       localStorage.setItem("audit_unlocked", "true");
