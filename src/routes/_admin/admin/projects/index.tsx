@@ -54,7 +54,7 @@ function ProjectsPage() {
 
   const [isNewProjectOpen, setIsNewProjectOpen] = useState(false);
   const [newProjectForm, setNewProjectForm] = useState({
-    name: "", client: "", services: [] as string[], manager: "John Smith",
+    name: "", client: "", services: [] as string[], manager: "",
     startDate: "", deadline: "", status: "Pending" as any, priority: "Medium" as any,
     description: "", budget: ""
   });
@@ -67,7 +67,7 @@ function ProjectsPage() {
       ? p.businessId
       : businesses.find(b => b.id === p.businessId);
     const client = biz?.businessName || "No business";
-    const manager = "John Smith";
+    const manager = p.assignee;
     await deleteProjectFn({ data: p.id });
     await logAuditEventFn({ data: { uid: "admin", action: "project_deleted", payload: { projectId: p.id, client, manager }, userName: "Admin" } });
     setProjectList(prev => prev.filter(x => x.id !== p.id));
@@ -153,7 +153,7 @@ function ProjectsPage() {
       refreshProjects().then(() => {
         setIsNewProjectOpen(false);
         setNewProjectForm({
-          name: "", client: "", services: [], manager: "John Smith",
+          name: "", client: "", services: [], manager: "",
           startDate: "", deadline: "", status: "Pending", priority: "Medium",
           description: "", budget: ""
         });
@@ -168,14 +168,14 @@ function ProjectsPage() {
         ? p.businessId
         : businesses.find(b => b.id === p.businessId);
       const client = biz?.businessName || "No business";
-      const manager = "John Smith";
+      const manager = p.assignee;
       
       let status: "Pending" | "In Progress" | "Completed" = "In Progress";
       if (p.progress === 0) status = "Pending";
       else if (p.progress === 100) status = "Completed";
 
       let matchType = true;
-      if (typeFilter === "My Projects") matchType = manager === "John Smith";
+      if (typeFilter === "My Projects") matchType = manager === p.assignee;
       else if (typeFilter === "AI Projects") matchType = true;
       else if (typeFilter === "Website Projects") matchType = p.services.includes("Website");
       else if (typeFilter === "Marketing Projects") matchType = p.services.includes("Marketing");
@@ -387,7 +387,7 @@ function ProjectsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-mm-subtle border-b border-mm-border text-mm-gray font-semibold">
-                {["Project ID", "Client/Business", "Services", "Project Manager", "Status", "Progress", "Deadline", "Actions"].map((h) => (
+                {["Project ID", "Client/Business", "Services", "Assignee", "Status", "Progress", "Deadline", "Actions"].map((h) => (
                   <th key={h} className="text-left font-semibold px-4 py-3 whitespace-nowrap">{h}</th>
                 ))}
               </tr>
@@ -408,7 +408,7 @@ function ProjectsPage() {
                     ? p.businessId
                     : businesses.find(b => b.id === p.businessId);
                   const client = biz?.businessName || "No business";
-                  const manager = "John Smith";
+                  const manager = p.assignee;
                   
                   let status: "Pending" | "In Progress" | "Completed" = "In Progress";
                   if (p.progress === 0) status = "Pending";
@@ -520,7 +520,7 @@ function ProjectsPage() {
               </div>
 
               <div>
-                <label style={{ color: "var(--color-mm-gray)", fontWeight: 600, fontSize: "13px", display: "block", marginBottom: "4px" }}>Project Manager</label>
+                <label style={{ color: "var(--color-mm-gray)", fontWeight: 600, fontSize: "13px", display: "block", marginBottom: "4px" }}>Assignee</label>
                 <input 
                   placeholder="Enter manager's name manually" 
                   value={newProjectForm.manager} 

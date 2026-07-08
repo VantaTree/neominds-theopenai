@@ -133,6 +133,7 @@ export const ProjectSchema = z.object({
   domain: z.string().default(""),
   services: z.array(z.string()).min(1, "Atleast one service should be there"),
   progress: z.number().min(0).max(100).default(0),
+  assignee: z.string().min(1, "Assignee is required"),
   updates: z.array(ProjectUpdateSchema).default([]),
   completedAt: TimestampSchema.nullable().optional(),
   deadline: TimestampSchema.nullable().optional(),
