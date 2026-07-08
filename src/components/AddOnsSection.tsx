@@ -320,22 +320,12 @@ export default function AddOnsSection({}: Props) {
     >
       <div className="max-w-6xl mx-auto px-6 relative z-10">
         <div className="text-center space-y-3">
-          <p
-            className="mb-3 text-center text-xs font-semibold uppercase tracking-[0.22em]"
-            style={{ color: "#FF5924" }}
-          >
-            Package Extensions
-          </p>
           <h3 className="text-3xl sm:text-4xl font-extrabold text-mm-dark tracking-tight pt-2">
-            Elevate Your{" "}
-            <span className="bg-linear-to-r from-mm-orange to-mm-pink bg-clip-text text-transparent">
-              Production
-            </span>
+            Add ons{" "}
+            {/* <span className="bg-linear-to-r from-mm-orange to-mm-pink bg-clip-text text-transparent">
+              ons
+            </span> */}
           </h3>
-          <p className="text-sm sm:text-base text-mm-dark/60 max-w-xl mx-auto font-sans">
-            Explore our specialized offline marketing and content production
-            add-ons. Drag to spin the carousel.
-          </p>
         </div>
 
         {/* 3D Merry-Go-Round Carousel Container */}

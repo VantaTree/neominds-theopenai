@@ -34,6 +34,7 @@ export default function ClientBottomLinks() {
       {/* Projects */}
       <Link
         to="/projects"
+        search={{activeCard: undefined}}
         className={`flex flex-col items-center justify-center space-y-1 cursor-pointer transition-colors ${
           location.pathname === "/projects" ? "text-mm-orange" : "text-mm-gray hover:text-mm-dark"
         }`}

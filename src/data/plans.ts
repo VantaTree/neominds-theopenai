@@ -40,7 +40,7 @@ const PLANS = [
     name: "Enterprise",
     price: "$89.99",
     period: "/mo",
-    action: "CONTACT US",
+    action: "GET STARTED",
     features: [
       "Modern 3D Website design",
       "7 Posts + 3 Reels per month",
