@@ -188,16 +188,18 @@ export default function AdminAside() {
           })}
         </nav>
 
-        {/* User Profile Card */}
+        {/* Admin Profile Card */}
         <div className="p-5 border-t border-mm-border flex items-center gap-3">
           <img
-            src="/images/avatar_john_doe.png"
+            src="/logos/logo_mini.png"
             alt="John Doe"
             className="h-9 w-9 rounded-full object-cover border border-mm-border"
           />
           <div className="min-w-0 font-sans">
-            <p className="text-sm font-bold text-mm-dark truncate">John Doe</p>
-            <p className="text-xs text-mm-gray truncate">john@example.com</p>
+            <p className="text-sm font-bold text-mm-dark truncate">
+              Super Admin
+            </p>
+            <p className="text-xs text-mm-gray truncate">theOpenAI</p>
           </div>
         </div>
       </aside>
