@@ -60,6 +60,7 @@ interface MappedUser {
   associatedBusinesses: DBBusiness[];
   industry?: string;
   website?: string;
+  image?: string;
 }
 
 function UsersPage() {
@@ -151,6 +152,7 @@ function UsersPage() {
         associatedBusinesses: userBizs,
         industry: mainBiz ? mainBiz.businessType : "Consulting",
         website: mainBiz ? mainBiz.websiteUrl : "",
+        image: u.image,
       };
     });
   }, [users, businesses]);
@@ -540,7 +542,16 @@ function UsersPage() {
           >
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-4">
-                <Avatar name={selectedUser.name} size={72} />
+                {selectedUser.image ? (
+                  <img
+                    src={selectedUser.image}
+                    alt={selectedUser.name}
+                    className="rounded-full object-cover shrink-0"
+                    style={{ width: 72, height: 72 }}
+                  />
+                ) : (
+                  <Avatar name={selectedUser.name} size={72} />
+                )}
                 <div>
                   <h2
                     className="text-2xl font-bold"
@@ -1274,7 +1285,16 @@ function UsersPage() {
                             </td>
                             <td className="px-5 py-4">
                               <div className="flex items-center gap-3">
-                                <Avatar name={u.name} size={36} />
+                                {u.image ? (
+                                  <img
+                                    src={u.image}
+                                    alt={u.name}
+                                    className="rounded-full object-cover shrink-0"
+                                    style={{ width: 36, height: 36 }}
+                                  />
+                                ) : (
+                                  <Avatar name={u.name} size={36} />
+                                )}
                                 <div>
                                   <div
                                     className="font-semibold text-mm-dark"

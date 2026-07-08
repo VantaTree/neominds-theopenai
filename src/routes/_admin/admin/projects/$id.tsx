@@ -23,8 +23,9 @@ import {
   Card,
   ProgressBar,
   StatusBadge,
+  PlanBadge,
 } from "@/components/admin/shared";
-import { getProjectsFn, saveProjectFn } from "@/lib/server-functions";
+import { getProjectsFn, saveProjectFn, getUsersFn, getBusinessesFn } from "@/lib/server-functions";
 import type {
   Project,
   ProjectStatus,
@@ -42,11 +43,15 @@ export const Route = createFileRoute("/_admin/admin/projects/$id")({
   },
   loader: async () => {
     try {
-      const projects = await getProjectsFn();
-      return { projects };
+      const [projects, users, businesses] = await Promise.all([
+        getProjectsFn(),
+        getUsersFn(),
+        getBusinessesFn(),
+      ]);
+      return { projects, users, businesses };
     } catch (err) {
       console.error("Loader failed to fetch projects data:", err);
-      return { projects: [] };
+      return { projects: [], users: [], businesses: [] };
     }
   },
   pendingComponent: AdminLoader,
@@ -57,7 +62,7 @@ export const Route = createFileRoute("/_admin/admin/projects/$id")({
 type Tab = "overview" | "progress" | "detailed";
 
 function ProjectDetail() {
-  const { projects: initialProjects } = Route.useLoaderData();
+  const { projects: initialProjects, users = [], businesses: initialBusinesses = [] } = Route.useLoaderData();
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const [projectList, setProjectList] = useState<Project[]>([]);
@@ -78,18 +83,8 @@ function ProjectDetail() {
   }, [id, edit]);
 
   const businesses = useMemo(() => {
-    const list: any[] = [];
-    initialProjects.forEach((p) => {
-      const biz =
-        typeof p.businessId === "object" && p.businessId !== null
-          ? p.businessId
-          : null;
-      if (biz && !list.some((b) => b.id === biz.id)) {
-        list.push(biz);
-      }
-    });
-    return list;
-  }, [initialProjects]);
+    return initialBusinesses;
+  }, [initialBusinesses]);
 
   const originalProject =
     projectList.find((p) => p.id === id) || projectList[0];
@@ -244,7 +239,7 @@ function ProjectDetail() {
     typeof activeProject.businessId === "object" &&
     activeProject.businessId !== null
       ? activeProject.businessId
-      : null;
+      : (businesses.find((b) => b.id === activeProject.businessId) || null);
   const clientName = activeBiz?.businessName || activeProject.name;
 
   return (
@@ -1335,63 +1330,139 @@ function DetailedTab({
     }, 1500);
   };
 
+  const { users = [], businesses = [] } = Route.useLoaderData();
+
   const biz =
     typeof project.businessId === "object" && project.businessId !== null
       ? project.businessId
-      : null;
+      : (businesses.find((b) => b.id === project.businessId) || null);
+
   const usr =
-    biz && typeof biz.userId === "object" && biz.userId !== null
-      ? biz.userId
+    biz
+      ? (typeof biz.userId === "object" && biz.userId !== null
+          ? biz.userId
+          : (users.find((u) => u.id === (typeof biz.userId === "string" ? biz.userId : biz.userId?.id)) || null))
       : null;
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <InfoCard
-          title="Client/Business Information"
-          rows={[
-            ["Business Name", biz?.businessName || project.name],
-            ["Email", usr?.email || ""],
-            ["Phone", usr?.phone || ""],
-            ["Industry", biz?.businessType || "Consulting"],
-            [
-              "Website",
-              biz?.websiteUrl ? (
-                <a
-                  key="w"
-                  href={`https://${biz.websiteUrl}`}
-                  className="hover:underline"
-                  style={{ color: "var(--color-mm-orange)" }}
-                >
-                  {biz.websiteUrl}
-                </a>
-              ) : (
-                ""
-              ),
-            ],
-            [
-              "Joined On",
-              usr?.createdAt
-                ? new Date(usr.createdAt).toLocaleDateString()
-                : "",
-            ],
-            [
-              "Plan",
-              <span
-                key="p"
-                className="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold"
-                style={{
-                  background:
-                    "color-mix(in oklch, var(--color-mm-orange) 18%, white)",
-                  border: "1px solid var(--color-mm-orange)",
-                  color: "var(--color-mm-orange)",
-                }}
-              >
-                {biz?.plan ? biz.plan + " Plan" : "None"}
-              </span>,
-            ],
-          ]}
-        />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        <div className="space-y-6">
+          <InfoCard
+            title="Client Information"
+            rows={[
+              [
+                "Client",
+                <div key="c" className="flex items-center gap-2">
+                  {usr?.image ? (
+                    <img
+                      src={usr.image}
+                      alt={usr.fullName}
+                      className="w-8 h-8 rounded-full object-cover shrink-0"
+                    />
+                  ) : (
+                    <Avatar name={usr?.fullName || "Client"} size={32} />
+                  )}
+                  <span>{usr?.fullName || "N/A"}</span>
+                </div>,
+              ],
+              [
+                "Email",
+                usr?.email ? (
+                  <a
+                    key="em"
+                    href={`mailto:${usr.email}`}
+                    className="hover:underline"
+                    style={{ color: "var(--color-mm-orange)" }}
+                  >
+                    {usr.email}
+                  </a>
+                ) : (
+                  "N/A"
+                ),
+              ],
+              [
+                "Phone",
+                usr?.phone ? (
+                  <a
+                    key="ph"
+                    href={`tel:${usr.phone}`}
+                    className="hover:underline"
+                    style={{ color: "var(--color-mm-orange)" }}
+                  >
+                    {usr.phone}
+                  </a>
+                ) : (
+                  "N/A"
+                ),
+              ],
+              [
+                "Joined On",
+                usr?.createdAt
+                  ? new Date(usr.createdAt).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })
+                  : "N/A",
+              ],
+            ]}
+          />
+          <InfoCard
+            title="Business Information"
+            rows={[
+              [
+                "Business",
+                <div key="b" className="flex items-center gap-2">
+                  {biz?.image ? (
+                    <img
+                      src={biz.image}
+                      alt={biz.businessName}
+                      className="w-8 h-8 rounded-full object-cover shrink-0"
+                    />
+                  ) : (
+                    <Avatar name={biz?.businessName || "Business"} size={32} />
+                  )}
+                  <span>{biz?.businessName || "N/A"}</span>
+                </div>,
+              ],
+              ["Industry / Type", biz?.businessType || "N/A"],
+              [
+                "Website",
+                biz?.websiteUrl ? (
+                  <a
+                    key="web"
+                    href={biz.websiteUrl.startsWith("http") ? biz.websiteUrl : `https://${biz.websiteUrl}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:underline"
+                    style={{ color: "var(--color-mm-orange)" }}
+                  >
+                    {biz.websiteUrl}
+                  </a>
+                ) : (
+                  "N/A"
+                ),
+              ],
+              [
+                "Plan",
+                biz?.plan ? (
+                  <PlanBadge key="pl" plan={biz.plan} />
+                ) : (
+                  <PlanBadge key="pl" plan="None" />
+                ),
+              ],
+              [
+                "Payment Status",
+                biz?.paymentStatus ? (
+                  <StatusBadge key="ps" status={biz.paymentStatus} />
+                ) : (
+                  "N/A"
+                ),
+              ],
+            ]}
+          />
+        </div>
         <InfoCard
           title="Project Details"
           rows={[
@@ -1419,14 +1490,22 @@ function DetailedTab({
             [
               "Start Date",
               project.startDate
-                ? new Date(project.startDate).toLocaleDateString()
-                : "",
+                ? new Date(project.startDate).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })
+                : "N/A",
             ],
             [
               "Deadline",
               project.deadline
-                ? new Date(project.deadline).toLocaleDateString()
-                : "",
+                ? new Date(project.deadline).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })
+                : "N/A",
             ],
             ["Status", <StatusBadge key="st" status={project.status} />],
             [
