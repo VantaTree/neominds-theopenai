@@ -15,6 +15,8 @@ import {
   ChevronDown,
   SearchX,
   CheckCircle2,
+  Camera,
+  User,
 } from "lucide-react";
 import { useState, useEffect, useRef, useMemo, Fragment } from "react";
 import { Avatar, PlanBadge, StatusBadge } from "@/components/admin/shared";
@@ -75,12 +77,55 @@ function UsersPage() {
     setBusinesses(initialBusinesses);
   }, [initialUsers, initialBusinesses]);
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setEditForm((prev: any) => ({ ...prev, image: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const [expandedUserIds, setExpandedUserIds] = useState<Set<string>>(new Set());
   const [selectedUser, setSelectedUser] = useState<MappedUser | null>(null);
   const [activeTab, setActiveTab] = useState("Profile");
   const [roleTab, setRoleTab] = useState<"clients" | "admins">("clients");
 
   const [editingUser, setEditingUser] = useState<MappedUser | null>(null);
+  const [editingBusiness, setEditingBusiness] = useState<DBBusiness | null>(null);
+  const [editBusinessForm, setEditBusinessForm] = useState<any>({});
+  const [editBusinessErrors, setEditBusinessErrors] = useState<Record<string, string>>({});
+  const [isSavingBusiness, setIsSavingBusiness] = useState(false);
+  const businessFileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleBusinessAvatarClick = () => {
+    businessFileInputRef.current?.click();
+  };
+
+  const handleBusinessFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setEditBusinessForm((prev: any) => ({ ...prev, image: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleEditBusinessClick = (b: DBBusiness) => {
+    setEditingBusiness(b);
+    setEditBusinessForm({ ...b });
+    setEditBusinessErrors({});
+  };
   const [editErrors, setEditErrors] = useState<Record<string, string>>({});
   const [editForm, setEditForm] = useState<any>({});
   const [toast, setToast] = useState<{ title: string; sub?: string } | null>(null);
@@ -253,13 +298,12 @@ function UsersPage() {
 
     setIsCreatingUser(true);
     const userId = `usr_${Date.now()}`;
-    const isNewUserAdmin = roleTab === "admins";
     const newUserSchema: DBUser = {
       id: userId,
       fullName: addForm.name,
       email: addForm.email,
       phone: addForm.phone,
-      role: isNewUserAdmin ? "admin" : "client",
+      role: "client",
       status: "Active",
       businessCount: 1,
       createdAt: new Date(),
@@ -280,17 +324,7 @@ function UsersPage() {
       updatedAt: new Date(),
     };
 
-    let claimPromise = Promise.resolve({ success: true });
-    if (isNewUserAdmin) {
-      claimPromise = setAdminClaimFn({ data: { uid: userId, isAdmin: true } })
-        .catch(err => {
-          console.error("Failed to assign admin claims:", err);
-          return { success: false };
-        });
-    }
-
     Promise.all([
-      claimPromise,
       saveUserFn({ data: newUserSchema }),
       saveBusinessFn({ data: newBusinessSchema }),
     ]).then(() => {
@@ -361,7 +395,8 @@ function UsersPage() {
       email: editForm.email,
       phone: editForm.phone,
       status: editForm.status as any,
-      role: editForm.role as any,
+      role: editingUser!.role as any,
+      image: editForm.image || "",
       businessCount: users.find((u) => u.id === userId)?.businessCount || 1,
       createdAt: users.find((u) => u.id === userId)?.createdAt || new Date(),
       updatedAt: new Date(),
@@ -387,21 +422,7 @@ function UsersPage() {
       updatedAt: new Date(),
     };
 
-    const prevUser = users.find((u) => u.id === userId);
-    const wasAdmin = prevUser?.role === "admin";
-    const isAdminNow = editForm.role === "admin";
-
-    let claimPromise = Promise.resolve({ success: true });
-    if (wasAdmin !== isAdminNow) {
-      claimPromise = setAdminClaimFn({ data: { uid: userId, isAdmin: isAdminNow } })
-        .catch(err => {
-          console.error("Failed to update Firebase custom claims:", err);
-          return { success: false };
-        });
-    }
-
     Promise.all([
-      claimPromise,
       saveUserFn({ data: userSchemaData }),
       saveBusinessFn({ data: businessSchemaData }),
     ]).then(() => {
@@ -418,14 +439,72 @@ function UsersPage() {
           phone: editForm.phone,
           plan: editForm.plan,
           status: editForm.status,
-          role: editForm.role,
+          role: editingUser!.role,
           industry: editForm.industry,
           website: editForm.website,
+          image: editForm.image,
         });
       }
       setEditingUser(null);
       setToast({ title: "✓ User updated successfully!" });
     });
+  };
+
+  const handleEditBusinessSubmit = () => {
+    const errs: Record<string, string> = {};
+    if (!editBusinessForm.businessName?.trim()) {
+      errs.businessName = "Business name is required";
+    }
+    if (editBusinessForm.contactEmail && !/^\S+@\S+\.\S+$/.test(editBusinessForm.contactEmail)) {
+      errs.contactEmail = "Please enter a valid email";
+    }
+
+    if (Object.keys(errs).length > 0) {
+      setEditBusinessErrors(errs);
+      return;
+    }
+
+    setIsSavingBusiness(true);
+    const updatedBiz: DBBusiness = {
+      ...editingBusiness!,
+      businessName: editBusinessForm.businessName,
+      businessType: editBusinessForm.businessType || "",
+      websiteUrl: editBusinessForm.websiteUrl || "",
+      contactPhone: editBusinessForm.contactPhone || "",
+      contactEmail: editBusinessForm.contactEmail || null,
+      plan: editBusinessForm.plan || "None",
+      paymentStatus: editBusinessForm.paymentStatus || "Pending",
+      image: editBusinessForm.image || "",
+      updatedAt: new Date(),
+    };
+
+    saveBusinessFn({ data: updatedBiz })
+      .then(() => {
+        setIsSavingBusiness(false);
+        setEditingBusiness(null);
+        setBusinesses((prev) =>
+          prev.map((b) => (b.id === updatedBiz.id ? updatedBiz : b))
+        );
+        if (selectedUser) {
+          const updatedBizs = selectedUser.associatedBusinesses.map((b) =>
+            b.id === updatedBiz.id ? updatedBiz : b
+          );
+          const primaryBiz = updatedBizs[0];
+          const newPlan = primaryBiz ? `${primaryBiz.plan || "Basic"} Plan` : "Basic Plan";
+          setSelectedUser({
+            ...selectedUser,
+            business: primaryBiz ? primaryBiz.businessName : "No business",
+            plan: newPlan,
+            associatedBusinesses: updatedBizs,
+          });
+        }
+        setToast({ title: "✓ Business updated successfully!" });
+      })
+      .catch((err) => {
+        console.error("Failed to save business:", err);
+        setIsSavingBusiness(false);
+        setToast({ title: "✗ Failed to update business" });
+      });
   };
 
   const handleDeleteUser = (userId: string) => {
@@ -578,7 +657,7 @@ function UsersPage() {
           >
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-4">
-                {selectedUser.image ? (
+                {selectedUser.image && selectedUser.image.trim() !== "" && selectedUser.image !== "undefined" && selectedUser.image !== "null" ? (
                   <img
                     src={selectedUser.image}
                     alt={selectedUser.name}
@@ -1347,7 +1426,7 @@ function UsersPage() {
                             </td>
                             <td className="px-5 py-4">
                               <div className="flex items-center gap-3">
-                                {u.image ? (
+                                {u.image && u.image.trim() !== "" && u.image !== "undefined" && u.image !== "null" ? (
                                   <img
                                     src={u.image}
                                     alt={u.name}
@@ -1444,6 +1523,7 @@ function UsersPage() {
                                             <th className="pb-2 font-semibold">CONTACT PHONE</th>
                                             <th className="pb-2 font-semibold">PLAN</th>
                                             <th className="pb-2 font-semibold">PAYMENT STATUS</th>
+                                            <th className="pb-2 font-semibold text-right">ACTIONS</th>
                                           </tr>
                                         </thead>
                                         <tbody>
@@ -1451,11 +1531,12 @@ function UsersPage() {
                                             <tr key={b.id} className="text-mm-dark border-b border-mm-subtle last:border-0">
                                               <td className="py-2.5 font-medium">
                                                 <div className="flex items-center gap-2.5">
-                                                  {b.image ? (
+                                                  {b.image && b.image.trim() !== "" && b.image !== "undefined" && b.image !== "null" ? (
                                                     <img
                                                       src={b.image}
                                                       alt={b.businessName}
-                                                      className="w-8 h-8 rounded-full object-cover shrink-0"
+                                                      className="rounded-full object-cover shrink-0"
+                                                      style={{ width: 32, height: 32 }}
                                                     />
                                                   ) : (
                                                     <Avatar name={b.businessName} size={32} />
@@ -1509,6 +1590,17 @@ function UsersPage() {
                                               </td>
                                               <td className="py-2.5">
                                                 <StatusBadge status={b.paymentStatus} />
+                                              </td>
+                                              <td className="py-2.5 text-right">
+                                                <button
+                                                  onClick={() => handleEditBusinessClick(b)}
+                                                  className="hover:text-mm-orange transition-colors cursor-pointer inline-flex items-center"
+                                                >
+                                                  <Edit2
+                                                    size={14}
+                                                    style={{ color: "var(--color-mm-gray)" }}
+                                                  />
+                                                </button>
                                               </td>
                                             </tr>
                                           ))}
@@ -1921,6 +2013,44 @@ function UsersPage() {
               </button>
             </div>
 
+            <div className="flex flex-col items-center mb-6">
+              <div 
+                className="relative group cursor-pointer" 
+                onClick={handleAvatarClick}
+                style={{
+                  width: "96px",
+                  height: "96px",
+                  borderRadius: "50%",
+                  border: "2px solid var(--color-mm-orange)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: "var(--color-mm-subtle)",
+                  overflow: "hidden",
+                }}
+              >
+                {editForm.image && editForm.image.trim() !== "" && editForm.image !== "undefined" && editForm.image !== "null" ? (
+                  <img src={editForm.image} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  <User className="w-12 h-12 text-mm-gray" />
+                )}
+                <div 
+                  className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  style={{ borderRadius: "50%" }}
+                >
+                  <Camera className="w-6 h-6 text-white" />
+                </div>
+              </div>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept="image/*"
+                className="hidden"
+              />
+              <p className="text-xs text-mm-gray mt-2">Click to change profile picture</p>
+            </div>
+
             <div className="space-y-4">
               <div>
                 <label
@@ -2119,112 +2249,7 @@ function UsersPage() {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label
-                    style={{
-                      color: "var(--color-mm-gray)",
-                      fontWeight: 600,
-                      fontSize: "13px",
-                      display: "block",
-                      marginBottom: "4px",
-                    }}
-                  >
-                    Industry
-                  </label>
-                  <select
-                    value={editForm.industry || "E-commerce"}
-                    onChange={(e) =>
-                      setEditForm({ ...editForm, industry: e.target.value })
-                    }
-                    style={{
-                      background: "white",
-                      border: "1px solid var(--color-mm-border)",
-                      borderRadius: "12px",
-                      padding: "10px 14px",
-                      color: "var(--color-mm-dark)",
-                      width: "100%",
-                      outline: "none",
-                    }}
-                  >
-                    <option>E-commerce</option>
-                    <option>Retail</option>
-                    <option>Healthcare</option>
-                    <option>Agency</option>
-                    <option>Real Estate</option>
-                    <option>Technology</option>
-                    <option>Other</option>
-                  </select>
-                </div>
-                <div>
-                  <label
-                    style={{
-                      color: "var(--color-mm-gray)",
-                      fontWeight: 600,
-                      fontSize: "13px",
-                      display: "block",
-                      marginBottom: "4px",
-                    }}
-                  >
-                    Plan
-                  </label>
-                  <select
-                    value={editForm.plan}
-                    onChange={(e) =>
-                      setEditForm({ ...editForm, plan: e.target.value })
-                    }
-                    style={{
-                      background: "white",
-                      border: "1px solid var(--color-mm-border)",
-                      borderRadius: "12px",
-                      padding: "10px 14px",
-                      color: "var(--color-mm-dark)",
-                      width: "100%",
-                      outline: "none",
-                    }}
-                  >
-                    <option>Basic Plan</option>
-                    <option>Plus Plan</option>
-                    <option>Pro Plan</option>
-                  </select>
-                </div>
-              </div>
 
-              <div>
-                <label
-                  style={{
-                    color: "var(--color-mm-gray)",
-                    fontWeight: 600,
-                    fontSize: "13px",
-                    display: "block",
-                    marginBottom: "4px",
-                  }}
-                >
-                  Website URL
-                </label>
-                <input
-                  value={editForm.website || ""}
-                  placeholder="https://"
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, website: e.target.value })
-                  }
-                  style={{
-                    background: "white",
-                    border: "1px solid var(--color-mm-border)",
-                    borderRadius: "12px",
-                    padding: "10px 14px",
-                    color: "var(--color-mm-dark)",
-                    width: "100%",
-                    outline: "none",
-                  }}
-                  onFocus={(e) =>
-                    (e.target.style.borderColor = "var(--color-mm-orange)")
-                  }
-                  onBlur={(e) =>
-                    (e.target.style.borderColor = "var(--color-mm-border)")
-                  }
-                />
-              </div>
 
               <div>
                 <label
@@ -2259,129 +2284,7 @@ function UsersPage() {
                 </select>
               </div>
 
-              <div>
-                <label
-                  style={{
-                    color: "var(--color-mm-gray)",
-                    fontWeight: 600,
-                    fontSize: "13px",
-                    display: "block",
-                    marginBottom: "4px",
-                  }}
-                >
-                  Role
-                </label>
-                <select
-                  value={editForm.role || "client"}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, role: e.target.value })
-                  }
-                  style={{
-                    background: "white",
-                    border: "1px solid var(--color-mm-border)",
-                    borderRadius: "12px",
-                    padding: "10px 14px",
-                    color: "var(--color-mm-dark)",
-                    width: "100%",
-                    outline: "none",
-                  }}
-                >
-                  <option value="client">Client</option>
-                  <option value="admin">Administrator</option>
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label
-                    style={{
-                      color: "var(--color-mm-gray)",
-                      fontWeight: 600,
-                      fontSize: "13px",
-                      display: "block",
-                      marginBottom: "4px",
-                    }}
-                  >
-                    New Password
-                  </label>
-                  <input
-                    type="password"
-                    placeholder="Leave blank to keep current"
-                    value={editForm.newPassword || ""}
-                    onChange={(e) =>
-                      setEditForm({ ...editForm, newPassword: e.target.value })
-                    }
-                    style={{
-                      background: "white",
-                      border: "1px solid var(--color-mm-border)",
-                      borderRadius: "12px",
-                      padding: "10px 14px",
-                      color: "var(--color-mm-dark)",
-                      width: "100%",
-                      outline: "none",
-                    }}
-                    onFocus={(e) =>
-                      (e.target.style.borderColor = "var(--color-mm-orange)")
-                    }
-                    onBlur={(e) =>
-                      (e.target.style.borderColor = "var(--color-mm-border)")
-                    }
-                  />
-                </div>
-                <div>
-                  <label
-                    style={{
-                      color: "var(--color-mm-gray)",
-                      fontWeight: 600,
-                      fontSize: "13px",
-                      display: "block",
-                      marginBottom: "4px",
-                    }}
-                  >
-                    Confirm Password
-                  </label>
-                  <input
-                    type="password"
-                    value={editForm.confirmPassword || ""}
-                    onChange={(e) =>
-                      setEditForm({
-                        ...editForm,
-                        confirmPassword: e.target.value,
-                      })
-                    }
-                    style={{
-                      background: "white",
-                      border: editErrors.confirmPassword
-                        ? "1px solid var(--color-mm-red)"
-                        : "1px solid var(--color-mm-border)",
-                      borderRadius: "12px",
-                      padding: "10px 14px",
-                      color: "var(--color-mm-dark)",
-                      width: "100%",
-                      outline: "none",
-                    }}
-                    onFocus={(e) => {
-                      if (!editErrors.confirmPassword)
-                        e.target.style.borderColor = "var(--color-mm-orange)";
-                    }}
-                    onBlur={(e) => {
-                      if (!editErrors.confirmPassword)
-                        e.target.style.borderColor = "var(--color-mm-border)";
-                    }}
-                  />
-                  {editErrors.confirmPassword && (
-                    <div
-                      style={{
-                        color: "var(--color-mm-red)",
-                        fontSize: "12px",
-                        marginTop: "4px",
-                      }}
-                    >
-                      {editErrors.confirmPassword}
-                    </div>
-                  )}
-                </div>
-              </div>
+              {/* Role and password change option removed from UI */}
             </div>
 
             <div
@@ -2405,6 +2308,365 @@ function UsersPage() {
                 style={{ background: "var(--color-mm-orange)", color: "white" }}
               >
                 Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── EDIT BUSINESS MODAL ── */}
+      {editingBusiness && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.2)", backdropFilter: "blur(4px)" }}
+          onClick={() => setEditingBusiness(null)}
+        >
+          <div
+            className="w-full"
+            style={{
+              background: "white",
+              borderRadius: "24px",
+              border: "1px solid var(--color-mm-border)",
+              maxWidth: "560px",
+              padding: "32px",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.15)",
+              width: "90%",
+              maxHeight: "90vh",
+              overflowY: "auto",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h2
+                style={{
+                  color: "var(--color-mm-dark)",
+                  fontWeight: 700,
+                  fontSize: "20px",
+                }}
+              >
+                Edit Business
+              </h2>
+              <button
+                onClick={() => setEditingBusiness(null)}
+                className="hover:opacity-70 transition-opacity cursor-pointer"
+              >
+                <X
+                  size={20}
+                  style={{ color: "var(--color-mm-gray)" }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.color = "var(--color-mm-red)")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.color = "var(--color-mm-gray)")
+                  }
+                />
+              </button>
+            </div>
+
+            {/* Business Avatar picture upload */}
+            <div className="flex flex-col items-center mb-6">
+              <div 
+                className="relative group cursor-pointer" 
+                onClick={handleBusinessAvatarClick}
+                style={{
+                  width: "96px",
+                  height: "96px",
+                  borderRadius: "50%",
+                  border: "2px solid var(--color-mm-orange)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: "var(--color-mm-subtle)",
+                  overflow: "hidden",
+                }}
+              >
+                {editBusinessForm.image && editBusinessForm.image.trim() !== "" && editBusinessForm.image !== "undefined" && editBusinessForm.image !== "null" ? (
+                  <img src={editBusinessForm.image} alt="Business Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <User className="w-12 h-12 text-mm-gray" />
+                )}
+                <div 
+                  className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  style={{ borderRadius: "50%" }}
+                >
+                  <Camera className="w-6 h-6 text-white" />
+                </div>
+              </div>
+              <input
+                type="file"
+                ref={businessFileInputRef}
+                onChange={handleBusinessFileChange}
+                accept="image/*"
+                className="hidden"
+              />
+              <p className="text-xs text-mm-gray mt-2">Click to change business logo</p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label
+                  style={{
+                    color: "var(--color-mm-gray)",
+                    fontWeight: 600,
+                    fontSize: "13px",
+                    display: "block",
+                    marginBottom: "4px",
+                  }}
+                >
+                  Business Name*
+                </label>
+                <input
+                  value={editBusinessForm.businessName || ""}
+                  onChange={(e) =>
+                    setEditBusinessForm({ ...editBusinessForm, businessName: e.target.value })
+                  }
+                  style={{
+                    background: "white",
+                    border: editBusinessErrors.businessName
+                      ? "1px solid var(--color-mm-red)"
+                      : "1px solid var(--color-mm-border)",
+                    borderRadius: "12px",
+                    padding: "10px 14px",
+                    color: "var(--color-mm-dark)",
+                    width: "100%",
+                    outline: "none",
+                  }}
+                />
+                {editBusinessErrors.businessName && (
+                  <div style={{ color: "var(--color-mm-red)", fontSize: "12px", marginTop: "4px" }}>
+                    {editBusinessErrors.businessName}
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label
+                    style={{
+                      color: "var(--color-mm-gray)",
+                      fontWeight: 600,
+                      fontSize: "13px",
+                      display: "block",
+                      marginBottom: "4px",
+                    }}
+                  >
+                    Type / Industry
+                  </label>
+                  <select
+                    value={editBusinessForm.businessType || "Consulting"}
+                    onChange={(e) =>
+                      setEditBusinessForm({ ...editBusinessForm, businessType: e.target.value })
+                    }
+                    style={{
+                      background: "white",
+                      border: "1px solid var(--color-mm-border)",
+                      borderRadius: "12px",
+                      padding: "10px 14px",
+                      color: "var(--color-mm-dark)",
+                      width: "100%",
+                      outline: "none",
+                    }}
+                  >
+                    <option>Consulting</option>
+                    <option>E-commerce</option>
+                    <option>Retail</option>
+                    <option>Healthcare</option>
+                    <option>Agency</option>
+                    <option>Real Estate</option>
+                    <option>Technology</option>
+                    <option>Other</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label
+                    style={{
+                      color: "var(--color-mm-gray)",
+                      fontWeight: 600,
+                      fontSize: "13px",
+                      display: "block",
+                      marginBottom: "4px",
+                    }}
+                  >
+                    Plan
+                  </label>
+                  <select
+                    value={editBusinessForm.plan || "None"}
+                    onChange={(e) =>
+                      setEditBusinessForm({ ...editBusinessForm, plan: e.target.value })
+                    }
+                    style={{
+                      background: "white",
+                      border: "1px solid var(--color-mm-border)",
+                      borderRadius: "12px",
+                      padding: "10px 14px",
+                      color: "var(--color-mm-dark)",
+                      width: "100%",
+                      outline: "none",
+                    }}
+                  >
+                    <option value="None">None</option>
+                    <option value="Basic">Basic Plan</option>
+                    <option value="Plus">Plus Plan</option>
+                    <option value="Pro">Pro Plan</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label
+                  style={{
+                    color: "var(--color-mm-gray)",
+                    fontWeight: 600,
+                    fontSize: "13px",
+                    display: "block",
+                    marginBottom: "4px",
+                  }}
+                >
+                  Website URL
+                </label>
+                <input
+                  value={editBusinessForm.websiteUrl || ""}
+                  placeholder="https://"
+                  onChange={(e) =>
+                    setEditBusinessForm({ ...editBusinessForm, websiteUrl: e.target.value })
+                  }
+                  style={{
+                    background: "white",
+                    border: "1px solid var(--color-mm-border)",
+                    borderRadius: "12px",
+                    padding: "10px 14px",
+                    color: "var(--color-mm-dark)",
+                    width: "100%",
+                    outline: "none",
+                  }}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label
+                    style={{
+                      color: "var(--color-mm-gray)",
+                      fontWeight: 600,
+                      fontSize: "13px",
+                      display: "block",
+                      marginBottom: "4px",
+                    }}
+                  >
+                    Contact Phone
+                  </label>
+                  <input
+                    value={editBusinessForm.contactPhone || ""}
+                    onChange={(e) =>
+                      setEditBusinessForm({ ...editBusinessForm, contactPhone: e.target.value })
+                    }
+                    style={{
+                      background: "white",
+                      border: "1px solid var(--color-mm-border)",
+                      borderRadius: "12px",
+                      padding: "10px 14px",
+                      color: "var(--color-mm-dark)",
+                      width: "100%",
+                      outline: "none",
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label
+                    style={{
+                      color: "var(--color-mm-gray)",
+                      fontWeight: 600,
+                      fontSize: "13px",
+                      display: "block",
+                      marginBottom: "4px",
+                    }}
+                  >
+                    Contact Email
+                  </label>
+                  <input
+                    value={editBusinessForm.contactEmail || ""}
+                    onChange={(e) =>
+                      setEditBusinessForm({ ...editBusinessForm, contactEmail: e.target.value })
+                    }
+                    style={{
+                      background: "white",
+                      border: editBusinessErrors.contactEmail
+                        ? "1px solid var(--color-mm-red)"
+                        : "1px solid var(--color-mm-border)",
+                      borderRadius: "12px",
+                      padding: "10px 14px",
+                      color: "var(--color-mm-dark)",
+                      width: "100%",
+                      outline: "none",
+                    }}
+                  />
+                  {editBusinessErrors.contactEmail && (
+                    <div style={{ color: "var(--color-mm-red)", fontSize: "12px", marginTop: "4px" }}>
+                      {editBusinessErrors.contactEmail}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label
+                  style={{
+                    color: "var(--color-mm-gray)",
+                    fontWeight: 600,
+                    fontSize: "13px",
+                    display: "block",
+                    marginBottom: "4px",
+                  }}
+                >
+                  Payment Status
+                </label>
+                <select
+                  value={editBusinessForm.paymentStatus || "Pending"}
+                  onChange={(e) =>
+                    setEditBusinessForm({ ...editBusinessForm, paymentStatus: e.target.value })
+                  }
+                  style={{
+                    background: "white",
+                    border: "1px solid var(--color-mm-border)",
+                    borderRadius: "12px",
+                    padding: "10px 14px",
+                    color: "var(--color-mm-dark)",
+                    width: "100%",
+                    outline: "none",
+                  }}
+                >
+                  <option value="Pending">Pending</option>
+                  <option value="Paid">Paid</option>
+                  <option value="Failed">Failed</option>
+                  <option value="Refunded">Refunded</option>
+                </select>
+              </div>
+            </div>
+
+            <div
+              className="mt-6 pt-4 flex justify-end gap-3"
+              style={{ borderTop: "1px solid var(--color-mm-border)" }}
+            >
+              <button
+                onClick={() => setEditingBusiness(null)}
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-80 transition-opacity cursor-pointer"
+                style={{
+                  background: "white",
+                  border: "1px solid var(--color-mm-border)",
+                  color: "var(--color-mm-gray)",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                disabled={isSavingBusiness}
+                onClick={handleEditBusinessSubmit}
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity cursor-pointer flex items-center justify-center min-w-[120px]"
+                style={{ background: "var(--color-mm-orange)", color: "white" }}
+              >
+                {isSavingBusiness ? "Saving..." : "Save Changes"}
               </button>
             </div>
           </div>
