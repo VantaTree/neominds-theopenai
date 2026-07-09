@@ -6,8 +6,10 @@ interface UseCase {
   label: string;
   headline: string;
   headlineItalic?: string;
-  image: string;
+  image?: string;
+  video?: string;
   color: string;
+  gradient: string;
 }
 
 const USE_CASES: UseCase[] = [
@@ -16,7 +18,9 @@ const USE_CASES: UseCase[] = [
     headline: "Helping healthcare providers attract more patients,",
     headlineItalic: " and build a trusted digital presence.",
     image: "/images/healthcare.jpeg",
+    // video: "/videos/healthcare.mp4",
     color: "#FF5924",
+    gradient: "linear-gradient(to bottom, #FFF0EC, #FFE6E1)",
   },
   {
     label: "Education",
@@ -24,14 +28,18 @@ const USE_CASES: UseCase[] = [
       "Helping schools, Montessori institutions, and learning centers increase admissions,",
     headlineItalic: " and grow with AI-powered digital solutions",
     image: "/images/education.png",
+    // video: "/videos/education.mp4",
     color: "#FF7DD3",
+    gradient: "linear-gradient(to bottom, #FFEBF7, #FFE0F2)",
   },
   {
     label: "Hospitality",
     headline: "Hospitality brands increase reservations,",
     headlineItalic: " strengthen their online reputation",
     image: "/images/hospitality.jpeg",
+    // video: "/videos/hospitality.mp4",
     color: "#85D3FF",
+    gradient: "linear-gradient(to bottom, #E8F7FF, #D2EEFF)",
   },
   {
     label: "Food Industry",
@@ -39,21 +47,27 @@ const USE_CASES: UseCase[] = [
       "Empowering food businesses , food manufacturers, cloud kitchens,",
     headlineItalic: " and gourmet food companies",
     image: "/images/kunafa.jpeg",
+    // video: "/videos/food_industry.mp4",
     color: "#5CB13E",
+    gradient: "linear-gradient(to bottom, #F1F9EE, #E2F3DC)",
   },
   {
     label: "Restaurants",
     headline: "Helping restaurants, cafés, hotels,",
     headlineItalic: " automate guest engagement.",
     image: "/images/food.png",
+    // video: "/videos/restaurants.mp4",
     color: "#FFE926",
+    gradient: "linear-gradient(to bottom, #FFFDF0, #FFFBE0)",
   },
   {
     label: "Finance & Investments",
     headline: "Helping financial advisors, investment firms ",
     headlineItalic: "generate qualified leads, strengthen client relationships",
     image: "/images/client_work.jpeg",
+    // video: "/videos/finance.mp4",
     color: "#FF6866",
+    gradient: "linear-gradient(to bottom, #FFF2F2, #FFE4E4)",
   },
 ];
 
@@ -117,16 +131,6 @@ export function MymindUseCases() {
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-10 sm:mb-12 text-center">
-          <motion.p
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-60px" }}
-            transition={{ duration: 0.5 }}
-            className="mb-4 text-xs font-semibold uppercase tracking-[0.2em]"
-            style={{ color: "#FF5924" }}
-          >
-            USE CASES
-          </motion.p>
           <motion.h2
             initial={{ opacity: 0, y: 24 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -162,15 +166,18 @@ export function MymindUseCases() {
                 whileHover={{ backgroundColor: "rgba(0,0,0,0.04)" }}
                 className="shrink-0 relative pb-4 text-base sm:text-lg font-semibold transition-colors duration-300 cursor-pointer rounded-sm"
                 style={{
-                  color: active === i ? "#FF5924" : "#748297",
+                  color: active === i ? uc.color : "#748297",
                   fontFamily: "'Inter', sans-serif",
                   minHeight: 44,
                 }}
               >
                 {uc.label}
                 <span
-                  className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[2px] bg-[#FF5924] transition-all duration-300"
-                  style={{ width: active === i ? "30px" : "0px" }}
+                  className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[2px] transition-all duration-300"
+                  style={{
+                    width: active === i ? "30px" : "0px",
+                    backgroundColor: uc.color,
+                  }}
                 />
               </motion.button>
             ))}
@@ -183,44 +190,64 @@ export function MymindUseCases() {
             {USE_CASES.map((uc, i) => (
               <div key={i} className="flex-[0_0_100%] min-w-0 px-1">
                 <div
-                  className="relative w-full h-[320px] sm:h-[450px] md:h-[500px] overflow-hidden rounded-2xl shadow-xl flex items-center justify-center bg-[#f8f9fa] cursor-grab active:cursor-grabbing select-none border border-[#E2E6EE]"
+                  className="relative w-full h-[480px] sm:h-[580px] md:h-[640px] overflow-hidden rounded-2xl shadow-xl flex flex-col justify-between cursor-grab active:cursor-grabbing select-none border border-[#E2E6EE]"
                   style={{
-                    background: uc.color + "18",
+                    background: uc.gradient,
                   }}
                 >
-                  {/* Headline overlay */}
-                  <div className="absolute inset-0 z-10 flex flex-col justify-end p-6 sm:p-8 md:p-12 bg-linear-to-t from-white/95 via-white/40 to-transparent">
+                  {/* Headline info at the top */}
+                  <div className="flex flex-col items-center text-center p-8 sm:p-10 md:p-12 z-10">
                     <p
-                      className="text-xs font-semibold uppercase tracking-widest mb-2 sm:mb-3"
+                      className="text-xs font-semibold uppercase tracking-[0.2em] mb-3 sm:mb-4"
                       style={{ color: uc.color }}
                     >
                       Built for {uc.label}
                     </p>
                     <h3
-                      className="max-w-lg leading-tight"
+                      className="max-w-2xl leading-tight"
                       style={{
                         fontFamily: "'Louize', Georgia, serif",
-                        fontSize: "clamp(1.3rem, 3vw, 2.25rem)",
+                        fontSize: "clamp(1.5rem, 3.5vw, 2.5rem)",
                         letterSpacing: "-0.02em",
-                        color: "#000",
+                        color: "#111418",
                         fontWeight: 400,
                       }}
                     >
                       {uc.headline}
                       {uc.headlineItalic && (
-                        <em style={{ fontStyle: "italic" }}>
+                        <em className="block sm:inline font-serif" style={{ fontStyle: "italic" }}>
                           {uc.headlineItalic}
                         </em>
                       )}
                     </h3>
                   </div>
 
-                  <img
-                    src={uc.image}
-                    alt={uc.label}
-                    loading="lazy"
-                    className="absolute inset-0 h-full w-full object-cover opacity-90"
-                  />
+                  {/* Image/Video at the bottom, top portion faded out */}
+                  <div
+                    className="relative w-full overflow-hidden h-[240px] sm:h-[340px] md:h-[380px] mt-auto"
+                    style={{
+                      maskImage: "linear-gradient(to bottom, transparent 0%, black 25%)",
+                      WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 25%)",
+                    }}
+                  >
+                    {uc.video ? (
+                      <video
+                        src={uc.video}
+                        muted
+                        loop
+                        playsInline
+                        autoPlay
+                        className="w-full h-full object-cover object-top pointer-events-none"
+                      />
+                    ) : uc.image ? (
+                      <img
+                        src={uc.image}
+                        alt={uc.label}
+                        loading="lazy"
+                        className="w-full h-full object-cover object-top pointer-events-none"
+                      />
+                    ) : null}
+                  </div>
                 </div>
               </div>
             ))}
@@ -229,14 +256,14 @@ export function MymindUseCases() {
 
         {/* Pagination Dots */}
         <div className="mt-8 flex justify-center gap-2">
-          {USE_CASES.map((_, i) => (
+          {USE_CASES.map((uc, i) => (
             <button
               key={i}
               onClick={() => emblaApi?.scrollTo(i)}
               className="h-2 rounded-full transition-all duration-300 cursor-pointer"
               style={{
                 width: active === i ? 24 : 8,
-                background: active === i ? "#FF5924" : "#E2E6EE",
+                background: active === i ? uc.color : "#E2E6EE",
               }}
               aria-label={`Go to slide ${i + 1}`}
             />

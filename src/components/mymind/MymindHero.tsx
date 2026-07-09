@@ -31,7 +31,7 @@ export function MymindHero() {
             willChange: "transform, opacity",
           }}
         >
-          <div style={{ overflow: "hidden" }}>
+          <div style={{ overflow: "hidden", paddingBottom: "0.15em", marginBottom: "-0.15em" }}>
             <motion.span
               className="block"
               initial={{ opacity: 0, y: 40 }}
@@ -41,7 +41,7 @@ export function MymindHero() {
               Affordable Digital growth,
             </motion.span>
           </div>
-          <div style={{ overflow: "hidden" }}>
+          <div style={{ overflow: "hidden", paddingBottom: "0.15em", marginBottom: "-0.15em" }}>
             <motion.span
               className="block"
               initial={{ opacity: 0, y: 40 }}
@@ -54,7 +54,7 @@ export function MymindHero() {
         </h1>
 
         {/* Subheadline with tagged pills */}
-        <div
+        {/* <div
           className="mx-auto mb-8 sm:mb-10 max-w-xl"
           style={{
             color: "#4A5465",
@@ -118,7 +118,7 @@ export function MymindHero() {
               managed by us $29.99/month.
             </motion.span>
           </div>
-        </div>
+        </div> */}
 
         {/* CTA row */}
         <motion.div
@@ -136,7 +136,7 @@ export function MymindHero() {
             className="flex items-center gap-2 rounded-full px-7 py-3 text-sm font-bold text-white"
             style={{ background: "#FF5924" }}
           >
-            <Link to="/assessment">Get My Free Draft</Link>
+            <Link to="/assessment">Know your Business</Link>
           </motion.div>
         </motion.div>
       </div>

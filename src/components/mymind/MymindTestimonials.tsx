@@ -793,16 +793,6 @@ export function MymindTestimonials() {
     >
       {/* Section Header */}
       <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 pt-24 pb-16 text-center flex flex-col items-center gap-3 relative z-30">
-        <motion.p
-          initial={{ opacity: 0, y: 16 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-60px" }}
-          transition={{ duration: 0.5 }}
-          className="mb-4 text-xs font-semibold uppercase tracking-[0.2em]"
-          style={{ color: "#FF5924" }}
-        >
-          Client Testimonials
-        </motion.p>
         <h2
           className="text-[#111418] tracking-tight leading-[1.05]"
           style={{
@@ -814,17 +804,6 @@ export function MymindTestimonials() {
         >
           Client Testimonials
         </h2>
-        <p
-          className="max-w-lg leading-relaxed"
-          style={{
-            color: "#4A5465",
-            fontFamily: "'Inter', sans-serif",
-            fontSize: "clamp(1rem, 2vw, 1.15rem)",
-          }}
-        >
-          Drag the canvas directly or slide the relative tracking ball on the
-          control pad below to explore the project web.
-        </p>
       </div>
 
       <div

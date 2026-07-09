@@ -9,22 +9,23 @@ export function MymindDownloads() {
       // style={{ background: "#fff0ec" }} FFF5F0
       style={{
         background:
-          "linear-gradient(180deg, #FFF5F0 0%, #fff0ec 30%, #fff0ec 100%)",
+          // "linear-gradient(180deg, #FFF5F0 0%, #fff0ec 30%, #fff0ec 100%)",
+          "#FFFFFF"
       }}
       id="downloads"
     >
-      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <motion.p
           initial={{ opacity: 0, y: 12 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
-          className="mb-3 text-center text-xs font-semibold uppercase tracking-[0.22em]"
-          style={{ color: "#FF5924" }}
+          className="mb-3 text-center text-2xl font-semibold uppercase tracking-[0.22em]"
+          style={{ color: "#000000" }}
         >
           PRICING
         </motion.p>
-        <motion.h2
+        {/* <motion.h2
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -41,11 +42,11 @@ export function MymindDownloads() {
           Agency quality. DIY speed.
           <br />
           <em>Cheaper than both.</em>
-        </motion.h2>
+        </motion.h2> */}
 
         {/* Pricing cards */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          {PLANS.slice(0, 3).map((plan, i) => (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-4 ">
+          {PLANS.map((plan, i) => (
             <PriceCard key={plan.name} plan={plan} i={i} />
           ))}
         </div>

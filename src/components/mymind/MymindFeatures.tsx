@@ -12,6 +12,7 @@ interface FeatureItem {
   title: string;
   body: string;
   narrow?: boolean;
+  bg?: string;
 }
 
 const ROWS: [FeatureItem, FeatureItem][] = [
@@ -19,15 +20,17 @@ const ROWS: [FeatureItem, FeatureItem][] = [
     {
       // img: "/images/seo.png",
       video: "/videos/seo.mp4",
-      title: "SEO built-in from day one",
+      title: "SEO",
       body: "Reach more people without paying for every click. Smart SEO helps your business generate long-term traffic and consistent inquiries.",
       narrow: true,
+      bg: "#f3f0e7",
     },
     {
       // img: "/images/Website.png",
       video: "/videos/website.mp4",
-      title: "Websites - Designed to Grow",
+      title: "Websites",
       body: "Build a professional website that earns trust, generates leads, and becomes the foundation of your digital presence.",
+      bg: "#e5eaf2",
     },
   ],
   [
@@ -36,13 +39,15 @@ const ROWS: [FeatureItem, FeatureItem][] = [
       video:"/videos/content_creation.mp4",
       title: "Content Creation (Reels & Posts)",
       body: "Consistent content keeps your business in front of customers. We create social media content that informs, engages, and converts.  ",
+      bg: "#dde9d3",
     },
     {
       // img: "/images/business_profile.png",
       video: "/videos/Google_business.mp4",
-      title: "Google Business Profile - Build Instant Trust ",
-      body: "Strengthen your online credibility with a complete and optimized business profile across Major platforms.",
+      title: "Google Business Profile",
+      body: "Build a complete business profile to boost your online business.",
       narrow: true,
+      bg: "#f4ecef",
     },
   ],
   [
@@ -52,27 +57,31 @@ const ROWS: [FeatureItem, FeatureItem][] = [
       title: "Social Media Optimization",
       body: "Grow your brand with optimized social profiles, engaging content, and strategies that attract the right audience.",
       narrow: true,
+      bg: "#ffece5",
     },
     {
       // img: "/images/VoiceBot.png",
       video: "/videos/chatbot.mp4",
-      title: "Chat & Voice Bot - Your Business Never Sleeps ",
+      title: "Chat & Voice Bot",
       body: "Provide 24/7 voice support, qualify leads, and book appointments automatically through AI-powered voice technology.",
+      bg: "#f3f0e7",
     },
   ],
   [
     {
       // img: "/images/onground.png",
       video: "/videos/ongroundshoot.mp4",
-      title: "On-Ground Shoot - Professional Visual Storytelling",
-      body: "Create premium-quality visuals that reflect your brand and connect with your audience.",
+      title: "On-Ground Shoot",
+      body: " Stand out with a modern 3D website that combines stunning visuals, smooth interactions, and responsive performance.",
+      bg: "#e5eaf2",
     },
     {
       // img: "/images/3d-Images.png",
       video: "/videos/3d_website.mp4",
-      title: "3D  WEBSITES-Experiences That Impress  ",
+      title: "3D  WEBSITES",
       body: "Create immersive 3D experiences that make your business unforgettable and keep visitors engaged.",
       narrow: true,
+      bg: "#f4ecef",
     },
   ],
 ];
@@ -84,6 +93,7 @@ function FeatureCard({
   body,
   narrow,
   delay = 0,
+  bg = "#F0F2F5",
 }: FeatureItem & { delay?: number }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isHovered, setIsHovered] = useState(false);
@@ -118,36 +128,38 @@ function FeatureCard({
       onMouseLeave={() => setIsHovered(false)}
       className={`group overflow-hidden rounded-2xl ${narrow ? "flex-5" : "flex-7"}`}
       style={{
-        background: "#F0F2F5",
+        background: bg,
         minWidth: 0,
         willChange: "transform, opacity",
       }}
     >
-      <div className="overflow-hidden">
-        {video ? (
-          <video
-            ref={videoRef}
-            src={video}
-            muted
-            loop
-            playsInline
-            preload="auto"
-            autoPlay={VIDEO_PLAY_MODE === "auto"}
-            className="w-full h-auto block object-cover transition-transform duration-500 group-hover:scale-[1.04]"
-          />
-        ) : (
-          <img
-            src={img}
-            alt={title}
-            loading="lazy"
-            className="w-full h-auto block object-cover transition-transform duration-500 group-hover:scale-[1.04]"
-            onError={(e) => {
-              (e.currentTarget as HTMLImageElement).style.opacity = "0.3";
-            }}
-          />
-        )}
+      <div className="p-4 sm:p-5 pb-0">
+        <div className="overflow-hidden rounded-xl">
+          {video ? (
+            <video
+              ref={videoRef}
+              src={video}
+              muted
+              loop
+              playsInline
+              preload="auto"
+              autoPlay={VIDEO_PLAY_MODE === "auto"}
+              className="w-full h-auto block object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+            />
+          ) : (
+            <img
+              src={img}
+              alt={title}
+              loading="lazy"
+              className="w-full h-auto block object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).style.opacity = "0.3";
+              }}
+            />
+          )}
+        </div>
       </div>
-      <div className="p-5 sm:p-7">
+      <div className="p-4 sm:p-5 pt-3 sm:pt-4">
         <h3
           className="mb-2 leading-snug"
           style={{
@@ -198,12 +210,12 @@ export function MymindFeatures() {
     <section
       className="w-full overflow-x-hidden py-20 md:py-28"
       id="features"
-      style={{ background: "#fff" }}
+      style={{ background: "linear-gradient(to bottom, #FF5924, #ffffff)" }}
     >
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-12 sm:mb-16 text-center">
-          <motion.p
+          {/* <motion.p
             initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-60px" }}
@@ -212,7 +224,7 @@ export function MymindFeatures() {
             style={{ color: "#FF5924" }}
           >
             EVERYTHING YOU NEED
-          </motion.p>
+          </motion.p> */}
           <motion.h2
             initial={{ opacity: 0, y: 24 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -227,7 +239,7 @@ export function MymindFeatures() {
               fontWeight: 400,
             }}
           >
-            AI Business Ecosystem
+             Our Features
           </motion.h2>
         </div>
 
@@ -287,7 +299,7 @@ export function MymindFeatures() {
                   color: "#ffffff",
                 }}
               >
-                Email Marketing - Grow Beyond Social Media
+                Email Marketing
               </h3>
               <p
                 className="text-sm leading-relaxed"

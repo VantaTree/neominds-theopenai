@@ -4,7 +4,6 @@ import GradientArc from "../GradientArc";
 
 const NO_LIST = [
   "overpriced websites",
-  "manual analysis",
   "growth barriers",
   "unclear priorities",
   "technical headaches",
@@ -16,20 +15,20 @@ export function MymindManifesto() {
     <>
       {/* ─── Part 1: Manifesto text (white bg) ─── */}
       <section
-        className="w-full overflow-x-hidden py-20 md:py-28 lg:py-36"
+        className="w-full overflow-x-hidden pt-20 md:pt-28 lg:pt-36 pb-2 md:pb-3"
         // style={{ background: "#fff" }}
       >
-        <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 text-justify">
           {/* Label */}
           <motion.p
             initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-60px" }}
             transition={{ duration: 0.5 }}
-            className="mb-12 text-center text-lg font-semibold uppercase tracking-[0.22em]"
+            className="mb-12 text-center text-lg font-semibold tracking-[0.22em]"
             style={{ color: "#748297" }}
           >
-            WHY WE BUILT THIS
+            What is theOpenAI
           </motion.p>
 
           {/* Body paragraphs */}
@@ -58,47 +57,13 @@ export function MymindManifesto() {
                   marginTop: "0.05em",
                 }}
               >
-                Running
+                We
               </span>{" "}
-              a business has never been easy. But finding the right help
-              shouldn't be the hardest part. Every day, business owners are
-              flooded with agencies selling websites, marketers promising leads,
-              and software claiming to solve every problem. Yet very few stop to
-              answer the most important question
+              analyze your business through AI agents, providing you with digital services from website development to digital marketing and AI Automation by experts at a very affordable price
             </p>
 
-            <p className="mb-10 font-bold">
-              What does your business actually need right now?
-            </p>
-            <p className="mb-5 ">Some businesses need a better website.</p>
-            <p className="mb-5 ">Some need stronger marketing.</p>
-            <p className="mb-5 ">Some need automation.</p>
             <p className="mb-5 ">
-              Others simply need the right strategy before investing another
-              rupee.
-            </p>
-            <p className="mb-5 ">
-              Instead of receiving guidance, most businesses receive sales
-              pitches.
-            </p>
-            <p className="mb-5 ">
-              We built <span className="font-bold">The Open AI</span> to change
-              that.
-            </p>
-            <p className="mb-10">
-              Our AI first understands your business, identifies growth
-              bottlenecks, prioritizes what matters most, and creates a
-              practical roadmap. Once the strategy is ready, our expert teams
-              execute it from websites and branding to SEO, marketing,
-              automation, CRM, and business consulting.
-            </p>
-            <p className="mb-5 ">
-              Just clear recommendations backed by AI and delivered by experts.
-            </p>
-
-            <p>
-              Because every business deserves the confidence to know what to do
-              next before spending money on the wrong solution.
+              our platform is dedicated to help startups, local to medium businesses, and growing enterprises to establish a powerful online presence.
             </p>
           </motion.div>
         </div>
@@ -106,7 +71,7 @@ export function MymindManifesto() {
 
       {/* ─── Part 2: NO list on peach/orange gradient ─── */}
       <section
-        className="w-full overflow-x-hidden py-20 md:py-28"
+        className="w-full overflow-x-hidden py-20 md:py-12"
         // style={{
         //   background: `
         //     radial-gradient(ellipse 70% 90% at 15% 60%, rgba(255, 200, 170, 0.9) 0%, transparent 65%),
@@ -169,28 +134,6 @@ export function MymindManifesto() {
               </motion.div>
             ))}
           </div>
-
-          {/* Mascot at bottom
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-40px" }}
-            transition={{ duration: 0.6, delay: NO_LIST.length * 0.08 + 0.1 }}
-            className="mt-12 flex justify-center"
-          >
-            <motion.div
-              animate={{ y: [0, -10, 0] }}
-              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-            >
-              <img
-                src="/images/statement_mymind_guy.svg"
-                alt="theopenai mascot"
-                className="h-20 w-auto"
-                style={{ opacity: 0.45 }}
-                draggable={false}
-              />
-            </motion.div>
-          </motion.div> */}
         </div>
       </section>
 
@@ -277,7 +220,7 @@ export function MymindManifesto() {
                 minHeight: 44,
               }}
             >
-              Start Free Business Audit
+              Know your Business
               <svg
                 viewBox="0 0 24 24"
                 fill="none"

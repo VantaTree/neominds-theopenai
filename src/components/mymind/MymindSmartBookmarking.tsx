@@ -37,8 +37,8 @@ export function MymindSmartBookmarking() {
             lineHeight: 1.7,
           }}
         >
-          From websites and CRM to content creation, collabs, and paid ads. We
-          handle it all so you can focus on running your business.
+           From websites to Digital marketing and AI automations.
+           <p>We handle it all so you can focus on running your business.</p>
         </motion.p>
       </div>
 

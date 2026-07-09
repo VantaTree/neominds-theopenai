@@ -8,41 +8,6 @@ export function MymindPhilosophy() {
     >
       <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
 
-        {/* <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-80px" }}
-          transition={{ duration: 0.8 }}
-          className="relative mb-8 flex flex-col items-center"
-        >
-          <div
-            className="absolute left-1/2 -translate-x-1/2"
-            style={{
-              width: "min(500px, 80vw)",
-              maxWidth: "calc(100% - 32px)",
-              height: "min(250px, 40vw)",
-              border: "1px solid rgba(0,0,0,0.08)",
-              borderBottom: "none",
-              borderRadius: "9999px 9999px 0 0",
-              top: 40,
-            }}
-          />
-          <motion.div
-            animate={{ y: [0, -8, 0] }}
-            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-            className="relative z-10"
-            style={{ willChange: "transform" }}
-          >
-            <img
-              src="/images/statement_mymind_guy.svg"
-              alt="theopenai mascot"
-              loading="lazy"
-              className="h-auto w-16 sm:w-20 md:w-24"
-              draggable={false}
-            />
-          </motion.div>
-        </motion.div> */}
-
         {/* Founder text */}
         <div
           className="text-center"
@@ -106,42 +71,6 @@ export function MymindPhilosophy() {
             makes your business grow.
           </motion.p>
         </div>
-
-        {/* Founder badges */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-40px" }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-          className="flex flex-wrap justify-center gap-3 mb-10"
-        >
-          {["ex-Google engineers", "ex-$1B startup founders", "Chamber of Commerce tech advisors"].map((badge) => (
-            <span
-              key={badge}
-              className="rounded-full px-4 py-2 text-xs font-semibold"
-              style={{ background: "#fff0ec", color: "#FF5924", fontFamily: "'Inter', sans-serif" }}
-            >
-              {badge}
-            </span>
-          ))}
-        </motion.div>
-
-        {/* CTA */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-60px" }}
-          transition={{ duration: 0.6, delay: 0.25 }}
-          className="flex justify-center pb-14"
-        >
-          <a
-            href="#"
-            className="inline-flex items-center gap-3 rounded-full px-8 sm:px-10 py-3.5 sm:py-4 text-xs font-bold uppercase tracking-widest text-white transition-all duration-300 hover:scale-105 hover:shadow-xl"
-            style={{ background: "#FF5924", minHeight: 44 }}
-          >
-            Get my free draft
-          </a>
-        </motion.div>
       </div>
     </section>
   );
