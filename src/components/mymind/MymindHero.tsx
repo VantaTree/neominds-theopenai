@@ -12,10 +12,6 @@ const KEYWORD_PILLS = [
   { label: "Marketing", color: "#FFE926", textColor: "#ca8a04" },
 ];
 
-const DESKTOP_VIDEO = "/videos/intro-desktop.mp4";
-const IPHONE_VIDEO = "/videos/intro-iphone.mp4";
-const IPHONE_MOCKUP = "/images/iphone-video-mockup.webp";
-
 export function MymindHero() {
   const { openLightbox } = useLightbox();
 
