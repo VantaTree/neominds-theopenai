@@ -1,33 +1,59 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { Home, Folder, Building2, Crown, Settings, ChevronDown, LogOut, User, MessageCircle } from "lucide-react";
+import { useBusiness } from "@/hooks/use-business";
+import { auth } from "@/lib/firebase";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 
 export default function ClientNav() {
+  const navigate = useNavigate();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  
+  const { businesses, activeBusiness, setActiveBusiness, loading } = useBusiness();
+  const [businessDropdownOpen, setBusinessDropdownOpen] = useState(false);
+  const businessDropdownRef = useRef<HTMLDivElement>(null);
+  const [mobileBusinessDropdownOpen, setMobileBusinessDropdownOpen] = useState(false);
+  const mobileBusinessDropdownRef = useRef<HTMLDivElement>(null);
+
   const [userProfile, setUserProfile] = useState({
     name: "John Doe",
+    email: "",
     avatar: "",
   });
 
-  // Load user profile from local storage on mount
+  // Load user profile from firebase auth on mount
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("user_profile");
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (parsed.name) {
-            setUserProfile({
-              name: parsed.name,
-              avatar: parsed.avatar || "",
-            });
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setUserProfile({
+          name: user.displayName || user.email?.split("@")[0] || "User",
+          email: user.email || "",
+          avatar: user.photoURL || "",
+        });
+      } else {
+        if (typeof window !== "undefined") {
+          const saved = localStorage.getItem("user_profile");
+          if (saved) {
+            try {
+              const parsed = JSON.parse(saved);
+              setUserProfile({
+                name: parsed.name || "User",
+                email: parsed.email || "",
+                avatar: parsed.avatar || "",
+              });
+              return;
+            } catch (e) {}
           }
-        } catch (e) {
-          // ignore
         }
+        setUserProfile({
+          name: "User",
+          email: "",
+          avatar: "",
+        });
       }
-    }
+    });
+    return unsubscribe;
   }, []);
 
   const getInitials = (fullName: string) => {
@@ -39,11 +65,17 @@ export default function ClientNav() {
       .substring(0, 2) || "U";
   };
 
-  // Close dropdown on outside click
+  // Close dropdowns on outside click
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setDropdownOpen(false);
+      }
+      if (businessDropdownRef.current && !businessDropdownRef.current.contains(event.target as Node)) {
+        setBusinessDropdownOpen(false);
+      }
+      if (mobileBusinessDropdownRef.current && !mobileBusinessDropdownRef.current.contains(event.target as Node)) {
+        setMobileBusinessDropdownOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -91,20 +123,163 @@ export default function ClientNav() {
             <span>Chat</span>
           </Link>
           
-          <button
-            className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold text-mm-gray/40 cursor-not-allowed"
-            disabled
-            title="Coming soon"
-          >
-            <Building2 className="h-4 w-4" />
-            <span>Our Businesses</span>
-          </button>
-
+          {loading ? (
+            <button
+              className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold text-mm-gray/40 cursor-not-allowed"
+              disabled
+            >
+              <div className="h-4 w-4 rounded bg-mm-orange/10 text-mm-orange flex items-center justify-center text-[9px] font-black uppercase animate-pulse" />
+              <span>Loading...</span>
+            </button>
+          ) : businesses.length > 0 ? (
+            <div className="relative" ref={businessDropdownRef}>
+              <button
+                onClick={() => setBusinessDropdownOpen(!businessDropdownOpen)}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold text-mm-gray hover:text-mm-dark hover:bg-mm-subtle transition-all cursor-pointer"
+              >
+                {activeBusiness?.image ? (
+                  <img src={activeBusiness.image} alt={activeBusiness.businessName} className="h-4 w-4 rounded object-cover" />
+                ) : (
+                  <div className="h-4 w-4 rounded bg-mm-orange/10 text-mm-orange flex items-center justify-center text-[9px] font-black uppercase">
+                    {activeBusiness?.businessName?.charAt(0) || "B"}
+                  </div>
+                )}
+                <span className="max-w-[120px] truncate">{activeBusiness?.businessName || "Select Business"}</span>
+                {activeBusiness?.plan && activeBusiness.plan !== "None" && (
+                  <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-mm-orange/10 text-mm-orange font-bold uppercase tracking-wider scale-90">
+                    {activeBusiness.plan}
+                  </span>
+                )}
+                <ChevronDown className={`h-3 w-3 text-mm-gray/60 transition-transform duration-200 ${businessDropdownOpen ? "rotate-180" : ""}`} />
+              </button>
+              {businessDropdownOpen && (
+                <div className="absolute left-0 mt-2 w-56 bg-white border border-mm-border rounded-2xl shadow-lg py-2 z-50 animate-in fade-in-50 slide-in-from-top-1">
+                  <div className="px-4 py-1.5 border-b border-mm-border mb-1">
+                    <p className="text-[10px] uppercase font-bold text-mm-gray tracking-wider">Switch Business</p>
+                  </div>
+                  {businesses.map((biz) => (
+                    <div
+                      key={biz.id}
+                      onClick={() => {
+                        setActiveBusiness(biz);
+                        setBusinessDropdownOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-4 py-1.5 text-sm text-left hover:bg-mm-subtle transition-colors cursor-pointer ${biz.id === activeBusiness?.id ? "font-bold text-mm-dark bg-mm-subtle/40" : "text-mm-gray"}`}
+                    >
+                      <div className="flex items-center gap-2 truncate flex-1 min-w-0">
+                        {biz.image ? (
+                          <img src={biz.image} alt={biz.businessName} className="h-4.5 w-4.5 rounded object-cover shrink-0" />
+                        ) : (
+                          <div className="h-4.5 w-4.5 rounded bg-mm-orange/10 text-mm-orange flex items-center justify-center text-[9px] font-black uppercase shrink-0">
+                            {biz.businessName.charAt(0)}
+                          </div>
+                        )}
+                        <span className="truncate">{biz.businessName}</span>
+                        {biz.plan && biz.plan !== "None" && (
+                          <span className="text-[8px] px-1.5 py-0.5 rounded-md bg-mm-orange/10 text-mm-orange font-bold uppercase tracking-wider shrink-0">
+                            {biz.plan}
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveBusiness(biz);
+                          setBusinessDropdownOpen(false);
+                          navigate({ to: "/plans" });
+                        }}
+                        title="Upgrade Business Plan"
+                        className="ml-2 p-1 rounded-lg text-mm-orange hover:bg-mm-orange/10 hover:text-mm-orange transition-colors cursor-pointer shrink-0"
+                      >
+                        <Crown className="h-3.5 w-3.5 fill-current" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <button
+              className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold text-mm-gray/40 cursor-not-allowed"
+              disabled
+            >
+              <Building2 className="h-4 w-4" />
+              <span>No Businesses</span>
+            </button>
+          )}
 
         </div>
       </div>
 
       <div className="flex items-center gap-3">
+        {/* Mobile Business Selector */}
+        {loading ? (
+          <div className="relative md:hidden flex items-center p-1">
+            <div className="h-4.5 w-4.5 rounded bg-mm-orange/10 animate-pulse" />
+          </div>
+        ) : businesses.length > 0 ? (
+          <div className="relative md:hidden" ref={mobileBusinessDropdownRef}>
+            <button
+              onClick={() => setMobileBusinessDropdownOpen(!mobileBusinessDropdownOpen)}
+              className="flex items-center gap-1 p-1 rounded-xl hover:bg-mm-subtle transition-all cursor-pointer"
+            >
+              {activeBusiness?.image ? (
+                <img src={activeBusiness.image} alt={activeBusiness.businessName} className="h-4.5 w-4.5 rounded object-cover" />
+              ) : (
+                <div className="h-4.5 w-4.5 rounded bg-mm-orange/10 text-mm-orange flex items-center justify-center text-[9px] font-black uppercase">
+                  {activeBusiness?.businessName?.charAt(0) || "B"}
+                </div>
+              )}
+              <ChevronDown className={`h-3 w-3 text-mm-gray/60 transition-transform duration-200 ${mobileBusinessDropdownOpen ? "rotate-180" : ""}`} />
+            </button>
+            {mobileBusinessDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-52 bg-white border border-mm-border rounded-2xl shadow-lg py-2 z-50 animate-in fade-in-50 slide-in-from-top-1">
+                <div className="px-4 py-1.5 border-b border-mm-border mb-1">
+                  <p className="text-[10px] uppercase font-bold text-mm-gray tracking-wider">Switch Business</p>
+                </div>
+                {businesses.map((biz) => (
+                  <div
+                    key={biz.id}
+                    onClick={() => {
+                      setActiveBusiness(biz);
+                      setMobileBusinessDropdownOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-4 py-1.5 text-sm text-left hover:bg-mm-subtle transition-colors cursor-pointer ${biz.id === activeBusiness?.id ? "font-bold text-mm-dark bg-mm-subtle/40" : "text-mm-gray"}`}
+                  >
+                    <div className="flex items-center gap-2 truncate flex-1 min-w-0">
+                      {biz.image ? (
+                        <img src={biz.image} alt={biz.businessName} className="h-4.5 w-4.5 rounded object-cover shrink-0" />
+                      ) : (
+                        <div className="h-4.5 w-4.5 rounded bg-mm-orange/10 text-mm-orange flex items-center justify-center text-[9px] font-black uppercase shrink-0">
+                          {biz.businessName.charAt(0)}
+                        </div>
+                      )}
+                      <span className="truncate">{biz.businessName}</span>
+                      {biz.plan && biz.plan !== "None" && (
+                        <span className="text-[8px] px-1.5 py-0.5 rounded-md bg-mm-orange/10 text-mm-orange font-bold uppercase tracking-wider shrink-0">
+                          {biz.plan}
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveBusiness(biz);
+                        setMobileBusinessDropdownOpen(false);
+                        navigate({ to: "/plans" });
+                      }}
+                      title="Upgrade Business Plan"
+                      className="ml-2 p-1 rounded-lg text-mm-orange hover:bg-mm-orange/10 hover:text-mm-orange transition-colors cursor-pointer shrink-0"
+                    >
+                      <Crown className="h-3.5 w-3.5 fill-current" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : null}
+
         <button className="h-7 w-7 rounded-full bg-mm-orange/10 border border-mm-orange/20 flex items-center justify-center text-mm-orange cursor-pointer transition-all active:scale-95 md:inline-flex md:items-center md:gap-1.5 md:bg-mm-orange md:border-transparent md:text-white md:px-4 md:py-2 md:h-auto md:w-auto md:shadow-sm md:hover:opacity-95 md:rounded-xl">
           <Crown className="h-3.5 w-3.5 fill-mm-orange/10 md:fill-white" />
           <span className="hidden md:inline">Upgrade</span>
@@ -132,8 +307,10 @@ export default function ClientNav() {
           {dropdownOpen && (
             <div className="absolute right-0 mt-2 w-48 bg-white border border-mm-border rounded-2xl shadow-lg py-2 z-50 animate-in fade-in-50 slide-in-from-top-1">
               <div className="px-4 py-2 border-b border-mm-border mb-1">
-                <p className="text-xs text-mm-gray">Signed in as</p>
                 <p className="text-sm font-bold text-mm-dark truncate">{userProfile.name}</p>
+                {userProfile.email && (
+                  <p className="text-[10px] text-mm-gray truncate mt-0.5">{userProfile.email}</p>
+                )}
               </div>
               
               <Link
@@ -154,7 +331,17 @@ export default function ClientNav() {
                 <span>Settings</span>
               </Link>
               
-              <button className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-mm-red hover:bg-mm-red/5 transition-colors text-left cursor-pointer">
+              <button 
+                onClick={async () => {
+                  try {
+                    await signOut(auth);
+                    navigate({ to: "/login" });
+                  } catch (e) {
+                    console.error("Logout failed:", e);
+                  }
+                }}
+                className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-mm-red hover:bg-mm-red/5 transition-colors text-left cursor-pointer"
+              >
                 <LogOut className="h-4 w-4 text-mm-red/70" />
                 <span>Log Out</span>
               </button>

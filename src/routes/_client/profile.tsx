@@ -1,6 +1,9 @@
 import React, { useState, useRef, useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Camera, User, Mail, Phone, Check, Loader2 } from "lucide-react";
+import { Camera, User, Mail, Phone, Loader2 } from "lucide-react";
+import { auth } from "@/lib/firebase";
+import { onAuthStateChanged, updateProfile } from "firebase/auth";
+import { getUserFn, saveUserFn } from "@/lib/server-functions";
 
 export const Route = createFileRoute("/_client/profile")({
   component: RouteComponent,
@@ -27,18 +30,63 @@ function RouteComponent() {
       }
     }
     return {
-      name: "John Doe",
-      email: "john.doe@example.com",
-      phone: "+1 (555) 019-2834",
-      avatar: "" // Empty will default to initial letter circle
+      name: "",
+      email: "",
+      phone: "",
+      avatar: ""
     };
   });
+
+  const [dbUserDoc, setDbUserDoc] = useState<any>(null);
 
   // Editable form state
   const [formData, setFormData] = useState<ProfileData>({ ...profile });
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Sync auth details and database fields
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const dbUser = await getUserFn({ data: user.uid });
+          if (dbUser) {
+            setDbUserDoc(dbUser);
+            const uData = {
+              name: dbUser.fullName || user.displayName || user.email?.split("@")[0] || "User",
+              email: dbUser.email || user.email || "",
+              phone: dbUser.phone || "",
+              avatar: dbUser.image || user.photoURL || "",
+            };
+            setProfile(uData);
+            if (typeof window !== "undefined") {
+              localStorage.setItem("user_profile", JSON.stringify(uData));
+            }
+          } else {
+            const uData = {
+              name: user.displayName || user.email?.split("@")[0] || "User",
+              email: user.email || "",
+              phone: "",
+              avatar: user.photoURL || "",
+            };
+            setProfile(uData);
+          }
+        } catch (err) {
+          console.error("Error loading user profile from database:", err);
+          // Fallback
+          const uData = {
+            name: user.displayName || user.email?.split("@")[0] || "User",
+            email: user.email || "",
+            phone: "",
+            avatar: user.photoURL || "",
+          };
+          setProfile(uData);
+        }
+      }
+    });
+    return unsubscribe;
+  }, []);
 
   // Keep form data in sync if profile changes
   useEffect(() => {
@@ -48,7 +96,6 @@ function RouteComponent() {
   // Check if form has unsaved modifications
   const hasChanges =
     formData.name.trim() !== profile.name ||
-    formData.email.trim() !== profile.email ||
     formData.phone.trim() !== profile.phone ||
     formData.avatar !== profile.avatar;
 
@@ -72,23 +119,47 @@ function RouteComponent() {
     }
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!hasChanges) return;
 
     setIsSaving(true);
-    // Simulate save duration
-    setTimeout(() => {
+    try {
+      const user = auth.currentUser;
+      if (user) {
+        await updateProfile(user, {
+          displayName: formData.name.trim(),
+          photoURL: formData.avatar,
+        });
+
+        const updatedUser = {
+          ...dbUserDoc,
+          id: user.uid,
+          email: user.email || dbUserDoc?.email || "",
+          fullName: formData.name.trim(),
+          phone: formData.phone.trim(),
+          image: formData.avatar || "",
+          role: dbUserDoc?.role || "client",
+          status: dbUserDoc?.status || "Active",
+          businessCount: dbUserDoc?.businessCount ?? 0,
+          createdAt: dbUserDoc?.createdAt ? new Date(dbUserDoc.createdAt) : new Date(),
+          updatedAt: new Date(),
+        };
+
+        await saveUserFn({ data: updatedUser });
+        setDbUserDoc(updatedUser);
+      }
       setProfile({ ...formData });
       if (typeof window !== "undefined") {
         localStorage.setItem("user_profile", JSON.stringify(formData));
       }
-      setIsSaving(false);
       setShowSuccess(true);
-
-      // Hide success toast after 3 seconds
       setTimeout(() => setShowSuccess(false), 3000);
-    }, 1000);
+    } catch (error) {
+      console.error("Failed to update profile:", error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleReset = () => {
@@ -96,6 +167,7 @@ function RouteComponent() {
   };
 
   const getInitials = (fullName: string) => {
+    if (!fullName) return "U";
     return fullName
       .split(" ")
       .map((n) => n[0])
@@ -135,7 +207,7 @@ function RouteComponent() {
               accept="image/*"
               className="hidden"
             />
-
+            
             {/* Small camera badge */}
             <button className="absolute bottom-1 right-1 p-2 rounded-full bg-white border border-mm-border text-mm-dark shadow-sm hover:bg-mm-subtle transition-colors">
               <Camera className="h-3.5 w-3.5" />
@@ -170,21 +242,22 @@ function RouteComponent() {
               </div>
             </div>
 
-            {/* Input field 2: Contact Email */}
+            {/* Input field 2: Account Email */}
             <div className="space-y-1.5">
               <label className="text-[10px] font-extrabold text-mm-gray uppercase tracking-wider block">
-                Contact Email
+                Account Email
               </label>
               <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-mm-gray" />
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-mm-gray/50" />
                 <input
                   type="email"
                   name="email"
                   value={formData.email}
-                  onChange={handleInputChange}
-                  placeholder="Enter email address"
+                  readOnly
+                  disabled
+                  placeholder="Account email"
                   required
-                  className="w-full pl-11 pr-4.5 py-3 rounded-2xl border border-mm-border focus:border-mm-orange focus:ring-1 focus:ring-mm-orange outline-none text-xs font-bold text-mm-dark bg-white transition-all shadow-sm"
+                  className="w-full pl-11 pr-4.5 py-3 rounded-2xl border border-mm-border outline-none text-xs font-bold text-mm-gray bg-mm-subtle/30 cursor-not-allowed transition-all shadow-sm"
                 />
               </div>
             </div>
@@ -202,7 +275,6 @@ function RouteComponent() {
                   value={formData.phone}
                   onChange={handleInputChange}
                   placeholder="Enter phone number"
-                  required
                   className="w-full pl-11 pr-4.5 py-3 rounded-2xl border border-mm-border focus:border-mm-orange focus:ring-1 focus:ring-mm-orange outline-none text-xs font-bold text-mm-dark bg-white transition-all shadow-sm"
                 />
               </div>
@@ -249,3 +321,4 @@ function RouteComponent() {
     </div>
   );
 }
+

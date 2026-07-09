@@ -1,9 +1,47 @@
 import { useState, useEffect, useRef } from "react";
-import { createFileRoute, Outlet, useLocation } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useLocation, redirect } from "@tanstack/react-router";
 import { QueryClientProvider } from "@tanstack/react-query";
 import AdminAside from "@/components/admin/AdminAside";
+import { verifyAdminAccessFn } from "@/lib/server-functions";
 
 export const Route = createFileRoute("/_admin")({
+  beforeLoad: async ({ context, location }) => {
+    let isAdmin = false;
+    let isAuthenticated = false;
+
+    try {
+      const res = await verifyAdminAccessFn();
+      if (res && res.authorized) {
+        isAdmin = true;
+        isAuthenticated = true;
+      }
+    } catch (e) {
+      // Ignore, fall back to client checks
+    }
+
+    if (!isAuthenticated) {
+      if (typeof window !== "undefined") {
+        await context.auth.waitUntilInitialized();
+        if (!context.auth.user) {
+          throw redirect({
+            to: "/login",
+            search: { redirect: location.pathname },
+          });
+        }
+        const res = await verifyAdminAccessFn();
+        if (!res.authorized) {
+          throw redirect({
+            to: "/dashboard",
+          });
+        }
+      } else {
+        throw redirect({
+          to: "/login",
+          search: { redirect: location.pathname },
+        });
+      }
+    }
+  },
   component: RouteComponent,
 });
 

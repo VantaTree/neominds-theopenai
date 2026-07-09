@@ -1,9 +1,60 @@
 import { useState, useEffect, useRef } from "react";
-import { createFileRoute, Outlet, useLocation } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useLocation, redirect } from "@tanstack/react-router";
 import ClientNav from "../../components/client/ClientNav";
 import ClientBottomLinks from "../../components/client/ClientBottomLinks";
+import { checkUserRoleFn, getMyBusinessesFn } from "@/lib/server-functions";
+import { BusinessProvider } from "@/hooks/use-business";
 
 export const Route = createFileRoute("/_client")({
+  beforeLoad: async ({ context, location }) => {
+    let userRole: string | null = null;
+    let isAuthenticated = false;
+
+    try {
+      const res = await checkUserRoleFn();
+      if (res && res.role) {
+        userRole = res.role;
+        isAuthenticated = true;
+      }
+    } catch (e) {
+      // Ignore session check error, fall back to client auth
+    }
+
+    if (!isAuthenticated) {
+      if (typeof window !== "undefined") {
+        await context.auth.waitUntilInitialized();
+        if (!context.auth.user) {
+          throw redirect({
+            to: "/login",
+            search: { redirect: location.pathname },
+          });
+        }
+      } else {
+        throw redirect({
+          to: "/login",
+          search: { redirect: location.pathname },
+        });
+      }
+    }
+
+    if (userRole === "admin") {
+      throw redirect({
+        to: "/admin",
+      });
+    }
+  },
+  loader: async () => {
+    try {
+      const data = await getMyBusinessesFn();
+      return {
+        initialBusinesses: data || [],
+      };
+    } catch (e) {
+      return {
+        initialBusinesses: [],
+      };
+    }
+  },
   component: RouteComponent,
 });
 
@@ -89,6 +140,7 @@ function PageTransitionWrapper({ children }: { children: React.ReactNode }) {
 }
 
 function RouteComponent() {
+  const { initialBusinesses } = Route.useLoaderData();
   const location = useLocation();
   const [isMobile, setIsMobile] = useState(false);
 
@@ -101,47 +153,54 @@ function RouteComponent() {
   }, []);
 
   const isChatDomainMobile = isMobile && location.pathname.startsWith("/chat/") && location.pathname !== "/chat";
-
-  if (isChatDomainMobile) {
-    return (
-      <div className="h-[100dvh] w-screen bg-white flex flex-col font-sans relative overflow-hidden">
-        <main className="flex-1 w-full flex flex-col overflow-hidden">
-          <PageTransitionWrapper>
-            <Outlet />
-          </PageTransitionWrapper>
-        </main>
-      </div>
-    );
-  }
-
-  if (isMobile) {
-    return (
-      <div className="h-[100dvh] w-screen bg-[#F9FAFC] flex flex-col font-sans relative pb-16 overflow-hidden">
-        <ClientNav />
-        <div className="h-16 shrink-0" />
-
-        <main className="flex-1 w-full flex flex-col overflow-y-auto">
-          <PageTransitionWrapper>
-            <Outlet />
-          </PageTransitionWrapper>
-        </main>
-
-        <ClientBottomLinks />
-      </div>
-    );
-  }
-
   const isChatRoute = location.pathname.startsWith("/chat");
 
+  const renderContent = () => {
+    if (isChatDomainMobile) {
+      return (
+        <div className="h-dvh w-screen bg-white flex flex-col font-sans relative overflow-hidden">
+          <main className="flex-1 w-full flex flex-col overflow-hidden">
+            <PageTransitionWrapper>
+              <Outlet />
+            </PageTransitionWrapper>
+          </main>
+        </div>
+      );
+    }
+
+    if (isMobile) {
+      return (
+        <div className="h-dvh w-screen bg-[#F9FAFC] flex flex-col font-sans relative pb-16 overflow-hidden">
+          <ClientNav />
+          <div className="h-16 shrink-0" />
+
+          <main className="flex-1 w-full flex flex-col overflow-y-auto">
+            <PageTransitionWrapper>
+              <Outlet />
+            </PageTransitionWrapper>
+          </main>
+
+          <ClientBottomLinks />
+        </div>
+      );
+    }
+
+    return (
+      <div className={`${isChatRoute ? "h-screen overflow-hidden" : "min-h-screen"} bg-[#F9FAFC] flex flex-col font-sans`}>
+        <ClientNav />
+        <div className="h-16 shrink-0" />
+        <main className={`flex-1 w-full flex flex-col ${isChatRoute ? "overflow-hidden" : ""}`}>
+          <PageTransitionWrapper>
+            <Outlet />
+          </PageTransitionWrapper>
+        </main>
+      </div>
+    );
+  };
+
   return (
-    <div className={`${isChatRoute ? "h-screen overflow-hidden" : "min-h-screen"} bg-[#F9FAFC] flex flex-col font-sans`}>
-      <ClientNav />
-      <div className="h-16 shrink-0" />
-      <main className={`flex-1 w-full flex flex-col ${isChatRoute ? "overflow-hidden" : ""}`}>
-        <PageTransitionWrapper>
-          <Outlet />
-        </PageTransitionWrapper>
-      </main>
-    </div>
+    <BusinessProvider initialBusinesses={initialBusinesses}>
+      {renderContent()}
+    </BusinessProvider>
   );
 }
