@@ -439,13 +439,18 @@ export const createBlog = async (data: Omit<Blog, "id" | "createdAt" | "updatedA
 export const updateBlog = async (id: string, data: Partial<Blog>): Promise<Blog> => {
   const db = getDb();
   const docRef = db.collection("blogs").doc(id).withConverter(blogConverter);
-  const updateData = {
+  const snap = await docRef.get();
+  if (!snap.exists) {
+    throw new Error(`Blog post with ID ${id} not found`);
+  }
+  const existingBlog = snap.data()!;
+  const updatedBlog = {
+    ...existingBlog,
     ...data,
     updatedAt: new Date(),
   };
-  await docRef.set(updateData as any, { merge: true });
-  const snap = await docRef.get();
-  return snap.data()!;
+  await docRef.set(updatedBlog);
+  return updatedBlog;
 };
 
 export const deleteBlog = async (id: string): Promise<void> => {

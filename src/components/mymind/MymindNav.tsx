@@ -2,6 +2,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { X, Menu } from "lucide-react";
 import { Link } from "@tanstack/react-router";
+import { auth } from "@/lib/firebase";
+import { onAuthStateChanged, type User } from "firebase/auth";
 
 const NAV_LINKS = [
   { label: "What", dot: "#FF5924", href: "/" },
@@ -14,6 +16,14 @@ const NAV_LINKS = [
 export function MymindNav() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    if (!auth) return;
+    return onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+  }, []);
 
   useEffect(() => {
     const onScroll = () => {
@@ -110,7 +120,7 @@ export function MymindNav() {
           {/* Right */}
           <div className="flex items-center gap-3">
             <Link
-              to="/login"
+              to={user ? "/dashboard" : "/login"}
               className="hidden text-sm transition-colors duration-200 md:block"
               style={{ color: "#748297" }}
               onMouseEnter={(e) => (e.currentTarget.style.color = "#24272D")}
@@ -119,7 +129,7 @@ export function MymindNav() {
               Log in
             </Link>
             <Link
-              to="/assessment"
+              to={user ? "/dashboard" : "/assessment"}
               className="hidden md:flex rounded-full px-5 py-2 text-sm font-semibold text-white transition-all duration-200 hover:opacity-90"
               style={{
                 background: "#FF5924",
@@ -186,7 +196,7 @@ export function MymindNav() {
                 className="mt-auto mb-4 flex w-full flex-row justify-center gap-5"
               >
                 <Link
-                  to="/login"
+                  to={user ? "/dashboard" : "/login"}
                   onClick={() => setMenuOpen(false)}
                   className="flex items-center justify-center rounded-full border py-3 px-5 text-xl font-medium"
                   style={{
@@ -198,7 +208,7 @@ export function MymindNav() {
                   Log in
                 </Link>
                 <Link
-                  to="/signup"
+                  to={user ? "/dashboard" : "/signup"}
                   onClick={() => setMenuOpen(false)}
                   className="flex items-center justify-center rounded-full py-3 px-5 text-xl font-medium text-white"
                   style={{ background: "#FF5924", minHeight: 44 }}

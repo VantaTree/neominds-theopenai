@@ -14,10 +14,13 @@ import { Route as SignupRouteImport } from './routes/signup'
 import { Route as PlansRouteImport } from './routes/plans'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as HowRouteImport } from './routes/how'
+import { Route as BlogsRouteImport } from './routes/blogs'
 import { Route as AssessmentRouteImport } from './routes/assessment'
 import { Route as ClientRouteRouteImport } from './routes/_client/route'
 import { Route as AdminRouteRouteImport } from './routes/_admin/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as BlogsIndexRouteImport } from './routes/blogs.index'
+import { Route as BlogsSlugRouteImport } from './routes/blogs.$slug'
 import { Route as ClientSettingsRouteImport } from './routes/_client/settings'
 import { Route as ClientReportRouteImport } from './routes/_client/report'
 import { Route as ClientProjectsRouteImport } from './routes/_client/projects'
@@ -34,9 +37,10 @@ import { Route as AdminAdminSupportRouteImport } from './routes/_admin/admin/sup
 import { Route as AdminAdminSettingsRouteImport } from './routes/_admin/admin/settings'
 import { Route as AdminAdminReportsRouteImport } from './routes/_admin/admin/reports'
 import { Route as AdminAdminPaymentsRouteImport } from './routes/_admin/admin/payments'
-import { Route as AdminAdminBlogsRouteImport } from './routes/_admin/admin/blogs'
 import { Route as AdminAdminProjectsIndexRouteImport } from './routes/_admin/admin/projects/index'
+import { Route as AdminAdminBlogsIndexRouteImport } from './routes/_admin/admin/blogs/index'
 import { Route as AdminAdminProjectsIdRouteImport } from './routes/_admin/admin/projects/$id'
+import { Route as AdminAdminBlogsIdRouteImport } from './routes/_admin/admin/blogs/$id'
 
 const WhyRoute = WhyRouteImport.update({
   id: '/why',
@@ -63,6 +67,11 @@ const HowRoute = HowRouteImport.update({
   path: '/how',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BlogsRoute = BlogsRouteImport.update({
+  id: '/blogs',
+  path: '/blogs',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AssessmentRoute = AssessmentRouteImport.update({
   id: '/assessment',
   path: '/assessment',
@@ -80,6 +89,16 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const BlogsIndexRoute = BlogsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => BlogsRoute,
+} as any)
+const BlogsSlugRoute = BlogsSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => BlogsRoute,
 } as any)
 const ClientSettingsRoute = ClientSettingsRouteImport.update({
   id: '/settings',
@@ -161,14 +180,14 @@ const AdminAdminPaymentsRoute = AdminAdminPaymentsRouteImport.update({
   path: '/admin/payments',
   getParentRoute: () => AdminRouteRoute,
 } as any)
-const AdminAdminBlogsRoute = AdminAdminBlogsRouteImport.update({
-  id: '/admin/blogs',
-  path: '/admin/blogs',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
 const AdminAdminProjectsIndexRoute = AdminAdminProjectsIndexRouteImport.update({
   id: '/admin/projects/',
   path: '/admin/projects/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminAdminBlogsIndexRoute = AdminAdminBlogsIndexRouteImport.update({
+  id: '/admin/blogs/',
+  path: '/admin/blogs/',
   getParentRoute: () => AdminRouteRoute,
 } as any)
 const AdminAdminProjectsIdRoute = AdminAdminProjectsIdRouteImport.update({
@@ -176,10 +195,16 @@ const AdminAdminProjectsIdRoute = AdminAdminProjectsIdRouteImport.update({
   path: '/admin/projects/$id',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const AdminAdminBlogsIdRoute = AdminAdminBlogsIdRouteImport.update({
+  id: '/admin/blogs/$id',
+  path: '/admin/blogs/$id',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/assessment': typeof AssessmentRoute
+  '/blogs': typeof BlogsRouteWithChildren
   '/how': typeof HowRoute
   '/login': typeof LoginRoute
   '/plans': typeof PlansRoute
@@ -192,7 +217,8 @@ export interface FileRoutesByFullPath {
   '/projects': typeof ClientProjectsRoute
   '/report': typeof ClientReportRoute
   '/settings': typeof ClientSettingsRoute
-  '/admin/blogs': typeof AdminAdminBlogsRoute
+  '/blogs/$slug': typeof BlogsSlugRoute
+  '/blogs/': typeof BlogsIndexRoute
   '/admin/payments': typeof AdminAdminPaymentsRoute
   '/admin/reports': typeof AdminAdminReportsRoute
   '/admin/settings': typeof AdminAdminSettingsRoute
@@ -202,7 +228,9 @@ export interface FileRoutesByFullPath {
   '/chat/$domain': typeof ClientChatDomainRoute
   '/admin/': typeof AdminAdminIndexRoute
   '/chat/': typeof ClientChatIndexRoute
+  '/admin/blogs/$id': typeof AdminAdminBlogsIdRoute
   '/admin/projects/$id': typeof AdminAdminProjectsIdRoute
+  '/admin/blogs/': typeof AdminAdminBlogsIndexRoute
   '/admin/projects/': typeof AdminAdminProjectsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -219,7 +247,8 @@ export interface FileRoutesByTo {
   '/projects': typeof ClientProjectsRoute
   '/report': typeof ClientReportRoute
   '/settings': typeof ClientSettingsRoute
-  '/admin/blogs': typeof AdminAdminBlogsRoute
+  '/blogs/$slug': typeof BlogsSlugRoute
+  '/blogs': typeof BlogsIndexRoute
   '/admin/payments': typeof AdminAdminPaymentsRoute
   '/admin/reports': typeof AdminAdminReportsRoute
   '/admin/settings': typeof AdminAdminSettingsRoute
@@ -229,7 +258,9 @@ export interface FileRoutesByTo {
   '/chat/$domain': typeof ClientChatDomainRoute
   '/admin': typeof AdminAdminIndexRoute
   '/chat': typeof ClientChatIndexRoute
+  '/admin/blogs/$id': typeof AdminAdminBlogsIdRoute
   '/admin/projects/$id': typeof AdminAdminProjectsIdRoute
+  '/admin/blogs': typeof AdminAdminBlogsIndexRoute
   '/admin/projects': typeof AdminAdminProjectsIndexRoute
 }
 export interface FileRoutesById {
@@ -238,6 +269,7 @@ export interface FileRoutesById {
   '/_admin': typeof AdminRouteRouteWithChildren
   '/_client': typeof ClientRouteRouteWithChildren
   '/assessment': typeof AssessmentRoute
+  '/blogs': typeof BlogsRouteWithChildren
   '/how': typeof HowRoute
   '/login': typeof LoginRoute
   '/plans': typeof PlansRoute
@@ -250,7 +282,8 @@ export interface FileRoutesById {
   '/_client/projects': typeof ClientProjectsRoute
   '/_client/report': typeof ClientReportRoute
   '/_client/settings': typeof ClientSettingsRoute
-  '/_admin/admin/blogs': typeof AdminAdminBlogsRoute
+  '/blogs/$slug': typeof BlogsSlugRoute
+  '/blogs/': typeof BlogsIndexRoute
   '/_admin/admin/payments': typeof AdminAdminPaymentsRoute
   '/_admin/admin/reports': typeof AdminAdminReportsRoute
   '/_admin/admin/settings': typeof AdminAdminSettingsRoute
@@ -260,7 +293,9 @@ export interface FileRoutesById {
   '/_client/chat/$domain': typeof ClientChatDomainRoute
   '/_admin/admin/': typeof AdminAdminIndexRoute
   '/_client/chat/': typeof ClientChatIndexRoute
+  '/_admin/admin/blogs/$id': typeof AdminAdminBlogsIdRoute
   '/_admin/admin/projects/$id': typeof AdminAdminProjectsIdRoute
+  '/_admin/admin/blogs/': typeof AdminAdminBlogsIndexRoute
   '/_admin/admin/projects/': typeof AdminAdminProjectsIndexRoute
 }
 export interface FileRouteTypes {
@@ -268,6 +303,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/assessment'
+    | '/blogs'
     | '/how'
     | '/login'
     | '/plans'
@@ -280,7 +316,8 @@ export interface FileRouteTypes {
     | '/projects'
     | '/report'
     | '/settings'
-    | '/admin/blogs'
+    | '/blogs/$slug'
+    | '/blogs/'
     | '/admin/payments'
     | '/admin/reports'
     | '/admin/settings'
@@ -290,7 +327,9 @@ export interface FileRouteTypes {
     | '/chat/$domain'
     | '/admin/'
     | '/chat/'
+    | '/admin/blogs/$id'
     | '/admin/projects/$id'
+    | '/admin/blogs/'
     | '/admin/projects/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -307,7 +346,8 @@ export interface FileRouteTypes {
     | '/projects'
     | '/report'
     | '/settings'
-    | '/admin/blogs'
+    | '/blogs/$slug'
+    | '/blogs'
     | '/admin/payments'
     | '/admin/reports'
     | '/admin/settings'
@@ -317,7 +357,9 @@ export interface FileRouteTypes {
     | '/chat/$domain'
     | '/admin'
     | '/chat'
+    | '/admin/blogs/$id'
     | '/admin/projects/$id'
+    | '/admin/blogs'
     | '/admin/projects'
   id:
     | '__root__'
@@ -325,6 +367,7 @@ export interface FileRouteTypes {
     | '/_admin'
     | '/_client'
     | '/assessment'
+    | '/blogs'
     | '/how'
     | '/login'
     | '/plans'
@@ -337,7 +380,8 @@ export interface FileRouteTypes {
     | '/_client/projects'
     | '/_client/report'
     | '/_client/settings'
-    | '/_admin/admin/blogs'
+    | '/blogs/$slug'
+    | '/blogs/'
     | '/_admin/admin/payments'
     | '/_admin/admin/reports'
     | '/_admin/admin/settings'
@@ -347,7 +391,9 @@ export interface FileRouteTypes {
     | '/_client/chat/$domain'
     | '/_admin/admin/'
     | '/_client/chat/'
+    | '/_admin/admin/blogs/$id'
     | '/_admin/admin/projects/$id'
+    | '/_admin/admin/blogs/'
     | '/_admin/admin/projects/'
   fileRoutesById: FileRoutesById
 }
@@ -356,6 +402,7 @@ export interface RootRouteChildren {
   AdminRouteRoute: typeof AdminRouteRouteWithChildren
   ClientRouteRoute: typeof ClientRouteRouteWithChildren
   AssessmentRoute: typeof AssessmentRoute
+  BlogsRoute: typeof BlogsRouteWithChildren
   HowRoute: typeof HowRoute
   LoginRoute: typeof LoginRoute
   PlansRoute: typeof PlansRoute
@@ -400,6 +447,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HowRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/blogs': {
+      id: '/blogs'
+      path: '/blogs'
+      fullPath: '/blogs'
+      preLoaderRoute: typeof BlogsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/assessment': {
       id: '/assessment'
       path: '/assessment'
@@ -427,6 +481,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/blogs/': {
+      id: '/blogs/'
+      path: '/'
+      fullPath: '/blogs/'
+      preLoaderRoute: typeof BlogsIndexRouteImport
+      parentRoute: typeof BlogsRoute
+    }
+    '/blogs/$slug': {
+      id: '/blogs/$slug'
+      path: '/$slug'
+      fullPath: '/blogs/$slug'
+      preLoaderRoute: typeof BlogsSlugRouteImport
+      parentRoute: typeof BlogsRoute
     }
     '/_client/settings': {
       id: '/_client/settings'
@@ -540,18 +608,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdminPaymentsRouteImport
       parentRoute: typeof AdminRouteRoute
     }
-    '/_admin/admin/blogs': {
-      id: '/_admin/admin/blogs'
-      path: '/admin/blogs'
-      fullPath: '/admin/blogs'
-      preLoaderRoute: typeof AdminAdminBlogsRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
     '/_admin/admin/projects/': {
       id: '/_admin/admin/projects/'
       path: '/admin/projects'
       fullPath: '/admin/projects/'
       preLoaderRoute: typeof AdminAdminProjectsIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/_admin/admin/blogs/': {
+      id: '/_admin/admin/blogs/'
+      path: '/admin/blogs'
+      fullPath: '/admin/blogs/'
+      preLoaderRoute: typeof AdminAdminBlogsIndexRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     '/_admin/admin/projects/$id': {
@@ -561,11 +629,17 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdminProjectsIdRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/_admin/admin/blogs/$id': {
+      id: '/_admin/admin/blogs/$id'
+      path: '/admin/blogs/$id'
+      fullPath: '/admin/blogs/$id'
+      preLoaderRoute: typeof AdminAdminBlogsIdRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
   }
 }
 
 interface AdminRouteRouteChildren {
-  AdminAdminBlogsRoute: typeof AdminAdminBlogsRoute
   AdminAdminPaymentsRoute: typeof AdminAdminPaymentsRoute
   AdminAdminReportsRoute: typeof AdminAdminReportsRoute
   AdminAdminSettingsRoute: typeof AdminAdminSettingsRoute
@@ -573,12 +647,13 @@ interface AdminRouteRouteChildren {
   AdminAdminTemplatesRoute: typeof AdminAdminTemplatesRoute
   AdminAdminUsersRoute: typeof AdminAdminUsersRoute
   AdminAdminIndexRoute: typeof AdminAdminIndexRoute
+  AdminAdminBlogsIdRoute: typeof AdminAdminBlogsIdRoute
   AdminAdminProjectsIdRoute: typeof AdminAdminProjectsIdRoute
+  AdminAdminBlogsIndexRoute: typeof AdminAdminBlogsIndexRoute
   AdminAdminProjectsIndexRoute: typeof AdminAdminProjectsIndexRoute
 }
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
-  AdminAdminBlogsRoute: AdminAdminBlogsRoute,
   AdminAdminPaymentsRoute: AdminAdminPaymentsRoute,
   AdminAdminReportsRoute: AdminAdminReportsRoute,
   AdminAdminSettingsRoute: AdminAdminSettingsRoute,
@@ -586,7 +661,9 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminAdminTemplatesRoute: AdminAdminTemplatesRoute,
   AdminAdminUsersRoute: AdminAdminUsersRoute,
   AdminAdminIndexRoute: AdminAdminIndexRoute,
+  AdminAdminBlogsIdRoute: AdminAdminBlogsIdRoute,
   AdminAdminProjectsIdRoute: AdminAdminProjectsIdRoute,
+  AdminAdminBlogsIndexRoute: AdminAdminBlogsIndexRoute,
   AdminAdminProjectsIndexRoute: AdminAdminProjectsIndexRoute,
 }
 
@@ -632,11 +709,24 @@ const ClientRouteRouteWithChildren = ClientRouteRoute._addFileChildren(
   ClientRouteRouteChildren,
 )
 
+interface BlogsRouteChildren {
+  BlogsSlugRoute: typeof BlogsSlugRoute
+  BlogsIndexRoute: typeof BlogsIndexRoute
+}
+
+const BlogsRouteChildren: BlogsRouteChildren = {
+  BlogsSlugRoute: BlogsSlugRoute,
+  BlogsIndexRoute: BlogsIndexRoute,
+}
+
+const BlogsRouteWithChildren = BlogsRoute._addFileChildren(BlogsRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRouteRoute: AdminRouteRouteWithChildren,
   ClientRouteRoute: ClientRouteRouteWithChildren,
   AssessmentRoute: AssessmentRoute,
+  BlogsRoute: BlogsRouteWithChildren,
   HowRoute: HowRoute,
   LoginRoute: LoginRoute,
   PlansRoute: PlansRoute,

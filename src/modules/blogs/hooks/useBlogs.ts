@@ -7,13 +7,14 @@ import {
   deleteBlogFn,
 } from "@/lib/server-functions";
 import { type Blog } from "@/lib/schemas";
+import { dbKeys } from "@/lib/db-keys";
 
 export type CreateBlogInput = Omit<Blog, "id" | "createdAt" | "updatedAt">;
 export type UpdateBlogInput = Partial<CreateBlogInput>;
 
 export const useBlogsList = (onlyPublished = false) => {
   return useQuery<Blog[]>({
-    queryKey: ["blogs", onlyPublished],
+    queryKey: dbKeys.blogs(onlyPublished),
     queryFn: async () => {
       const res = await fetchBlogsFn({ data: { onlyPublished } });
       return res as Blog[];
@@ -23,7 +24,7 @@ export const useBlogsList = (onlyPublished = false) => {
 
 export const useBlogSingle = (slug: string) => {
   return useQuery<Blog | null>({
-    queryKey: ["blog", slug],
+    queryKey: dbKeys.blog(slug),
     queryFn: async () => {
       const res = await fetchBlogBySlugFn({ data: slug });
       return res as Blog | null;
@@ -40,7 +41,7 @@ export const useCreateBlog = () => {
       return res as Blog;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["blogs"] });
+      queryClient.invalidateQueries({ queryKey: dbKeys.blogs() });
     }
   });
 };
@@ -53,8 +54,8 @@ export const useUpdateBlog = () => {
       return res as Blog;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["blogs"] });
-      queryClient.invalidateQueries({ queryKey: ["blog", data.slug] });
+      queryClient.invalidateQueries({ queryKey: dbKeys.blogs() });
+      queryClient.invalidateQueries({ queryKey: dbKeys.blog(data.slug) });
     }
   });
 };
@@ -66,7 +67,8 @@ export const useDeleteBlog = () => {
       await deleteBlogFn({ data: id });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["blogs"] });
+      queryClient.invalidateQueries({ queryKey: dbKeys.blogs() });
     }
   });
 };
+

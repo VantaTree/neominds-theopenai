@@ -146,7 +146,20 @@ export default function BlogPreview({ blog, onBack, onEdit }: BlogPreviewProps) 
 
             {/* Rich Content Container */}
             <div 
-              className="prose prose-sm max-w-none text-mm-dark leading-relaxed space-y-4"
+              className="w-full text-mm-dark leading-relaxed space-y-4
+                [&_h2]:text-2xl [&_h2]:font-black [&_h2]:mt-6 [&_h2]:mb-3 [&_h2]:text-mm-dark [&_h2]:tracking-tight
+                [&_h3]:text-xl [&_h3]:font-bold [&_h3]:mt-4 [&_h3]:mb-2 [&_h3]:text-mm-dark [&_h3]:tracking-tight
+                [&_p]:leading-relaxed [&_p]:mb-4
+                [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-3 [&_ul]:space-y-1.5
+                [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-3 [&_ol]:space-y-1.5
+                [&_li]:my-1 [&_li]:leading-relaxed
+                [&_blockquote]:border-l-4 [&_blockquote]:border-mm-orange [&_blockquote]:italic [&_blockquote]:pl-4 [&_blockquote]:my-4 [&_blockquote]:text-mm-gray [&_blockquote]:bg-stone-50 [&_blockquote]:py-2 [&_blockquote]:pr-2 [&_blockquote]:rounded-r-lg
+                [&_pre]:bg-stone-900 [&_pre]:text-stone-100 [&_pre]:p-4 [&_pre]:rounded-2xl [&_pre]:font-mono [&_pre]:text-xs [&_pre]:my-4 [&_pre]:overflow-x-auto
+                [&_code]:bg-stone-100 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded-md [&_code]:font-mono [&_code]:text-xs [&_code]:text-mm-orange [&_code]:font-semibold
+                [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:text-stone-100 [&_pre_code]:font-normal
+                [&_a]:text-mm-orange [&_a]:underline [&_a]:font-semibold hover:[&_a]:text-[#d68f15]
+                [&_hr]:border-stone-200 [&_hr]:my-6
+                [&_img]:rounded-2xl [&_img]:border [&_img]:border-stone-200 [&_img]:max-w-full [&_img]:h-auto [&_img]:my-6"
               dangerouslySetInnerHTML={{ __html: blog.content }}
             />
           </div>
