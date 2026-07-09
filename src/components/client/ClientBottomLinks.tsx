@@ -72,10 +72,14 @@ export default function ClientBottomLinks() {
               <p className="text-xs font-black text-mm-dark truncate">John Doe</p>
             </div>
             
-            <button className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-mm-dark hover:bg-mm-subtle transition-colors text-left cursor-pointer">
+            <Link
+              to="/profile"
+              onClick={() => setProfileOpen(false)}
+              className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-mm-dark hover:bg-mm-subtle transition-colors text-left cursor-pointer"
+            >
               <User className="h-3.5 w-3.5 text-mm-gray" />
               <span>My Profile</span>
-            </button>
+            </Link>
             
             <button className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-[#FF5924] hover:bg-[#FF5924]/5 transition-colors text-left cursor-pointer">
               <LogOut className="h-3.5 w-3.5 text-[#FF5924]/85" />

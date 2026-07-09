@@ -21,6 +21,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ClientSettingsRouteImport } from './routes/_client/settings'
 import { Route as ClientReportRouteImport } from './routes/_client/report'
 import { Route as ClientProjectsRouteImport } from './routes/_client/projects'
+import { Route as ClientProfileRouteImport } from './routes/_client/profile'
 import { Route as ClientPlanRouteImport } from './routes/_client/plan'
 import { Route as ClientMessageRouteImport } from './routes/_client/message'
 import { Route as ClientDashboardRouteImport } from './routes/_client/dashboard'
@@ -91,6 +92,11 @@ const ClientReportRoute = ClientReportRouteImport.update({
 const ClientProjectsRoute = ClientProjectsRouteImport.update({
   id: '/projects',
   path: '/projects',
+  getParentRoute: () => ClientRouteRoute,
+} as any)
+const ClientProfileRoute = ClientProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => ClientRouteRoute,
 } as any)
 const ClientPlanRoute = ClientPlanRouteImport.update({
@@ -170,6 +176,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof ClientDashboardRoute
   '/message': typeof ClientMessageRoute
   '/plan': typeof ClientPlanRoute
+  '/profile': typeof ClientProfileRoute
   '/projects': typeof ClientProjectsRoute
   '/report': typeof ClientReportRoute
   '/settings': typeof ClientSettingsRoute
@@ -195,6 +202,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof ClientDashboardRoute
   '/message': typeof ClientMessageRoute
   '/plan': typeof ClientPlanRoute
+  '/profile': typeof ClientProfileRoute
   '/projects': typeof ClientProjectsRoute
   '/report': typeof ClientReportRoute
   '/settings': typeof ClientSettingsRoute
@@ -223,6 +231,7 @@ export interface FileRoutesById {
   '/_client/dashboard': typeof ClientDashboardRoute
   '/_client/message': typeof ClientMessageRoute
   '/_client/plan': typeof ClientPlanRoute
+  '/_client/profile': typeof ClientProfileRoute
   '/_client/projects': typeof ClientProjectsRoute
   '/_client/report': typeof ClientReportRoute
   '/_client/settings': typeof ClientSettingsRoute
@@ -250,6 +259,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/message'
     | '/plan'
+    | '/profile'
     | '/projects'
     | '/report'
     | '/settings'
@@ -275,6 +285,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/message'
     | '/plan'
+    | '/profile'
     | '/projects'
     | '/report'
     | '/settings'
@@ -302,6 +313,7 @@ export interface FileRouteTypes {
     | '/_client/dashboard'
     | '/_client/message'
     | '/_client/plan'
+    | '/_client/profile'
     | '/_client/projects'
     | '/_client/report'
     | '/_client/settings'
@@ -413,6 +425,13 @@ declare module '@tanstack/react-router' {
       path: '/projects'
       fullPath: '/projects'
       preLoaderRoute: typeof ClientProjectsRouteImport
+      parentRoute: typeof ClientRouteRoute
+    }
+    '/_client/profile': {
+      id: '/_client/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ClientProfileRouteImport
       parentRoute: typeof ClientRouteRoute
     }
     '/_client/plan': {
@@ -543,6 +562,7 @@ interface ClientRouteRouteChildren {
   ClientDashboardRoute: typeof ClientDashboardRoute
   ClientMessageRoute: typeof ClientMessageRoute
   ClientPlanRoute: typeof ClientPlanRoute
+  ClientProfileRoute: typeof ClientProfileRoute
   ClientProjectsRoute: typeof ClientProjectsRoute
   ClientReportRoute: typeof ClientReportRoute
   ClientSettingsRoute: typeof ClientSettingsRoute
@@ -552,6 +572,7 @@ const ClientRouteRouteChildren: ClientRouteRouteChildren = {
   ClientDashboardRoute: ClientDashboardRoute,
   ClientMessageRoute: ClientMessageRoute,
   ClientPlanRoute: ClientPlanRoute,
+  ClientProfileRoute: ClientProfileRoute,
   ClientProjectsRoute: ClientProjectsRoute,
   ClientReportRoute: ClientReportRoute,
   ClientSettingsRoute: ClientSettingsRoute,
