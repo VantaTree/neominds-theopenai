@@ -49,6 +49,8 @@ function RouteComponent() {
       {/* Render the Project Dashboard component */}
       <ProjectDashboard
         activeProjectId={activeProjectId}
+        onActiveProjectChange={(id) => setActiveProjectId(id)}
+        onUpgradeTrigger={() => setShowUpgrade(true)}
         apiUrl="/api/projects"
       />
 

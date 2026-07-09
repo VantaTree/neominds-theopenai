@@ -1,5 +1,6 @@
 import React from "react";
 import { Monitor, Megaphone, Zap, Lock, MoreHorizontal, ArrowRight } from "lucide-react";
+import ProjectLogo from "./ProjectLogo";
 
 interface TaskDetails {
   title: string;
@@ -30,11 +31,11 @@ const CATEGORY_CONFIG = {
   },
   marketing: {
     icon: Megaphone,
-    iconColor: "text-mm-orange",
-    iconBg: "bg-orange-50 border-orange-100",
-    progressBarBg: "bg-mm-orange",
-    accentBg: "bg-mm-orange/5",
-    accentText: "text-mm-orange"
+    iconColor: "text-red-500",
+    iconBg: "bg-red-50 border-red-100",
+    progressBarBg: "bg-red-500",
+    accentBg: "bg-red-500/5",
+    accentText: "text-red-600"
   },
   automation: {
     icon: Zap,
@@ -59,7 +60,6 @@ export default function BusinessTaskCard({
   className = ""
 }: BusinessTaskCardProps) {
   const config = CATEGORY_CONFIG[category];
-  const Icon = config.icon;
 
   return (
     <div
@@ -72,9 +72,7 @@ export default function BusinessTaskCard({
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className={`p-2.5 rounded-xl border flex items-center justify-center ${config.iconBg}`}>
-              <Icon className={`h-4.5 w-4.5 ${config.iconColor}`} />
-            </div>
+            <ProjectLogo category={category} size="sm" />
             <h3 className="text-[15px] font-bold text-mm-dark tracking-tight">{name}</h3>
           </div>
         </div>

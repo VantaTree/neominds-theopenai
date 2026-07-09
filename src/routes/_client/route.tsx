@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { createFileRoute, Outlet, useLocation } from "@tanstack/react-router";
-import ClientDesktopNav from "../../components/client/ClientDesktopNav";
-import ClientMobileNav from "../../components/client/ClientMobileNav";
+import ClientNav from "../../components/client/ClientNav";
 import ClientBottomLinks from "../../components/client/ClientBottomLinks";
 
 export const Route = createFileRoute("/_client")({
@@ -96,7 +95,8 @@ function RouteComponent() {
   if (isMobile) {
     return (
       <div className="min-h-screen bg-[#F9FAFC] flex flex-col font-sans relative pb-16">
-        <ClientMobileNav />
+        <ClientNav />
+        <div className="h-16 shrink-0" />
 
         <main className="flex-1 w-full flex flex-col overflow-y-auto">
           <PageTransitionWrapper>
@@ -111,8 +111,8 @@ function RouteComponent() {
 
   return (
     <div className="min-h-screen bg-[#F9FAFC] flex flex-col font-sans">
-      <ClientDesktopNav />
-      <div className="h-15 shrink-0" />
+      <ClientNav />
+      <div className="h-16 shrink-0" />
       <main className="flex-1 w-full flex flex-col">
         <PageTransitionWrapper>
           <Outlet />
