@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Compass, BadgeCheck } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface Testimonial {
   id: string;
@@ -307,6 +307,50 @@ export function MymindTestimonials() {
   // Active highlighted card
   const [activeIndex, setActiveIndex] = useState(0);
 
+  // Details Side Panel State
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [selectedPanelIndex, setSelectedPanelIndex] = useState(0);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  // Listen for Escape key to close the side panel
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsPanelOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  // Ref to the scrollable area in the side panel
+  const panelScrollRef = useRef<HTMLDivElement | null>(null);
+
+  // Lock body scroll and redirect wheel events to panel when panel is open
+  useEffect(() => {
+    if (!isPanelOpen) return;
+
+    document.body.style.overflow = "hidden";
+
+    const handleWindowWheel = (e: WheelEvent) => {
+      // Prevent the website body/background from scrolling and block other listeners (like Lenis)
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // Redirect scroll delta directly to the side panel container
+      if (panelScrollRef.current) {
+        panelScrollRef.current.scrollTop += e.deltaY;
+      }
+    };
+
+    window.addEventListener("wheel", handleWindowWheel, { passive: false, capture: true });
+
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("wheel", handleWindowWheel, { capture: true });
+    };
+  }, [isPanelOpen]);
+
   // Viewport camera parameters
   const camXRef = useRef(centerX);
   const camYRef = useRef(centerY);
@@ -372,7 +416,8 @@ export function MymindTestimonials() {
       if (
         timeSinceInteract > 3000 &&
         !isDraggingController.current &&
-        !isDraggingGraph.current
+        !isDraggingGraph.current &&
+        !isPanelOpen
       ) {
         // Change focused card index
         const elapsedIntervals = Math.floor(timeSinceInteract / 6000);
@@ -400,10 +445,12 @@ export function MymindTestimonials() {
         targetZoom.current = 1.15;
       }
 
-      // Smooth Camera LERP interpolation
-      camXRef.current += (targetCamX.current - camXRef.current) * 0.08 * dt;
-      camYRef.current += (targetCamY.current - camYRef.current) * 0.08 * dt;
-      zoomRef.current += (targetZoom.current - zoomRef.current) * 0.08 * dt;
+      // Smooth Camera LERP interpolation (only when panel is closed to allow animations to stop)
+      if (!isPanelOpen) {
+        camXRef.current += (targetCamX.current - camXRef.current) * 0.08 * dt;
+        camYRef.current += (targetCamY.current - camYRef.current) * 0.08 * dt;
+        zoomRef.current += (targetZoom.current - zoomRef.current) * 0.08 * dt;
+      }
 
       // Sync tracking ball with actual camera position in real-time
       if (!isDraggingController.current) {
@@ -492,7 +539,9 @@ export function MymindTestimonials() {
           // Moving pulses on curved paths
           ctx.fillStyle = `rgba(${acc.r}, ${acc.g}, ${acc.b}, 0.85)`;
           pulsesRef.current.forEach((pulse) => {
-            pulse.progress += pulse.speed * dt;
+            if (!isPanelOpen) {
+              pulse.progress += pulse.speed * dt;
+            }
             if (pulse.progress >= 1) {
               pulse.progress = 0;
               // Reroute to a connected node
@@ -544,7 +593,7 @@ export function MymindTestimonials() {
       window.removeEventListener("resize", handleResize);
       cancelAnimationFrame(animId);
     };
-  }, [activeIndex]);
+  }, [activeIndex, isPanelOpen]);
 
   // Window drag/mouse handlers for controller puck and direct canvas dragging
   useEffect(() => {
@@ -1043,13 +1092,17 @@ export function MymindTestimonials() {
           {/* Background canvas connections web */}
           <canvas
             ref={canvasRef}
-            className="absolute inset-0 w-full h-full pointer-events-none"
+            className={`absolute inset-0 w-full h-full pointer-events-none transition-[filter,opacity] duration-300 ${
+              isPanelOpen ? "blur-md opacity-40" : ""
+            }`}
           />
 
           {/* Tilted / Panned graph layout wrapper */}
           <div
             ref={graphWrapperRef}
-            className="absolute inset-0 pointer-events-none will-change-transform"
+            className={`absolute inset-0 pointer-events-none will-change-transform transition-[filter,opacity] duration-300 ${
+              isPanelOpen ? "blur-md pointer-events-none opacity-40" : ""
+            }`}
             style={{ transformOrigin: "0 0" }}
           >
             {testimonials.map((card, idx) => {
@@ -1069,48 +1122,49 @@ export function MymindTestimonials() {
                 >
                   {/* Premium Testimonial Card */}
                   <div
-                    className={`w-[230px] sm:w-[285px] rounded-2xl border bg-white border-mm-border shadow-2xl flex flex-col transition-all duration-500 will-change-transform ${
-                      isActive
+                    className={`w-[230px] sm:w-[285px] aspect-[16/11] rounded-2xl border bg-white border-mm-border shadow-2xl flex flex-col transition-all duration-500 will-change-transform overflow-hidden relative ${isActive
                         ? "ring-1 ring-mm-orange border-mm-orange/40 scale-115 md:scale-150 shadow-[0_15px_45px_rgba(255,89,36,0.12)]"
                         : "opacity-60 scale-90 saturate-50 hover:opacity-90"
-                    }`}
+                      }`}
                   >
-                    {/* Large Project Image - Flush with top card boundary */}
-                    <div className="w-full aspect-16/10 overflow-hidden rounded-t-2xl bg-[#f0f2f5] border-b border-black/5 relative">
-                      <img
-                        src={card.imagePath}
-                        alt={card.businessName}
-                        className="w-full h-full object-cover select-none pointer-events-none"
-                        style={{
-                          objectFit: "cover",
-                          height: "100%",
-                        }}
-                      />
-                      <div className="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
-                    </div>
+                    {/* The centered image contained inside the card */}
+                    <img
+                      src={card.imagePath}
+                      alt={card.businessName}
+                      className="absolute inset-0 w-full h-full object-contain object-center select-none pointer-events-none"
+                    />
 
-                    {/* Card Details & Quote Body - Inner padding applied here */}
-                    <div className="p-4 flex flex-col gap-3">
-                      {/* Meta details */}
-                      <div className="flex flex-col gap-0.5">
-                        <div className="flex items-center justify-between">
-                          <span className="font-extrabold text-sm sm:text-base text-mm-orange tracking-tight leading-none font-sans">
-                            {card.businessName}
-                          </span>
-                          <span className="flex items-center gap-0.5 text-[10px] text-mm-gray font-bold uppercase tracking-wider font-sans">
-                            {card.name}
-                            <BadgeCheck className="h-3 w-3 text-mm-orange shrink-0" />
-                          </span>
-                        </div>
-                        <span className="text-xs text-mm-dark/60 font-medium leading-tight mt-1 font-sans">
-                          {card.projectDescription}
+                    {/* Semi-transparent / blurred bottom overlay bar */}
+                    <div className="absolute bottom-0 inset-x-0 bg-white/90 backdrop-blur-xs py-2 px-3 flex flex-col gap-1 z-10">
+                      <div className="flex items-center justify-between w-full">
+                        <span className="font-extrabold text-xs sm:text-sm text-mm-dark tracking-tight leading-none font-sans truncate max-w-[120px] sm:max-w-[160px]">
+                          {card.businessName}
                         </span>
-                      </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Snap camera instantly to selected card (jumping selection animation)
+                            camXRef.current = card.x;
+                            camYRef.current = card.y;
+                            zoomRef.current = 1.15;
 
-                      {/* 2-line Review Text */}
-                      <p className="text-mm-dark/85 text-xs sm:text-sm italic leading-relaxed line-clamp-2 font-sans">
-                        "{card.text}"
-                      </p>
+                            setActiveIndex(idx);
+                            targetCamX.current = card.x;
+                            targetCamY.current = card.y;
+                            targetZoom.current = 1.15;
+
+                            setSelectedPanelIndex(idx);
+                            setIsPanelOpen(true);
+                          }}
+                          className="text-[10px] sm:text-xs font-bold text-mm-orange hover:text-mm-orange/80 transition-colors shrink-0 flex items-center gap-0.5 font-sans cursor-pointer"
+                        >
+                          View More &gt;
+                        </button>
+                      </div>
+                      <div className="text-[9px] sm:text-[10px] text-mm-gray font-bold uppercase tracking-wider font-sans leading-none flex items-center gap-0.5">
+                        {card.name}
+                        <BadgeCheck className="h-2.5 w-2.5 text-mm-orange shrink-0" />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1143,11 +1197,10 @@ export function MymindTestimonials() {
                 return (
                   <div
                     key={node.id}
-                    className={`absolute size-1.5 rounded-full transition-all duration-300 pointer-events-none ${
-                      isActive
+                    className={`absolute size-1.5 rounded-full transition-all duration-300 pointer-events-none ${isActive
                         ? "bg-mm-orange scale-150 shadow-[0_0_6px_rgba(255,89,36,0.6)]"
                         : "bg-mm-dark/20"
-                    }`}
+                      }`}
                     style={{
                       transform: `translate3d(${nodePctX * 70}px, ${nodePctY * 40}px, 0)`,
                     }}
@@ -1168,6 +1221,99 @@ export function MymindTestimonials() {
           </div>
         </div>
       </div>
+
+      {/* Side Panel Drawer (slides from right) */}
+      <AnimatePresence>
+        {isPanelOpen && (
+          <>
+            {/* Backdrop Blur Overlay */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => { setIsPanelOpen(false); setIsDropdownOpen(false); }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50"
+            />
+
+            {/* Slide-out Panel */}
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="fixed right-0 top-0 bottom-0 h-full w-full md:w-1/2 bg-black/75 backdrop-blur-lg border-l border-white/10 z-50 shadow-2xl flex flex-col font-sans text-white overflow-hidden"
+            >
+              {/* Panel Header */}
+              <div className="p-6 border-b border-white/10 flex items-center justify-between">
+                <h3 className="text-lg font-bold text-white/90">Project Client Testimonials</h3>
+                <button
+                  onClick={() => { setIsPanelOpen(false); setIsDropdownOpen(false); }}
+                  className="p-2 rounded-full hover:bg-white/10 text-white/60 hover:text-white transition-colors cursor-pointer"
+                  aria-label="Close panel"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Scrollable Content */}
+              <div ref={panelScrollRef} className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6">
+                {/* Main Selected Project Details */}
+                {(() => {
+                  const activeProject = rawTestimonials[selectedPanelIndex];
+                  if (!activeProject) return null;
+                  return (
+                    <div className="space-y-6 animate-in fade-in-50 duration-300">
+                      {/* Project Image - completely showed */}
+                      <div className="w-full aspect-[16/10] bg-[#1a1b20] rounded-2xl overflow-hidden border border-white/5 flex items-center justify-center">
+                        <img
+                          src={activeProject.imagePath}
+                          alt={activeProject.businessName}
+                          className="w-full h-full object-contain p-2 select-none pointer-events-none"
+                        />
+                      </div>
+
+                      {/* Project Metadata */}
+                      <div className="space-y-2">
+                        <span className="text-xs font-semibold uppercase tracking-widest text-mm-orange">
+                          {activeProject.projectDescription}
+                        </span>
+                        <h2 className="text-3xl font-extrabold tracking-tight text-white leading-tight">
+                          {activeProject.businessName}
+                        </h2>
+                        <div className="flex items-center gap-1.5 text-sm text-white/50 pt-1">
+                          <span>Client: {activeProject.name}</span>
+                          <span className="w-1 h-1 rounded-full bg-white/20" />
+                          <span className="text-emerald-400 font-medium">Verified Partner</span>
+                        </div>
+                      </div>
+
+                      {/* Divider */}
+                      <div className="h-px bg-white/10" />
+
+                      {/* Testimonial Quote */}
+                      <div className="space-y-2">
+                        <span className="text-[10px] uppercase font-bold tracking-wider text-white/40 block">
+                          Client Feedback
+                        </span>
+                        <div className="relative bg-linear-to-b from-white/[0.04] to-white/[0.01] rounded-2xl p-6 border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] overflow-hidden">
+                          <p 
+                            className="text-lg text-white/95 leading-relaxed pl-3 pt-2 relative z-10 font-medium"
+                            style={{ fontFamily: "'Louize', Georgia, serif", fontStyle: "italic" }}
+                          >
+                            {activeProject.text}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </section>
   );
 }
