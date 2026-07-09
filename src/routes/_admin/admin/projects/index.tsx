@@ -1,22 +1,45 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Search, Plus, Eye, Edit2, Trash2 } from "lucide-react";
 import { statusColors } from "@/lib/mock-data";
-import type { Project } from "@/lib/mock-data";
+import type { Project } from "@/lib/schemas";
 import { Avatar, ProgressBar, StatusBadge, Card } from "@/components/admin/shared";
 import { CheckCircle2, ArrowRight, X, ChevronDown, SearchX } from "lucide-react";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { getProjectsFn, saveProjectFn, getUsersFn, deleteProjectFn, logAuditEventFn, getBusinessesFn } from "@/lib/server-functions";
+import { AdminLoader } from "@/components/AdminLoader";
 
 export const Route = createFileRoute("/_admin/admin/projects/")({
   head: () => ({ meta: [{ title: "Projects — GrowConsult AI" }] }),
+  loader: async () => {
+    try {
+      const [projects, users, businesses] = await Promise.all([
+        getProjectsFn(),
+        getUsersFn(),
+        getBusinessesFn(),
+      ]);
+      return { projects, users, businesses };
+    } catch (err) {
+      console.error("Loader failed to fetch projects data:", err);
+      return { projects: [], users: [], businesses: [] };
+    }
+  },
+  pendingComponent: AdminLoader,
+  pendingMs: 0,
   component: ProjectsPage,
 });
 
 function ProjectsPage() {
-  const [projectList, setProjectList] = useState<Project[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
-  const [businesses, setBusinesses] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { projects: initialProjects, users: initialUsers, businesses: initialBusinesses } = Route.useLoaderData();
+  const [projectList, setProjectList] = useState<Project[]>(initialProjects);
+  const [users, setUsers] = useState<any[]>(initialUsers);
+  const [businesses, setBusinesses] = useState<any[]>(initialBusinesses);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    setProjectList(initialProjects);
+    setUsers(initialUsers);
+    setBusinesses(initialBusinesses);
+  }, [initialProjects, initialUsers, initialBusinesses]);
 
   const refreshProjects = async () => {
     const [pData, uData, bData] = await Promise.all([
@@ -24,77 +47,29 @@ function ProjectsPage() {
       getUsersFn(),
       getBusinessesFn()
     ]);
+    setProjectList(pData);
+    setUsers(uData);
     setBusinesses(bData);
-
-    const mapped = pData.map(p => {
-      const biz = bData.find(b => b.id === p.businessId);
-      const usr = uData.find(u => u.id === (biz ? (typeof biz.userId === "string" ? biz.userId : biz.userId?.id) : ""));
-      
-      let status: "Pending" | "In Progress" | "Completed" = "In Progress";
-      if (p.progress === 0) status = "Pending";
-      else if (p.progress === 100) status = "Completed";
-
-      return {
-        id: p.id,
-        client: biz?.businessName || "No business",
-        services: [p.type],
-        manager: "John Smith",
-        status: status,
-        progress: p.progress,
-        deadline: p.deadline ? new Date(p.deadline).toLocaleDateString() : "",
-        startDate: p.createdAt ? new Date(p.createdAt).toLocaleDateString() : "",
-        priority: "Medium" as const,
-        email: usr?.email || "",
-        phone: usr?.phone || "",
-        industry: biz?.businessType || "Consulting",
-        website: biz?.websiteUrl || "",
-        joinedOn: usr?.createdAt ? new Date(usr.createdAt).toLocaleDateString() : "",
-        plan: (biz?.plan || "None") + " Plan",
-        description: p.description,
-        notes: "",
-        serviceGroups: [
-          { 
-            name: p.type, 
-            progress: p.progress,
-            color: "var(--color-mm-orange)",
-            tasks: p.updates.map((u, i) => ({
-              id: `t-${i}`,
-              name: u.message,
-              assignee: u.designation,
-              status: p.progress === 100 ? ("Completed" as const) : ("In Progress" as const),
-              progress: p.progress
-            }))
-          }
-        ]
-      };
-    });
-    setProjectList(mapped);
-    setUsers(uData.map(u => {
-      const biz = bData.find(b => (typeof b.userId === "string" ? b.userId : b.userId?.id) === u.id);
-      return {
-        ...u,
-        name: u.fullName,
-        business: biz ? biz.businessName : ""
-      };
-    }));
   };
 
-  useEffect(() => {
-    refreshProjects().then(() => setIsLoading(false));
-  }, []);
   const [isNewProjectOpen, setIsNewProjectOpen] = useState(false);
   const [newProjectForm, setNewProjectForm] = useState({
-    name: "", client: "", services: [] as string[], manager: "John Smith",
-    startDate: "", deadline: "", status: "Pending" as any, priority: "Medium" as any,
-    description: "", budget: ""
+    name: "", client: "", businessId: "", services: [] as string[], domain: "" as any, manager: "",
+    startDate: "", deadline: "", status: "" as any, priority: "" as any,
+    description: "", notes: ""
   });
   const [newProjectErrors, setNewProjectErrors] = useState<Record<string, boolean>>({});
   const [toast, setToast] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Project | null>(null);
 
   const handleDelete = async (p: Project) => {
+    const biz = typeof p.businessId === "object" && p.businessId !== null
+      ? p.businessId
+      : businesses.find(b => b.id === p.businessId);
+    const client = biz?.businessName || "No business";
+    const manager = p.assignee;
     await deleteProjectFn({ data: p.id });
-    await logAuditEventFn({ data: { uid: "admin", action: "project_deleted", payload: { projectId: p.id, client: p.client, manager: p.manager }, userName: "Admin" } });
+    await logAuditEventFn({ data: { uid: "admin", action: "project_deleted", payload: { projectId: p.id, client, manager }, userName: "Admin" } });
     setProjectList(prev => prev.filter(x => x.id !== p.id));
     setConfirmDelete(null);
     setToast(`✓ Project "${p.id}" deleted successfully.`);
@@ -137,47 +112,84 @@ function ProjectsPage() {
     }));
   };
 
+  const filteredBusinessesForSelect = useMemo(() => {
+    if (!newProjectForm.client) {
+      return businesses;
+    }
+    return businesses.filter(b => (typeof b.userId === "string" ? b.userId : b.userId?.id) === newProjectForm.client);
+  }, [businesses, newProjectForm.client]);
+
+  const handleClientChange = (clientId: string) => {
+    const clientBizs = businesses.filter(b => (typeof b.userId === "string" ? b.userId : b.userId?.id) === clientId);
+    let nextBizId = "";
+    if (clientBizs.length === 1) {
+      nextBizId = clientBizs[0].id;
+    } else if (clientBizs.some(b => b.id === newProjectForm.businessId)) {
+      nextBizId = newProjectForm.businessId;
+    }
+    setNewProjectForm(prev => ({
+      ...prev,
+      client: clientId,
+      businessId: nextBizId
+    }));
+    setNewProjectErrors(prev => ({ ...prev, client: false, businessId: false }));
+  };
+
+  const handleBusinessChange = (businessId: string) => {
+    const selectedBiz = businesses.find(b => b.id === businessId);
+    const linkedUserId = selectedBiz ? (typeof selectedBiz.userId === "string" ? selectedBiz.userId : selectedBiz.userId?.id) : "";
+    setNewProjectForm(prev => ({
+      ...prev,
+      businessId,
+      client: linkedUserId || prev.client
+    }));
+    setNewProjectErrors(prev => ({ ...prev, client: false, businessId: false }));
+  };
+
   const handleCreateSubmit = () => {
     const errs: Record<string, boolean> = {};
     if (!newProjectForm.name.trim()) errs.name = true;
     if (!newProjectForm.client) errs.client = true;
+    if (!newProjectForm.businessId) errs.businessId = true;
+    if (!newProjectForm.domain) errs.domain = true;
     if (newProjectForm.services.length === 0) errs.services = true;
+    if (!newProjectForm.manager.trim()) errs.manager = true;
     if (!newProjectForm.startDate) errs.startDate = true;
     if (!newProjectForm.deadline) errs.deadline = true;
+    if (!newProjectForm.status) errs.status = true;
+    if (!newProjectForm.priority) errs.priority = true;
 
     if (Object.keys(errs).length > 0) {
       setNewProjectErrors(errs);
       return;
     }
 
-    const selectedUserObj = users.find(u => {
-      const label = u.business ? `${u.name} — ${u.business}` : u.name;
-      return label === newProjectForm.client;
-    });
-    const matchedBiz = businesses.find(b => (typeof b.userId === "string" ? b.userId : b.userId?.id) === selectedUserObj?.id);
-    const businessId = matchedBiz ? matchedBiz.id : `biz_${selectedUserObj?.id || "unknown"}`;
-
     const newPrjSchema = {
       id: `PRJ-${1000 + projectList.length + 1}`,
-      businessId: businessId,
+      businessId: newProjectForm.businessId,
       name: newProjectForm.name,
       description: newProjectForm.description,
-      domain: "",
-      type: newProjectForm.services.join(" + "),
+      domain: newProjectForm.domain,
+      services: newProjectForm.services,
       progress: 0,
+      assignee: newProjectForm.manager,
+      status: newProjectForm.status,
+      priority: newProjectForm.priority,
+      notes: newProjectForm.notes,
       updates: [],
+      startDate: new Date(newProjectForm.startDate),
       deadline: newProjectForm.deadline ? new Date(newProjectForm.deadline) : null,
-      createdAt: newProjectForm.startDate ? new Date(newProjectForm.startDate) : new Date(),
+      createdAt: new Date(),
       updatedAt: new Date(),
     };
 
-    saveProjectFn({ data: newPrjSchema }).then(() => {
+    saveProjectFn({ data: newPrjSchema as any }).then(() => {
       refreshProjects().then(() => {
         setIsNewProjectOpen(false);
         setNewProjectForm({
-          name: "", client: "", services: [], manager: "John Smith",
-          startDate: "", deadline: "", status: "Pending", priority: "Medium",
-          description: "", budget: ""
+          name: "", client: "", businessId: "", services: [], domain: "" as any, manager: "",
+          startDate: "", deadline: "", status: "" as any, priority: "" as any,
+          description: "", notes: ""
         });
         setToast("✓ Project created successfully!");
       });
@@ -186,15 +198,24 @@ function ProjectsPage() {
 
   const filteredProjects = useMemo(() => {
     return projectList.filter(p => {
+      const biz = typeof p.businessId === "object" && p.businessId !== null
+        ? p.businessId
+        : businesses.find(b => b.id === p.businessId);
+      const manager = p.assignee;
+      
+      let status: "Pending" | "In Progress" | "Completed" = "In Progress";
+      if (p.progress === 0) status = "Pending";
+      else if (p.progress === 100) status = "Completed";
+
       let matchType = true;
-      if (typeFilter === "My Projects") matchType = p.manager === "John Smith";
+      if (typeFilter === "My Projects") matchType = manager === p.assignee;
       else if (typeFilter === "AI Projects") matchType = true;
       else if (typeFilter === "Website Projects") matchType = p.services.includes("Website");
       else if (typeFilter === "Marketing Projects") matchType = p.services.includes("Marketing");
       else if (typeFilter === "SEO Projects") matchType = p.services.includes("SEO");
 
       let matchStatus = true;
-      if (statusFilter !== "All Status") matchStatus = p.status === statusFilter;
+      if (statusFilter !== "All Status") matchStatus = status === statusFilter;
 
       let matchService = true;
       if (serviceFilter !== "All Services") {
@@ -208,12 +229,29 @@ function ProjectsPage() {
       let matchSearch = true;
       const term = searchQuery.toLowerCase();
       if (term) {
-        matchSearch = p.id.toLowerCase().includes(term) || p.client.toLowerCase().includes(term) || p.manager.toLowerCase().includes(term);
+        const userIdStr = biz
+          ? (typeof biz.userId === "object" && biz.userId !== null
+            ? biz.userId.id
+            : biz.userId)
+          : null;
+        const matchedUser = users.find(u => u.id === userIdStr);
+        const clientName = matchedUser?.fullName || "Unknown Client";
+        const clientEmail = matchedUser?.email || "No email";
+        const businessName = biz?.businessName || "No business";
+        const businessType = biz?.businessType || "Consulting";
+
+        matchSearch =
+          p.id.toLowerCase().includes(term) ||
+          clientName.toLowerCase().includes(term) ||
+          clientEmail.toLowerCase().includes(term) ||
+          businessName.toLowerCase().includes(term) ||
+          businessType.toLowerCase().includes(term) ||
+          manager.toLowerCase().includes(term);
       }
 
       return matchType && matchStatus && matchService && matchSearch;
     });
-  }, [projectList, typeFilter, statusFilter, serviceFilter, searchQuery]);
+  }, [projectList, typeFilter, statusFilter, serviceFilter, searchQuery, businesses, users]);
 
   const clearAllFilters = () => {
     setSearchQuery("");
@@ -227,12 +265,12 @@ function ProjectsPage() {
   return (
     <div className="space-y-8">
       <h1 className="text-2xl font-bold" style={{ color: "var(--color-mm-dark)" }}>
-        Project Manager – Project List
+        Projects
       </h1>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex flex-col gap-1 w-full max-w-[280px]">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 w-full md:w-auto">
+          <div className="w-full sm:w-[280px]">
             <div className="relative">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--color-mm-gray)" }} />
               <input 
@@ -257,26 +295,26 @@ function ProjectsPage() {
               )}
             </div>
             {hasActiveFilters && (
-              <div style={{ color: "var(--color-mm-gray)", fontSize: "12px", paddingLeft: "4px" }}>
+              <div style={{ color: "var(--color-mm-gray)", fontSize: "12px", paddingLeft: "4px", marginTop: "4px" }}>
                 Showing {filteredProjects.length} of {projectList.length} projects
               </div>
             )}
           </div>
 
-          <div className="relative" ref={typeRef}>
+          <div className="relative w-full sm:w-auto" ref={typeRef}>
             <button 
               onClick={() => setIsTypeOpen(!isTypeOpen)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm transition-colors"
+              className="inline-flex items-center justify-between sm:justify-start gap-2 px-4 py-2.5 rounded-xl text-sm transition-colors w-full sm:w-auto"
               style={{ background: "white", border: typeFilter === "All Projects" ? "1px solid var(--color-mm-border)" : "1px solid var(--color-mm-orange)", color: typeFilter === "All Projects" ? "var(--color-mm-gray)" : "var(--color-mm-orange)" }}
             >
-              {typeFilter}
-              <ChevronDown size={14} style={{ transform: isTypeOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 150ms ease" }} />
+              <span className="truncate">{typeFilter}</span>
+              <ChevronDown size={14} className="shrink-0" style={{ transform: isTypeOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 150ms ease" }} />
             </button>
             {isTypeOpen && (
-              <div style={{ background: "white", border: "1px solid var(--color-mm-border)", borderRadius: "16px", padding: "8px", boxShadow: "0 8px 24px rgba(0,0,0,0.10)", minWidth: "220px", position: "absolute", zIndex: 100, marginTop: "4px" }}>
+              <div style={{ background: "white", border: "1px solid var(--color-mm-border)", borderRadius: "16px", padding: "8px", boxShadow: "0 8px 24px rgba(0,0,0,0.10)", minWidth: "220px", position: "absolute", zIndex: 100, marginTop: "4px" }} className="w-full sm:w-auto left-0">
                 {[
                   { label: "All Projects", count: projectList.length },
-                  { label: "My Projects", count: projectList.filter(p => p.manager === "John Smith").length },
+                  { label: "My Projects", count: projectList.filter(() => true).length },
                   { label: "AI Projects", count: projectList.length },
                   { label: "Website Projects", count: projectList.filter(p => p.services.includes("Website")).length },
                   { label: "Marketing Projects", count: projectList.filter(p => p.services.includes("Marketing")).length },
@@ -298,17 +336,17 @@ function ProjectsPage() {
             )}
           </div>
 
-          <div className="relative" ref={statusRef}>
+          <div className="relative w-full sm:w-auto" ref={statusRef}>
             <button 
               onClick={() => setIsStatusOpen(!isStatusOpen)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm transition-colors"
+              className="inline-flex items-center justify-between sm:justify-start gap-2 px-4 py-2.5 rounded-xl text-sm transition-colors w-full sm:w-auto"
               style={{ background: "white", border: statusFilter === "All Status" ? "1px solid var(--color-mm-border)" : "1px solid var(--color-mm-orange)", color: statusFilter === "All Status" ? "var(--color-mm-gray)" : "var(--color-mm-orange)" }}
             >
-              {statusFilter}
-              <ChevronDown size={14} style={{ transform: isStatusOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 150ms ease" }} />
+              <span className="truncate">{statusFilter}</span>
+              <ChevronDown size={14} className="shrink-0" style={{ transform: isStatusOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 150ms ease" }} />
             </button>
             {isStatusOpen && (
-              <div style={{ background: "white", border: "1px solid var(--color-mm-border)", borderRadius: "16px", padding: "8px", boxShadow: "0 8px 24px rgba(0,0,0,0.10)", minWidth: "200px", position: "absolute", zIndex: 100, marginTop: "4px" }}>
+              <div style={{ background: "white", border: "1px solid var(--color-mm-border)", borderRadius: "16px", padding: "8px", boxShadow: "0 8px 24px rgba(0,0,0,0.10)", minWidth: "200px", position: "absolute", zIndex: 100, marginTop: "4px" }} className="w-full sm:w-auto left-0">
                 {[
                   { label: "All Status", bg: "transparent", color: "transparent" },
                   { label: "In Progress", bg: "rgba(59, 130, 246, 0.1)", color: "var(--color-mm-blue)" },
@@ -317,7 +355,14 @@ function ProjectsPage() {
                   { label: "Completed", bg: "rgba(92, 177, 62, 0.1)", color: "var(--color-mm-green)" },
                   { label: "Cancelled", bg: "var(--color-mm-subtle)", color: "var(--color-mm-gray)" }
                 ].map(opt => {
-                  const count = opt.label === "All Status" ? projectList.length : projectList.filter(p => p.status === opt.label).length;
+                  const count = opt.label === "All Status" 
+                    ? projectList.length 
+                    : projectList.filter(p => {
+                        let status: "Pending" | "In Progress" | "Completed" = "In Progress";
+                        if (p.progress === 0) status = "Pending";
+                        else if (p.progress === 100) status = "Completed";
+                        return status === opt.label;
+                      }).length;
                   return (
                     <div 
                       key={opt.label} onClick={() => { setStatusFilter(opt.label); setIsStatusOpen(false); }}
@@ -337,17 +382,17 @@ function ProjectsPage() {
             )}
           </div>
 
-          <div className="relative" ref={serviceRef}>
+          <div className="relative w-full sm:w-auto" ref={serviceRef}>
             <button 
               onClick={() => setIsServiceOpen(!isServiceOpen)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm transition-colors"
+              className="inline-flex items-center justify-between sm:justify-start gap-2 px-4 py-2.5 rounded-xl text-sm transition-colors w-full sm:w-auto"
               style={{ background: "white", border: serviceFilter === "All Services" ? "1px solid var(--color-mm-border)" : "1px solid var(--color-mm-orange)", color: serviceFilter === "All Services" ? "var(--color-mm-gray)" : "var(--color-mm-orange)" }}
             >
-              {serviceFilter}
-              <ChevronDown size={14} style={{ transform: isServiceOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 150ms ease" }} />
+              <span className="truncate">{serviceFilter}</span>
+              <ChevronDown size={14} className="shrink-0" style={{ transform: isServiceOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 150ms ease" }} />
             </button>
             {isServiceOpen && (
-              <div style={{ background: "white", border: "1px solid var(--color-mm-border)", borderRadius: "16px", padding: "8px", boxShadow: "0 8px 24px rgba(0,0,0,0.10)", minWidth: "200px", position: "absolute", zIndex: 100, marginTop: "4px" }}>
+              <div style={{ background: "white", border: "1px solid var(--color-mm-border)", borderRadius: "16px", padding: "8px", boxShadow: "0 8px 24px rgba(0,0,0,0.10)", minWidth: "200px", position: "absolute", zIndex: 100, marginTop: "4px" }} className="w-full sm:w-auto left-0">
                 {[
                   { label: "All Services", chips: [] },
                   { label: "Website", chips: [{ bg: "rgba(59, 130, 246, 0.1)", color: "var(--color-mm-blue)", text: "Website" }] },
@@ -375,13 +420,13 @@ function ProjectsPage() {
           </div>
         </div>
         
-        <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between sm:justify-end gap-3 w-full md:w-auto">
           {hasActiveFilters && (
-            <button onClick={clearAllFilters} className="text-xs hover:underline" style={{ color: "var(--color-mm-orange)" }}>
+            <button onClick={clearAllFilters} className="text-xs hover:underline whitespace-nowrap" style={{ color: "var(--color-mm-orange)" }}>
               Clear all filters
             </button>
           )}
-          <button onClick={() => setIsNewProjectOpen(true)} className="px-4 py-2 bg-mm-orange hover:bg-mm-orange/95 text-white font-semibold rounded-xl transition-colors inline-flex items-center gap-2">
+          <button onClick={() => setIsNewProjectOpen(true)} className="px-4 py-2.5 bg-mm-orange hover:bg-mm-orange/95 text-white font-semibold rounded-xl transition-colors inline-flex items-center justify-center gap-2 w-full sm:w-auto whitespace-nowrap">
             <Plus size={16} /> New Project
           </button>
         </div>
@@ -392,7 +437,7 @@ function ProjectsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-mm-subtle border-b border-mm-border text-mm-gray font-semibold">
-                {["Project ID", "Client/Business", "Services", "Project Manager", "Status", "Progress", "Deadline", "Actions"].map((h) => (
+                {["Client", "Business", "Services", "Assignee", "Status", "Progress", "Deadline", "Actions"].map((h) => (
                   <th key={h} className="text-left font-semibold px-4 py-3 whitespace-nowrap">{h}</th>
                 ))}
               </tr>
@@ -408,45 +453,89 @@ function ProjectsPage() {
                   </td>
                 </tr>
               ) : filteredProjects.length > 0 ? (
-                filteredProjects.map((p) => (
-                  <tr key={p.id} style={{ borderTop: "1px solid var(--color-mm-border)" }} className="hover:bg-mm-subtle transition-colors">
-                    <td className="px-4 py-3 text-xs" style={{ color: "var(--color-mm-gray)" }}>{p.id}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <Avatar name={p.client} size={28} />
-                        <span className="font-semibold" style={{ color: "var(--color-mm-dark)" }}>{p.client}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-1">
-                        {p.services.map((s) => (
-                          <span key={s} className="px-2.5 py-0.5 rounded-full text-xs border border-mm-border bg-mm-subtle text-mm-gray">
-                            {s}
-                          </span>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3" style={{ color: "var(--color-mm-gray)" }}>{p.manager}</td>
-                    <td className="px-4 py-3"><StatusBadge status={p.status} /></td>
-                    <td className="px-4 py-3 min-w-[160px]">
-                      <ProgressBar value={p.progress} color={statusColors[p.status as keyof typeof statusColors]} />
-                    </td>
-                    <td className="px-4 py-3 text-xs whitespace-nowrap" style={{ color: "var(--color-mm-gray)" }}>{p.deadline}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <Link to="/admin/projects/$id" params={{ id: p.id }} search={{ edit: false }} className="hover:opacity-70" title="View">
-                          <Eye size={16} style={{ color: "var(--color-mm-gray)" }} />
-                        </Link>
-                        <Link to="/admin/projects/$id" params={{ id: p.id }} search={{ edit: true }} className="hover:opacity-70" title="Edit">
-                          <Edit2 size={16} style={{ color: "var(--color-mm-gray)" }} />
-                        </Link>
-                        <button onClick={() => setConfirmDelete(p)} className="hover:opacity-70 text-mm-red" title="Delete">
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                filteredProjects.map((p) => {
+                  const biz = typeof p.businessId === "object" && p.businessId !== null
+                    ? p.businessId
+                    : businesses.find(b => b.id === p.businessId);
+                  const manager = p.assignee;
+
+                  const userIdStr = biz
+                    ? (typeof biz.userId === "object" && biz.userId !== null
+                      ? biz.userId.id
+                      : biz.userId)
+                    : null;
+                  const matchedUser = users.find(u => u.id === userIdStr);
+
+                  const clientName = matchedUser?.fullName || "Unknown Client";
+                  const clientEmail = matchedUser?.email || "No email";
+                  const businessName = biz?.businessName || "No business";
+                  const businessType = biz?.businessType || "Consulting";
+                  
+                  let status: "Pending" | "In Progress" | "Completed" = "In Progress";
+                  if (p.progress === 0) status = "Pending";
+                  else if (p.progress === 100) status = "Completed";
+
+                  const deadlineStr = p.deadline ? new Date(p.deadline).toLocaleDateString() : "";
+
+                  return (
+                    <tr key={p.id} style={{ borderTop: "1px solid var(--color-mm-border)" }} className="hover:bg-mm-subtle transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <Avatar name={clientName} size={32} />
+                          <div>
+                            <div className="font-semibold" style={{ color: "var(--color-mm-dark)" }}>
+                              {clientName}
+                            </div>
+                            <div className="text-xs mt-0.5" style={{ color: "var(--color-mm-gray)" }}>
+                              {clientEmail}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <Avatar name={businessName} size={32} />
+                          <div>
+                            <div className="font-semibold" style={{ color: "var(--color-mm-dark)" }}>
+                              {businessName}
+                            </div>
+                            <div className="text-xs mt-0.5" style={{ color: "var(--color-mm-gray)" }}>
+                              {businessType}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-1">
+                          {p.services.map((s) => (
+                            <span key={s} className="px-2.5 py-0.5 rounded-full text-xs border border-mm-border bg-mm-subtle text-mm-gray">
+                              {s}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3" style={{ color: "var(--color-mm-gray)" }}>{manager}</td>
+                      <td className="px-4 py-3"><StatusBadge status={status} /></td>
+                      <td className="px-4 py-3 min-w-[160px]">
+                        <ProgressBar value={p.progress} color={statusColors[status as keyof typeof statusColors]} />
+                      </td>
+                      <td className="px-4 py-3 text-xs whitespace-nowrap" style={{ color: "var(--color-mm-gray)" }}>{deadlineStr}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <Link to="/admin/projects/$id" params={{ id: p.id }} search={{ edit: false }} className="hover:opacity-70" title="View">
+                            <Eye size={16} style={{ color: "var(--color-mm-gray)" }} />
+                          </Link>
+                          <Link to="/admin/projects/$id" params={{ id: p.id }} search={{ edit: true }} className="hover:opacity-70" title="Edit">
+                            <Edit2 size={16} style={{ color: "var(--color-mm-gray)" }} />
+                          </Link>
+                          <button onClick={() => setConfirmDelete(p)} className="hover:opacity-70 text-mm-red" title="Delete">
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               ) : (
                 <tr>
                   <td colSpan={8} className="px-4 py-12">
@@ -464,7 +553,7 @@ function ProjectsPage() {
       </div>
 
       {isNewProjectOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.2)", backdropFilter: "blur(4px)" }} onClick={() => setIsNewProjectOpen(false)}>
+        <div className="fixed inset-0 z-100 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.2)", backdropFilter: "blur(4px)" }} onClick={() => setIsNewProjectOpen(false)}>
           <div className="w-full" style={{ background: "white", borderRadius: "24px", border: "1px solid var(--color-mm-border)", maxWidth: "560px", padding: "32px", boxShadow: "0 20px 60px rgba(0,0,0,0.15)", width: "90%", maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
               <h2 style={{ color: "var(--color-mm-dark)", fontWeight: 700, fontSize: "20px" }}>Create New Project</h2>
@@ -478,24 +567,63 @@ function ProjectsPage() {
                 {newProjectErrors.name && <div style={{ color: "var(--color-mm-red)", fontSize: "12px", marginTop: "4px" }}>Project Name is required.</div>}
               </div>
 
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label style={{ color: "var(--color-mm-gray)", fontWeight: 600, fontSize: "13px", display: "block", marginBottom: "4px" }}>Client / User*</label>
+                  <select 
+                    value={newProjectForm.client} 
+                    onChange={(e) => handleClientChange(e.target.value)} 
+                    style={{ background: "white", border: newProjectErrors.client ? "1px solid var(--color-mm-red)" : "1px solid var(--color-mm-border)", borderRadius: "12px", padding: "10px 14px", color: "var(--color-mm-dark)", width: "100%", outline: "none" }} 
+                    onFocus={(e) => { if (!newProjectErrors.client) e.target.style.borderColor = "var(--color-mm-orange)" }} 
+                    onBlur={(e) => { if (!newProjectErrors.client) e.target.style.borderColor = "var(--color-mm-border)" }}
+                  >
+                    <option value="" disabled>Select a client</option>
+                    {users.map(u => (
+                      <option key={u.id} value={u.id}>{u.fullName} ({u.email})</option>
+                    ))}
+                  </select>
+                  {newProjectErrors.client && <div style={{ color: "var(--color-mm-red)", fontSize: "12px", marginTop: "4px" }}>Client is required.</div>}
+                </div>
+
+                <div>
+                  <label style={{ color: "var(--color-mm-gray)", fontWeight: 600, fontSize: "13px", display: "block", marginBottom: "4px" }}>Business*</label>
+                  <select 
+                    value={newProjectForm.businessId} 
+                    onChange={(e) => handleBusinessChange(e.target.value)} 
+                    style={{ background: "white", border: newProjectErrors.businessId ? "1px solid var(--color-mm-red)" : "1px solid var(--color-mm-border)", borderRadius: "12px", padding: "10px 14px", color: "var(--color-mm-dark)", width: "100%", outline: "none" }} 
+                    onFocus={(e) => { if (!newProjectErrors.businessId) e.target.style.borderColor = "var(--color-mm-orange)" }} 
+                    onBlur={(e) => { if (!newProjectErrors.businessId) e.target.style.borderColor = "var(--color-mm-border)" }}
+                  >
+                    <option value="" disabled>Select a business</option>
+                    {filteredBusinessesForSelect.map(b => (
+                      <option key={b.id} value={b.id}>{b.businessName} ({b.businessType || "Consulting"})</option>
+                    ))}
+                  </select>
+                  {newProjectErrors.businessId && <div style={{ color: "var(--color-mm-red)", fontSize: "12px", marginTop: "4px" }}>Business is required.</div>}
+                </div>
+              </div>
+
               <div>
-                <label style={{ color: "var(--color-mm-gray)", fontWeight: 600, fontSize: "13px", display: "block", marginBottom: "4px" }}>Client / User*</label>
-                <select value={newProjectForm.client} onChange={(e) => setNewProjectForm({...newProjectForm, client: e.target.value})} style={{ background: "white", border: newProjectErrors.client ? "1px solid var(--color-mm-red)" : "1px solid var(--color-mm-border)", borderRadius: "12px", padding: "10px 14px", color: "var(--color-mm-dark)", width: "100%", outline: "none" }} onFocus={(e) => { if (!newProjectErrors.client) e.target.style.borderColor = "var(--color-mm-orange)" }} onBlur={(e) => { if (!newProjectErrors.client) e.target.style.borderColor = "var(--color-mm-border)" }}>
-                  <option value="" disabled>Select a client</option>
-                  {users.map(u => {
-                    const label = u.business ? `${u.name} — ${u.business}` : u.name;
-                    return (
-                      <option key={u.id} value={label}>{label}</option>
-                    );
-                  })}
+                <label style={{ color: "var(--color-mm-gray)", fontWeight: 600, fontSize: "13px", display: "block", marginBottom: "4px" }}>Project Domain*</label>
+                <select 
+                  value={newProjectForm.domain} 
+                  onChange={(e) => { setNewProjectForm({...newProjectForm, domain: e.target.value}); setNewProjectErrors(prev => ({ ...prev, domain: false })); }} 
+                  style={{ background: "white", border: newProjectErrors.domain ? "1px solid var(--color-mm-red)" : "1px solid var(--color-mm-border)", borderRadius: "12px", padding: "10px 14px", color: "var(--color-mm-dark)", width: "100%", outline: "none" }} 
+                  onFocus={(e) => { if (!newProjectErrors.domain) e.target.style.borderColor = "var(--color-mm-orange)" }} 
+                  onBlur={(e) => { if (!newProjectErrors.domain) e.target.style.borderColor = "var(--color-mm-border)" }}
+                >
+                  <option value="" disabled>Select a domain</option>
+                  <option value="Website">Website</option>
+                  <option value="Marketing">Marketing</option>
+                  <option value="Automation">Automation</option>
                 </select>
-                {newProjectErrors.client && <div style={{ color: "var(--color-mm-red)", fontSize: "12px", marginTop: "4px" }}>Client is required.</div>}
+                {newProjectErrors.domain && <div style={{ color: "var(--color-mm-red)", fontSize: "12px", marginTop: "4px" }}>Domain is required.</div>}
               </div>
 
               <div>
                 <label style={{ color: "var(--color-mm-gray)", fontWeight: 600, fontSize: "13px", display: "block", marginBottom: "4px" }}>Services*</label>
                 <div className="flex flex-wrap gap-2">
-                  {["Website", "Marketing", "SEO", "Sales"].map(s => {
+                  {["Website", "Marketing", "SEO", "Sales", "Automation"].map(s => {
                     const isSelected = newProjectForm.services.includes(s);
                     return (
                       <button key={s} onClick={() => toggleService(s)} style={{ background: isSelected ? "var(--color-mm-orange)" : "var(--color-mm-subtle)", border: isSelected ? "1px solid var(--color-mm-orange)" : "1px solid var(--color-mm-border)", color: isSelected ? "white" : "var(--color-mm-gray)", borderRadius: "999px", padding: "6px 12px", fontSize: "13px" }} className="transition-colors hover:opacity-90">
@@ -508,46 +636,65 @@ function ProjectsPage() {
               </div>
 
               <div>
-                <label style={{ color: "var(--color-mm-gray)", fontWeight: 600, fontSize: "13px", display: "block", marginBottom: "4px" }}>Project Manager</label>
+                <label style={{ color: "var(--color-mm-gray)", fontWeight: 600, fontSize: "13px", display: "block", marginBottom: "4px" }}>Assignee / Manager*</label>
                 <input 
-                  placeholder="Enter manager's name manually" 
+                  placeholder="Enter manager's name" 
                   value={newProjectForm.manager} 
                   onChange={(e) => setNewProjectForm({...newProjectForm, manager: e.target.value})} 
-                  style={{ background: "white", border: "1px solid var(--color-mm-border)", borderRadius: "12px", padding: "10px 14px", color: "var(--color-mm-dark)", width: "100%", outline: "none" }}
-                  onFocus={(e) => e.target.style.borderColor = "var(--color-mm-orange)"}
-                  onBlur={(e) => e.target.style.borderColor = "var(--color-mm-border)"}
+                  style={{ background: "white", border: newProjectErrors.manager ? "1px solid var(--color-mm-red)" : "1px solid var(--color-mm-border)", borderRadius: "12px", padding: "10px 14px", color: "var(--color-mm-dark)", width: "100%", outline: "none" }}
+                  onFocus={(e) => { if (!newProjectErrors.manager) e.target.style.borderColor = "var(--color-mm-orange)" }}
+                  onBlur={(e) => { if (!newProjectErrors.manager) e.target.style.borderColor = "var(--color-mm-border)" }}
                 />
+                {newProjectErrors.manager && <div style={{ color: "var(--color-mm-red)", fontSize: "12px", marginTop: "4px" }}>Assignee is required.</div>}
               </div>
 
-              <div className="flex gap-3">
-                <div className="flex-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
                   <label style={{ color: "var(--color-mm-gray)", fontWeight: 600, fontSize: "13px", display: "block", marginBottom: "4px" }}>Start Date*</label>
                   <input type="date" value={newProjectForm.startDate} onChange={(e) => setNewProjectForm({...newProjectForm, startDate: e.target.value})} style={{ background: "white", border: newProjectErrors.startDate ? "1px solid var(--color-mm-red)" : "1px solid var(--color-mm-border)", borderRadius: "12px", padding: "10px 14px", color: "var(--color-mm-dark)", width: "100%", outline: "none" }} />
                   {newProjectErrors.startDate && <div style={{ color: "var(--color-mm-red)", fontSize: "12px", marginTop: "4px" }}>Required.</div>}
                 </div>
-                <div className="flex-1">
+                <div>
                   <label style={{ color: "var(--color-mm-gray)", fontWeight: 600, fontSize: "13px", display: "block", marginBottom: "4px" }}>Deadline*</label>
                   <input type="date" value={newProjectForm.deadline} onChange={(e) => setNewProjectForm({...newProjectForm, deadline: e.target.value})} style={{ background: "white", border: newProjectErrors.deadline ? "1px solid var(--color-mm-red)" : "1px solid var(--color-mm-border)", borderRadius: "12px", padding: "10px 14px", color: "var(--color-mm-dark)", width: "100%", outline: "none" }} />
                   {newProjectErrors.deadline && <div style={{ color: "var(--color-mm-red)", fontSize: "12px", marginTop: "4px" }}>Required.</div>}
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label style={{ color: "var(--color-mm-gray)", fontWeight: 600, fontSize: "13px", display: "block", marginBottom: "4px" }}>Status</label>
-                  <select value={newProjectForm.status} onChange={(e) => setNewProjectForm({...newProjectForm, status: e.target.value})} style={{ background: "white", border: "1px solid var(--color-mm-border)", borderRadius: "12px", padding: "10px 14px", color: "var(--color-mm-dark)", width: "100%", outline: "none" }}>
+                  <label style={{ color: "var(--color-mm-gray)", fontWeight: 600, fontSize: "13px", display: "block", marginBottom: "4px" }}>Status*</label>
+                  <select 
+                    value={newProjectForm.status} 
+                    onChange={(e) => { setNewProjectForm({...newProjectForm, status: e.target.value}); setNewProjectErrors(prev => ({ ...prev, status: false })); }} 
+                    style={{ background: "white", border: newProjectErrors.status ? "1px solid var(--color-mm-red)" : "1px solid var(--color-mm-border)", borderRadius: "12px", padding: "10px 14px", color: "var(--color-mm-dark)", width: "100%", outline: "none" }} 
+                    onFocus={(e) => { if (!newProjectErrors.status) e.target.style.borderColor = "var(--color-mm-orange)" }} 
+                    onBlur={(e) => { if (!newProjectErrors.status) e.target.style.borderColor = "var(--color-mm-border)" }}
+                  >
+                    <option value="" disabled>Select status</option>
                     <option value="Pending">Pending</option>
                     <option value="In Progress">In Progress</option>
                     <option value="On Hold">On Hold</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Cancelled">Cancelled</option>
                   </select>
+                  {newProjectErrors.status && <div style={{ color: "var(--color-mm-red)", fontSize: "12px", marginTop: "4px" }}>Status is required.</div>}
                 </div>
                 <div>
-                  <label style={{ color: "var(--color-mm-gray)", fontWeight: 600, fontSize: "13px", display: "block", marginBottom: "4px" }}>Priority</label>
-                  <select value={newProjectForm.priority} onChange={(e) => setNewProjectForm({...newProjectForm, priority: e.target.value})} style={{ background: "white", border: "1px solid var(--color-mm-border)", borderRadius: "12px", padding: "10px 14px", color: "var(--color-mm-dark)", width: "100%", outline: "none" }}>
-                    <option value="Low">● Low</option>
-                    <option value="Medium">● Medium</option>
-                    <option value="High">● High</option>
+                  <label style={{ color: "var(--color-mm-gray)", fontWeight: 600, fontSize: "13px", display: "block", marginBottom: "4px" }}>Priority*</label>
+                  <select 
+                    value={newProjectForm.priority} 
+                    onChange={(e) => { setNewProjectForm({...newProjectForm, priority: e.target.value}); setNewProjectErrors(prev => ({ ...prev, priority: false })); }} 
+                    style={{ background: "white", border: newProjectErrors.priority ? "1px solid var(--color-mm-red)" : "1px solid var(--color-mm-border)", borderRadius: "12px", padding: "10px 14px", color: "var(--color-mm-dark)", width: "100%", outline: "none" }} 
+                    onFocus={(e) => { if (!newProjectErrors.priority) e.target.style.borderColor = "var(--color-mm-orange)" }} 
+                    onBlur={(e) => { if (!newProjectErrors.priority) e.target.style.borderColor = "var(--color-mm-border)" }}
+                  >
+                    <option value="" disabled>Select priority</option>
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
                   </select>
+                  {newProjectErrors.priority && <div style={{ color: "var(--color-mm-red)", fontSize: "12px", marginTop: "4px" }}>Priority is required.</div>}
                 </div>
               </div>
 
@@ -557,11 +704,8 @@ function ProjectsPage() {
               </div>
 
               <div>
-                <label style={{ color: "var(--color-mm-gray)", fontWeight: 600, fontSize: "13px", display: "block", marginBottom: "4px" }}>Initial Budget</label>
-                <div className="relative">
-                  <span style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "var(--color-mm-gray)", fontSize: "14px" }}>$</span>
-                  <input type="number" placeholder="0.00" value={newProjectForm.budget} onChange={(e) => setNewProjectForm({...newProjectForm, budget: e.target.value})} style={{ background: "white", border: "1px solid var(--color-mm-border)", borderRadius: "12px", padding: "10px 14px 10px 28px", color: "var(--color-mm-dark)", width: "100%", outline: "none" }} onFocus={(e) => e.target.style.borderColor = "var(--color-mm-orange)"} onBlur={(e) => e.target.style.borderColor = "var(--color-mm-border)"} />
-                </div>
+                <label style={{ color: "var(--color-mm-gray)", fontWeight: 600, fontSize: "13px", display: "block", marginBottom: "4px" }}>Notes</label>
+                <textarea rows={2} placeholder="Add additional project notes..." value={newProjectForm.notes} onChange={(e) => setNewProjectForm({...newProjectForm, notes: e.target.value})} style={{ background: "white", border: "1px solid var(--color-mm-border)", borderRadius: "12px", padding: "10px 14px", color: "var(--color-mm-dark)", width: "100%", outline: "none", resize: "vertical" }} onFocus={(e) => e.target.style.borderColor = "var(--color-mm-orange)"} onBlur={(e) => e.target.style.borderColor = "var(--color-mm-border)"} />
               </div>
             </div>
 
@@ -573,32 +717,38 @@ function ProjectsPage() {
         </div>
       )}
 
-      {confirmDelete && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 animate-in fade-in duration-200" style={{ background: "rgba(0,0,0,0.3)" }}>
-          <div className="w-full max-w-sm rounded-2xl p-6 space-y-4 shadow-2xl" style={{ background: "white", border: "1px solid var(--color-mm-border)" }}>
-            <h3 className="font-bold text-lg" style={{ color: "var(--color-mm-dark)" }}>Delete Project?</h3>
-            <p className="text-sm" style={{ color: "var(--color-mm-gray)" }}>
-              Are you sure you want to delete project <strong>"{confirmDelete.id}"</strong> for client <strong>{confirmDelete.client}</strong>? This action is permanent.
-            </p>
-            <div className="flex gap-3 justify-end pt-2">
-              <button 
-                onClick={() => setConfirmDelete(null)} 
-                className="px-4 py-2 rounded-xl text-sm font-semibold border border-mm-border hover:bg-mm-subtle" 
-                style={{ background: "white", color: "var(--color-mm-gray)" }}
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={() => handleDelete(confirmDelete)} 
-                className="px-4 py-2 rounded-xl text-sm font-semibold hover:opacity-95 text-white" 
-                style={{ background: "var(--color-mm-red)" }}
-              >
-                Delete
-              </button>
+      {confirmDelete && (() => {
+        const biz = typeof confirmDelete.businessId === "object" && confirmDelete.businessId !== null
+          ? confirmDelete.businessId
+          : businesses.find(b => b.id === confirmDelete.businessId);
+        const client = biz?.businessName || "No business";
+        return (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 animate-in fade-in duration-200" style={{ background: "rgba(0,0,0,0.3)" }}>
+            <div className="w-full max-w-sm rounded-2xl p-6 space-y-4 shadow-2xl" style={{ background: "white", border: "1px solid var(--color-mm-border)" }}>
+              <h3 className="font-bold text-lg" style={{ color: "var(--color-mm-dark)" }}>Delete Project?</h3>
+              <p className="text-sm" style={{ color: "var(--color-mm-gray)" }}>
+                Are you sure you want to delete project <strong>"{confirmDelete.id}"</strong> for client <strong>{client}</strong>? This action is permanent.
+              </p>
+              <div className="flex gap-3 justify-end pt-2">
+                <button 
+                  onClick={() => setConfirmDelete(null)} 
+                  className="px-4 py-2 rounded-xl text-sm font-semibold border border-mm-border hover:bg-mm-subtle" 
+                  style={{ background: "white", color: "var(--color-mm-gray)" }}
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={() => handleDelete(confirmDelete)} 
+                  className="px-4 py-2 rounded-xl text-sm font-semibold hover:opacity-95 text-white" 
+                  style={{ background: "var(--color-mm-red)" }}
+                >
+                  Delete
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {toast && (
         <div className="fixed bottom-6 right-6 z-[100] px-5 py-3 rounded-xl shadow-lg transition-all animate-in slide-in-from-bottom-5" style={{ background: "rgba(92, 177, 62, 0.1)", border: "1px solid var(--color-mm-green)", color: "var(--color-mm-green)", fontWeight: 600 }}>

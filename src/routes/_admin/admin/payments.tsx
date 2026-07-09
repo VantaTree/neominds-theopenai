@@ -32,16 +32,29 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import {
   getPaymentsFn,
   savePaymentsFn,
-  getUsersFn,
-  getBusinessesFn,
 } from "@/lib/server-functions";
+import type { Payment } from "@/lib/schemas";
+import { AdminLoader } from "@/components/AdminLoader";
 
 export const Route = createFileRoute("/_admin/admin/payments")({
   head: () => ({ meta: [{ title: "Payments — GrowConsult AI" }] }),
+  loader: async () => {
+    try {
+      const payments = await getPaymentsFn();
+      return { payments };
+    } catch (err) {
+      console.error("Loader failed to fetch payments data:", err);
+      return { payments: [] };
+    }
+  },
+  pendingComponent: AdminLoader,
+  pendingMs: 0,
   component: PaymentsPage,
 });
 
 function PaymentsPage() {
+  const { payments: initialPayments } = Route.useLoaderData();
+  const [paymentsData, setPaymentsData] = useState<Payment[]>(initialPayments);
   const [selectedClientId, setSelectedClientId] = useState("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [modalOpen, setModalOpen] = useState<string | null>(null);
@@ -52,99 +65,93 @@ function PaymentsPage() {
   const [targetReminderUser, setTargetReminderUser] = useState<any>(null);
   const [targetInvoiceUser, setTargetInvoiceUser] = useState<any>(null);
   const [isAnnual, setIsAnnual] = useState(false);
-  const [paymentsData, setPaymentsData] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    const loadPayments = async () => {
-      const [pData, uData, bData] = await Promise.all([
-        getPaymentsFn(),
-        getUsersFn(),
-        getBusinessesFn(),
-      ]);
+    setPaymentsData(initialPayments);
+  }, [initialPayments]);
 
-      const mapped = pData.map((p) => {
-        const usr = uData.find((u) => u.id === (typeof p.userId === "string" ? p.userId : p.userId?.id));
-        const biz = bData.find((b) => b.id === p.businessId);
-
-        return {
-          id: p.id,
-          paymentId: p.id,
-          invoiceId:
-            p.gatewayInfo?.orderId ||
-            `INV-${p.id.replace(/\D/g, "") || "1024"}`,
-          client: usr?.fullName || biz?.businessName || "Unknown Client",
-          business: biz?.businessName || "Unknown Business",
-          email: usr?.email || "",
-          phone: usr?.phone || "",
-          plan: biz?.plan || "None",
-          amount: `$${p.amount.toFixed(2)}`,
-          date: p.timestamp ? new Date(p.timestamp).toLocaleDateString() : "",
-          time: p.timestamp
-            ? new Date(p.timestamp).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })
-            : "",
-          status: p.status,
-          paymentMethod: p.paymentMethod,
-          user: usr
-            ? {
-                id: usr.id,
-                name: usr.fullName,
-                email: usr.email,
-                phone: usr.phone,
-                joinedOn: usr.createdAt
-                  ? new Date(usr.createdAt).toLocaleDateString()
-                  : "",
-              }
-            : null,
-        };
-      });
-
-      setPaymentsData(mapped);
-      setIsLoading(false);
+  const resolvePaymentDetails = (p: Payment | null) => {
+    if (!p) return null;
+    const usr = typeof p.userId === "object" && p.userId !== null ? p.userId : null;
+    const biz = typeof p.businessId === "object" && p.businessId !== null ? p.businessId : null;
+    const client = usr?.fullName || biz?.businessName || "Unknown Client";
+    const business = biz?.businessName || "Unknown Business";
+    const email = usr?.email || "";
+    const phone = usr?.phone || "";
+    const plan = (biz?.plan || "None") as string;
+    const amount = `$${p.amount.toFixed(2)}`;
+    const amountNumber = p.amount;
+    const date = p.timestamp ? new Date(p.timestamp).toLocaleDateString() : "";
+    const time = p.timestamp
+      ? new Date(p.timestamp).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : "";
+    const invoiceId = p.gatewayInfo?.orderId || `INV-${p.id.replace(/\D/g, "") || "1024"}`;
+    return {
+      ...p,
+      paymentId: p.id,
+      client,
+      business,
+      email,
+      phone,
+      plan,
+      amount,
+      amountNumber,
+      date,
+      time,
+      invoiceId,
+      user: usr,
+      status: p.status as string,
     };
-    loadPayments();
-  }, []);
+  };
 
   const clientList = useMemo(() => {
     const map = new Map<string, any>();
     paymentsData.forEach((p) => {
-      if (p.client && !map.has(p.client)) {
-        const id = p.client.toLowerCase().replace(/\s+/g, "-");
-        map.set(p.client, {
+      const details = resolvePaymentDetails(p);
+      if (!details) return;
+      
+      const client = details.client;
+      if (client && !map.has(client)) {
+        const id = client.toLowerCase().replace(/\s+/g, "-");
+        map.set(client, {
           id,
-          name: p.client,
-          business: p.business || "",
-          email: p.email || p.user?.email || `${id}@example.com`,
-          phone: p.phone || p.user?.phone || "+1 (555) 000-0000",
-          plan: p.plan || "",
-          status: p.status || "Paid",
-          amountDue: p.status === "Overdue" ? p.amount : "$0.00",
-          joinedDate: p.date || "Today",
+          name: client,
+          business: details.business || "",
+          email: details.email || `${id}@example.com`,
+          phone: details.phone || "+1 (555) 000-0000",
+          plan: details.plan || "",
+          status: details.status || "Paid",
+          amountDue: details.status === "Overdue" ? details.amount : "$0.00",
+          joinedDate: details.date || "Today",
           totalPaid: paymentsData
-            .filter((x) => x.client === p.client && x.status === "Paid")
+            .filter((x) => {
+              const xDetails = resolvePaymentDetails(x);
+              return xDetails?.client === client && xDetails?.status === "Paid";
+            })
             .reduce(
-              (acc, x) =>
-                acc +
-                parseFloat((x.amount || "0").replace(/[^0-9.]/g, "") || "0"),
+              (acc, x) => acc + x.amount,
               0,
             ),
           totalPending: paymentsData
-            .filter((x) => x.client === p.client && x.status === "Pending")
+            .filter((x) => {
+              const xDetails = resolvePaymentDetails(x);
+              return xDetails?.client === client && xDetails?.status === "Pending";
+            })
             .reduce(
-              (acc, x) =>
-                acc +
-                parseFloat((x.amount || "0").replace(/[^0-9.]/g, "") || "0"),
+              (acc, x) => acc + x.amount,
               0,
             ),
           totalOverdue: paymentsData
-            .filter((x) => x.client === p.client && x.status === "Overdue")
+            .filter((x) => {
+              const xDetails = resolvePaymentDetails(x);
+              return xDetails?.client === client && xDetails?.status === "Overdue";
+            })
             .reduce(
-              (acc, x) =>
-                acc +
-                parseFloat((x.amount || "0").replace(/[^0-9.]/g, "") || "0"),
+              (acc, x) => acc + x.amount,
               0,
             ),
         });
@@ -238,7 +245,7 @@ function PaymentsPage() {
   }, [toast]);
 
   const sortedData = useMemo(() => {
-    let data = paymentsData.filter((p) => {
+    let data = paymentsData.map(p => resolvePaymentDetails(p)!).filter((p) => {
       const matchPlan =
         planFilter === "All Plans" ||
         (planFilter === "Basic Plan" &&
@@ -264,9 +271,9 @@ function PaymentsPage() {
       const matchSearch =
         !term ||
         p.client.toLowerCase().includes(term) ||
-        p.user.toLowerCase().includes(term) ||
+        (p.user?.fullName || "").toLowerCase().includes(term) ||
         p.business.toLowerCase().includes(term) ||
-        p.paymentId.toLowerCase().includes(term) ||
+        p.id.toLowerCase().includes(term) ||
         p.invoiceId.toLowerCase().includes(term) ||
         p.plan.toLowerCase().includes(term);
       return matchPlan && matchStatus && matchYear && matchMonth && matchSearch;
@@ -274,24 +281,16 @@ function PaymentsPage() {
 
     if (sortOption === "Date (Newest to Oldest)") {
       data.sort(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+        (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
       );
     } else if (sortOption === "Date (Oldest to Newest)") {
       data.sort(
-        (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+        (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
       );
     } else if (sortOption === "Amount (High to Low)") {
-      data.sort(
-        (a, b) =>
-          parseFloat(b.amount.replace(/[^0-9.-]+/g, "")) -
-          parseFloat(a.amount.replace(/[^0-9.-]+/g, "")),
-      );
+      data.sort((a, b) => b.amountNumber - a.amountNumber);
     } else if (sortOption === "Amount (Low to High)") {
-      data.sort(
-        (a, b) =>
-          parseFloat(a.amount.replace(/[^0-9.-]+/g, "")) -
-          parseFloat(b.amount.replace(/[^0-9.-]+/g, "")),
-      );
+      data.sort((a, b) => a.amountNumber - b.amountNumber);
     } else if (sortOption === "Client (A-Z)") {
       data.sort((a, b) => a.client.localeCompare(b.client));
     } else if (sortOption === "Client (Z-A)") {
@@ -315,7 +314,7 @@ function PaymentsPage() {
   ]);
 
   const sidebarTransactions = useMemo(() => {
-    return paymentsData.filter((p) => {
+    return paymentsData.map(p => resolvePaymentDetails(p)!).filter((p) => {
       const matchClient = p.client === selectedClient.name;
       const yearStr = sidebarYear === "All Years" ? "" : sidebarYear;
       const matchYear = !yearStr || p.date.includes(yearStr);
@@ -329,8 +328,9 @@ function PaymentsPage() {
   const handleExportCsv = () => {
     setIsExportingCsv(true);
     setTimeout(() => {
+      const resolvedList = paymentsData.map(p => resolvePaymentDetails(p)!);
       const csvContent = `"Payment ID","Invoice ID","Client Name","Business Name","Plan","Amount","Date","Time","Status","Payment Method"
-${paymentsData.map((p) => `"${p.paymentId}","${p.invoiceId}","${p.client}","${p.business}","${p.plan}","${p.amount}","${p.date}","${p.time}","${p.status}","${p.paymentMethod}"`).join("\n")}`;
+${resolvedList.map((p) => `"${p.id}","${p.invoiceId}","${p.client}","${p.business}","${p.plan}","${p.amount}","${p.date}","${p.time}","${p.status}","${p.paymentMethod}"`).join("\n")}`;
 
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);

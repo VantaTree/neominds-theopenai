@@ -97,40 +97,40 @@ img { max-width: 100%; height: auto; }
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
 
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-card-secondary: var(--card-secondary);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary-hover: var(--primary-hover);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
-  --color-border: var(--border);
-  --color-border-hover: var(--border-hover);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
+  --color-background: var(--color-mm-bg-wrap);
+  --color-foreground: var(--color-mm-dark);
+  --color-card: #ffffff;
+  --color-card-foreground: var(--color-mm-dark);
+  --color-card-secondary: var(--color-mm-subtle);
+  --color-popover: #ffffff;
+  --color-popover-foreground: var(--color-mm-dark);
+  --color-primary: var(--color-mm-orange);
+  --color-primary-foreground: #ffffff;
+  --color-primary-hover: var(--color-mm-orange);
+  --color-secondary: var(--color-mm-subtle);
+  --color-secondary-foreground: var(--color-mm-dark);
+  --color-muted: var(--color-mm-subtle);
+  --color-muted-foreground: var(--color-mm-gray);
+  --color-accent: var(--color-mm-subtle);
+  --color-accent-foreground: var(--color-mm-orange);
+  --color-destructive: var(--color-mm-red);
+  --color-destructive-foreground: #ffffff;
+  --color-border: var(--color-mm-border);
+  --color-border-hover: var(--color-mm-gray);
+  --color-input: #ffffff;
+  --color-ring: var(--color-mm-orange);
 
-  --color-heading: var(--heading);
-  --color-title: var(--title);
-  --color-body: var(--body);
-  --color-subtle: var(--subtle);
+  --color-heading: var(--color-mm-dark);
+  --color-title: var(--color-mm-dark);
+  --color-body: var(--color-mm-gray);
+  --color-subtle: var(--color-mm-gray);
 
-  --color-success: var(--success);
-  --color-info: var(--info);
-  --color-pending: var(--pending);
-  --color-danger: var(--danger);
+  --color-success: var(--color-mm-green);
+  --color-info: var(--color-mm-blue);
+  --color-pending: var(--color-mm-yellow);
+  --color-danger: var(--color-mm-red);
 
-  --color-row-hover: var(--row-hover);
+  --color-row-hover: var(--color-mm-subtle);
 
   /* --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif; */
 }
@@ -463,4 +463,42 @@ img { max-width: 100%; height: auto; }
   pointer-events: none;
   user-select: none;
   opacity: 0.6;
+}
+
+/* Custom styling for range input */
+.mm-range-input {
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--color-mm-subtle);
+  outline: none;
+  height: 8px;
+  border-radius: 8px;
+}
+.mm-range-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-mm-orange);
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  transition: transform 0.1s ease, background-color 0.1s ease;
+}
+.mm-range-input::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+.mm-range-input::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-mm-orange);
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  transition: transform 0.1s ease, background-color 0.1s ease;
+}
+.mm-range-input::-moz-range-thumb:hover {
+  transform: scale(1.15);
 }

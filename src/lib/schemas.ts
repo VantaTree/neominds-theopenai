@@ -21,15 +21,22 @@ export const TimestampSchema = z.union([
 // Default auto-populated date field builder (coerces null to undefined so that default value kicks in)
 const DateField = z.preprocess(
   (val) => (val === null ? undefined : val),
-  TimestampSchema.default(() => new Date())
+  TimestampSchema.default(() => new Date()),
 );
 
 // Helper schema to support reference fields which can be either a string ID, a Firestore DocumentReference, or the fully populated object
-export const Reference = <T extends z.ZodTypeAny>(schema: T, requiredMessage?: string) =>
+export const Reference = <T extends z.ZodTypeAny>(
+  schema: T,
+  requiredMessage?: string,
+) =>
   z.preprocess(
     (val) => {
       if (val && typeof val === "object") {
-        if ("id" in val && "path" in val && typeof (val as any).path === "string") {
+        if (
+          "id" in val &&
+          "path" in val &&
+          typeof (val as any).path === "string"
+        ) {
           return (val as any).id;
         }
       }
@@ -37,8 +44,8 @@ export const Reference = <T extends z.ZodTypeAny>(schema: T, requiredMessage?: s
     },
     z.union([
       requiredMessage ? z.string().min(1, requiredMessage) : z.string(),
-      schema
-    ])
+      schema,
+    ]),
   );
 
 // ============================================================================
@@ -51,7 +58,7 @@ export const UserSchema = z.object({
   id: z.string().min(1, "User ID is required"),
   email: z.string().email("Invalid email address").min(1, "Email is required"),
   fullName: z.string().default(""),
-  image:z.string().url().optional(),
+  image: z.string().url().optional(),
   phone: z.string().default(""),
   status: UserStatusEnum.default("Active"),
   businessCount: z.number().int().nonnegative().default(0),
@@ -64,7 +71,14 @@ export type User = z.infer<typeof UserSchema>;
 // ============================================================================
 // 2. BUSINESS SCHEMA
 // ============================================================================
-export const BusinessPlanEnum = z.enum(["None", "Basic", "Plus", "Enterprise", "Pro", "pro"]);
+export const BusinessPlanEnum = z.enum([
+  "None",
+  "Basic",
+  "Plus",
+  "Enterprise",
+  "Pro",
+  "pro",
+]);
 export type BusinessPlan = z.infer<typeof BusinessPlanEnum>;
 
 export const BusinessAddonEnum = z.enum([
@@ -92,6 +106,7 @@ export const BusinessSchema = z.object({
   businessType: z.string().default(""),
   contactEmail: z.string().email("Invalid contact email").optional().nullable(),
   contactPhone: z.string().default(""),
+  image: z.string().url().optional(),
   websiteUrl: z.string().default(""),
   paymentStatus: PaymentStatusEnum.default("Pending"),
   createdAt: DateField,
@@ -103,6 +118,15 @@ export type Business = z.infer<typeof BusinessSchema>;
 // ============================================================================
 // 3. PROJECT SCHEMA
 // ============================================================================
+export const ProjectDomainEnum = z.enum(["Website", "Marketing", "Automation"]);
+export type ProjectDomain = z.infer<typeof ProjectDomainEnum>;
+
+export const ProjectStatusEnum = z.enum(["Completed", "In Progress", "Pending", "On Hold", "Cancelled"]);
+export type ProjectStatus = z.infer<typeof ProjectStatusEnum>;
+
+export const ProjectPriorityEnum = z.enum(["Low", "Medium", "High"]);
+export type ProjectPriority = z.infer<typeof ProjectPriorityEnum>;
+
 export const ProjectUpdateSchema = z.object({
   message: z.string().min(1, "Update message cannot be empty"),
   timestamp: DateField,
@@ -115,12 +139,17 @@ export const ProjectSchema = z.object({
   businessId: Reference(BusinessSchema, "Business ID reference is required"),
   name: z.string().min(1, "Project name is required"),
   description: z.string().default(""),
-  domain: z.string().default(""),
-  type: z.string().default("Development"),
+  domain: ProjectDomainEnum,
+  services: z.array(z.string()).min(1, "Atleast one service should be there"),
   progress: z.number().min(0).max(100).default(0),
+  assignee: z.string().min(1, "Assignee is required"),
+  status: ProjectStatusEnum.default("Pending"),
+  priority: ProjectPriorityEnum.default("Medium"),
+  notes: z.string().default(""),
   updates: z.array(ProjectUpdateSchema).default([]),
   completedAt: TimestampSchema.nullable().optional(),
   deadline: TimestampSchema.nullable().optional(),
+  startDate: DateField,
   createdAt: DateField,
   updatedAt: DateField,
 });

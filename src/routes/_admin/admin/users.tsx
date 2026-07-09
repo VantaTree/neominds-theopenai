@@ -12,11 +12,12 @@ import {
   FileText,
   Eye,
   ArrowLeft,
+  ChevronDown,
+  SearchX,
+  CheckCircle2,
 } from "lucide-react";
-import { useState, useEffect, useRef, useMemo } from "react";
-import { type User } from "@/lib/mock-data";
+import { useState, useEffect, useRef, useMemo, Fragment } from "react";
 import { Avatar, PlanBadge, StatusBadge } from "@/components/admin/shared";
-import { SearchX, CheckCircle2, ChevronDown } from "lucide-react";
 import {
   getUsersFn,
   saveUserFn,
@@ -24,61 +25,64 @@ import {
   getBusinessesFn,
   saveBusinessFn,
 } from "@/lib/server-functions";
+import { AdminLoader } from "@/components/AdminLoader";
+import type { User as DBUser, Business as DBBusiness } from "@/lib/schemas";
 
 export const Route = createFileRoute("/_admin/admin/users")({
   head: () => ({ meta: [{ title: "Users — GrowConsult AI" }] }),
+  loader: async () => {
+    try {
+      const [users, businesses] = await Promise.all([
+        getUsersFn(),
+        getBusinessesFn(),
+      ]);
+      return { users, businesses };
+    } catch (err) {
+      console.error("Loader failed to fetch users/businesses data:", err);
+      return { users: [], businesses: [] };
+    }
+  },
+  pendingComponent: AdminLoader,
+  pendingMs: 0,
   component: UsersPage,
 });
 
+interface MappedUser {
+  id: string;
+  name: string;
+  business: string;
+  email: string;
+  phone: string;
+  plan: string;
+  status: string;
+  joinedOn: string;
+  createdAt: any;
+  associatedBusinesses: DBBusiness[];
+  industry?: string;
+  website?: string;
+  image?: string;
+}
+
 function UsersPage() {
-  const [userList, setUserList] = useState<User[]>([]);
-  const [businesses, setBusinesses] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const refreshUsers = async () => {
-    const [uData, bData] = await Promise.all([getUsersFn(), getBusinessesFn()]);
-    setBusinesses(bData);
-
-    const mapped = uData.map((u) => {
-      const biz = bData.find(
-        (b) =>
-          (typeof b.userId === "string" ? b.userId : b.userId?.id) === u.id,
-      );
-      return {
-        id: u.id,
-        name: u.fullName,
-        business: biz ? biz.businessName : "No business",
-        email: u.email,
-        phone: u.phone,
-        plan: ((biz?.plan || "None") + " Plan") as any,
-        status: u.status,
-        joinedOn: u.createdAt
-          ? new Date(u.createdAt).toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            })
-          : "",
-      };
-    });
-
-    setUserList(mapped);
-  };
+  const { users: initialUsers, businesses: initialBusinesses } = Route.useLoaderData();
+  const [users, setUsers] = useState<DBUser[]>(initialUsers);
+  const [businesses, setBusinesses] = useState<DBBusiness[]>(initialBusinesses);
 
   useEffect(() => {
-    refreshUsers().then(() => setIsLoading(false));
-  }, []);
-  const [isAddUserOpen, setIsAddUserOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+    setUsers(initialUsers);
+    setBusinesses(initialBusinesses);
+  }, [initialUsers, initialBusinesses]);
+
+  const [expandedUserIds, setExpandedUserIds] = useState<Set<string>>(new Set());
+  const [selectedUser, setSelectedUser] = useState<MappedUser | null>(null);
   const [activeTab, setActiveTab] = useState("Profile");
 
-  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editingUser, setEditingUser] = useState<MappedUser | null>(null);
   const [editErrors, setEditErrors] = useState<Record<string, string>>({});
   const [editForm, setEditForm] = useState<any>({});
-  const [toast, setToast] = useState<{ title: string; sub?: string } | null>(
-    null,
-  );
+  const [toast, setToast] = useState<{ title: string; sub?: string } | null>(null);
 
+  const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [addForm, setAddForm] = useState({
     name: "",
     business: "",
@@ -121,6 +125,100 @@ function UsersPage() {
     }
   }, [toast]);
 
+  // Map users and businesses from DB structure to clean UI mapped structure
+  const mappedUsers = useMemo<MappedUser[]>(() => {
+    return users.map((u) => {
+      const userBizs = businesses.filter(
+        (b) => (typeof b.userId === "string" ? b.userId : b.userId?.id) === u.id
+      );
+      const mainBiz = userBizs[0];
+      const plan = mainBiz ? `${mainBiz.plan || "Basic"} Plan` : "Basic Plan";
+      return {
+        id: u.id,
+        name: u.fullName || "",
+        business: mainBiz ? mainBiz.businessName : "No business",
+        email: u.email,
+        phone: u.phone || "",
+        plan,
+        status: u.status || "Active",
+        joinedOn: u.createdAt
+          ? new Date(u.createdAt).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            })
+          : "",
+        createdAt: u.createdAt,
+        associatedBusinesses: userBizs,
+        industry: mainBiz ? mainBiz.businessType : "Consulting",
+        website: mainBiz ? mainBiz.websiteUrl : "",
+        image: u.image,
+      };
+    });
+  }, [users, businesses]);
+
+  const filteredUsers = useMemo(() => {
+    return mappedUsers.filter((u) => {
+      const normalizedUserPlan = u.plan.endsWith(" Plan")
+        ? u.plan
+        : `${u.plan === "Growth" ? "Pro" : u.plan} Plan`;
+      const matchPlan =
+        planFilter === "All Plans" || normalizedUserPlan === planFilter;
+      const matchStatus =
+        statusFilter === "All Status" || u.status === statusFilter;
+      let matchSearch = true;
+      const term = searchQuery.toLowerCase();
+      if (term) {
+        matchSearch =
+          u.name.toLowerCase().includes(term) ||
+          u.business.toLowerCase().includes(term) ||
+          u.email.toLowerCase().includes(term) ||
+          u.phone.includes(term);
+      }
+      return matchPlan && matchStatus && matchSearch;
+    });
+  }, [mappedUsers, planFilter, statusFilter, searchQuery]);
+
+  const paginatedUsers = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredUsers.slice(start, start + itemsPerPage);
+  }, [filteredUsers, currentPage]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / itemsPerPage));
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, planFilter, statusFilter]);
+
+  const toggleUserExpanded = (userId: string) => {
+    setExpandedUserIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(userId)) {
+        next.delete(userId);
+      } else {
+        next.add(userId);
+      }
+      return next;
+    });
+  };
+
+  const expandAll = () => {
+    setExpandedUserIds(new Set(filteredUsers.map((u) => u.id)));
+  };
+
+  const collapseAll = () => {
+    setExpandedUserIds(new Set());
+  };
+
+  const clearAllFilters = () => {
+    setSearchQuery("");
+    setPlanFilter("All Plans");
+    setStatusFilter("All Status");
+  };
+
+  const hasActiveFilters =
+    searchQuery || planFilter !== "All Plans" || statusFilter !== "All Status";
+
   const handleAddSubmit = () => {
     const errs: Record<string, string> = {};
     if (!addForm.name.trim()) errs.name = "Full name is required";
@@ -128,11 +226,7 @@ function UsersPage() {
     if (!addForm.email.trim()) errs.email = "Email address is required";
     else if (!/^\S+@\S+\.\S+$/.test(addForm.email))
       errs.email = "Please enter a valid email";
-    else if (
-      userList.some(
-        (u) => u.email.toLowerCase() === addForm.email.toLowerCase(),
-      )
-    )
+    else if (users.some((u) => u.email.toLowerCase() === addForm.email.toLowerCase()))
       errs.email = "This email is already registered";
 
     if (!addForm.phone.trim()) errs.phone = "Phone number is required";
@@ -151,27 +245,27 @@ function UsersPage() {
 
     setIsCreatingUser(true);
     const userId = `usr_${Date.now()}`;
-    const newUserSchema = {
+    const newUserSchema: DBUser = {
       id: userId,
       fullName: addForm.name,
       email: addForm.email,
       phone: addForm.phone,
-      status: "Active" as const,
+      status: "Active",
       businessCount: 1,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    const newBusinessSchema = {
+    const newBusinessSchema: DBBusiness = {
       id: `biz_${userId}`,
       userId: userId,
-      plan: "Basic" as const,
+      plan: "Basic",
       addons: [],
       businessName: addForm.business,
       businessType: "Consulting",
       contactEmail: addForm.email,
       contactPhone: addForm.phone,
       websiteUrl: "",
-      paymentStatus: "Paid" as const,
+      paymentStatus: "Paid",
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -180,23 +274,9 @@ function UsersPage() {
       saveUserFn({ data: newUserSchema }),
       saveBusinessFn({ data: newBusinessSchema }),
     ]).then(() => {
-      const newUserLegacy: User = {
-        id: userId,
-        name: addForm.name,
-        business: addForm.business,
-        email: addForm.email,
-        phone: addForm.phone,
-        plan: "Basic Plan" as any,
-        status: "Active",
-        joinedOn: new Date().toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        }),
-      };
       setIsCreatingUser(false);
       setIsAddUserOpen(false);
-      setUserList([newUserLegacy, ...userList]);
+      setUsers((prev) => [newUserSchema, ...prev]);
       setBusinesses((prev) => [newBusinessSchema, ...prev]);
       setAddForm({
         name: "",
@@ -221,7 +301,7 @@ function UsersPage() {
     }
   };
 
-  const handleEditClick = (u: User) => {
+  const handleEditClick = (u: MappedUser) => {
     setEditingUser(u);
     const normalizedPlan = u.plan.endsWith(" Plan")
       ? u.plan
@@ -254,35 +334,33 @@ function UsersPage() {
       return;
     }
 
-    const updated = { ...editingUser, ...editForm } as User;
-
-    const userSchemaData = {
-      id: updated.id,
-      fullName: updated.name,
-      email: updated.email,
-      phone: updated.phone,
-      status: updated.status,
-      businessCount: 1,
-      createdAt: new Date(updated.joinedOn),
+    const userId = editingUser!.id;
+    const userSchemaData: DBUser = {
+      id: userId,
+      fullName: editForm.name,
+      email: editForm.email,
+      phone: editForm.phone,
+      status: editForm.status as any,
+      businessCount: users.find((u) => u.id === userId)?.businessCount || 1,
+      createdAt: users.find((u) => u.id === userId)?.createdAt || new Date(),
       updatedAt: new Date(),
     };
 
     const matchedBiz = businesses.find(
-      (b) =>
-        (typeof b.userId === "string" ? b.userId : b.userId?.id) === updated.id,
+      (b) => (typeof b.userId === "string" ? b.userId : b.userId?.id) === userId
     );
-    const bizId = matchedBiz ? matchedBiz.id : `biz_${updated.id}`;
-    const parsedPlan = updated.plan.replace(" Plan", "") as any;
-    const businessSchemaData = {
+    const bizId = matchedBiz ? matchedBiz.id : `biz_${userId}`;
+    const parsedPlan = editForm.plan.replace(" Plan", "") as any;
+    const businessSchemaData: DBBusiness = {
       id: bizId,
-      userId: updated.id,
+      userId: userId,
       plan: parsedPlan,
       addons: matchedBiz ? matchedBiz.addons : [],
-      businessName: updated.business,
-      businessType: matchedBiz ? matchedBiz.businessType : "Consulting",
-      contactEmail: updated.email,
-      contactPhone: updated.phone,
-      websiteUrl: matchedBiz ? matchedBiz.websiteUrl : "",
+      businessName: editForm.business,
+      businessType: editForm.industry || "Consulting",
+      contactEmail: editForm.email,
+      contactPhone: editForm.phone,
+      websiteUrl: editForm.website || "",
       paymentStatus: matchedBiz ? matchedBiz.paymentStatus : "Paid",
       createdAt: matchedBiz ? matchedBiz.createdAt : new Date(),
       updatedAt: new Date(),
@@ -292,16 +370,22 @@ function UsersPage() {
       saveUserFn({ data: userSchemaData }),
       saveBusinessFn({ data: businessSchemaData }),
     ]).then(() => {
-      setUserList((list) =>
-        list.map((u) => (u.id === editingUser?.id ? updated : u)),
+      setUsers((prev) => prev.map((u) => (u.id === userId ? userSchemaData : u)));
+      setBusinesses((prev) =>
+        prev.map((b) => (b.id === bizId ? businessSchemaData : b))
       );
-      setBusinesses((list) =>
-        list.map((b) =>
-          b.id === businessSchemaData.id ? businessSchemaData : b,
-        ),
-      );
-      if (selectedUser?.id === editingUser?.id) {
-        setSelectedUser(updated);
+      if (selectedUser?.id === userId) {
+        setSelectedUser({
+          ...selectedUser,
+          name: editForm.name,
+          business: editForm.business,
+          email: editForm.email,
+          phone: editForm.phone,
+          plan: editForm.plan,
+          status: editForm.status,
+          industry: editForm.industry,
+          website: editForm.website,
+        });
       }
       setEditingUser(null);
       setToast({ title: "✓ User updated successfully!" });
@@ -309,17 +393,20 @@ function UsersPage() {
   };
 
   const handleDeleteUser = (userId: string) => {
-    const user = userList.find((u) => u.id === userId);
+    const user = users.find((u) => u.id === userId);
     if (!user) return;
-    if (window.confirm(`Are you sure you want to delete ${user.name}?`)) {
+    if (window.confirm(`Are you sure you want to delete ${user.fullName}?`)) {
       deleteUserFn({ data: userId }).then(() => {
-        setUserList((list) => list.filter((u) => u.id !== userId));
+        setUsers((prev) => prev.filter((u) => u.id !== userId));
+        setBusinesses((prev) =>
+          prev.filter((b) => (typeof b.userId === "string" ? b.userId : b.userId?.id) !== userId)
+        );
         if (selectedUser?.id === userId) {
           setSelectedUser(null);
         }
         setToast({
           title: "✓ User deleted successfully!",
-          sub: `${user.name} has been removed.`,
+          sub: `${user.fullName} has been removed.`,
         });
       });
     }
@@ -349,7 +436,7 @@ function UsersPage() {
     if (!selectedUser) return;
     if (
       window.confirm(
-        `Are you sure you want to send a password reset link to ${selectedUser.email}?`,
+        `Are you sure you want to send a password reset link to ${selectedUser.email}?`
       )
     ) {
       setToast({
@@ -361,81 +448,86 @@ function UsersPage() {
 
   const handleSuspendUser = () => {
     if (!selectedUser) return;
-    const isSuspended = selectedUser.status === "Inactive";
+    const userObj = users.find((u) => u.id === selectedUser.id);
+    if (!userObj) return;
+    const isSuspended = userObj.status === "Inactive" || userObj.status === "Suspended";
     const actionText = isSuspended ? "reactivate" : "suspend";
     const confirmMsg = `Are you sure you want to ${actionText} ${selectedUser.name}'s account?`;
 
     if (window.confirm(confirmMsg)) {
       const newStatus = isSuspended ? "Active" : "Inactive";
-      const updated = { ...selectedUser, status: newStatus } as User;
-      saveUserFn({ data: updated }).then(() => {
-        setUserList((list) =>
-          list.map((u) => (u.id === selectedUser.id ? updated : u)),
+      const updatedUser: DBUser = {
+        ...userObj,
+        status: newStatus,
+        updatedAt: new Date(),
+      };
+      saveUserFn({ data: updatedUser }).then(() => {
+        setUsers((list) =>
+          list.map((u) => (u.id === selectedUser.id ? updatedUser : u))
         );
-        setSelectedUser(updated);
+        setSelectedUser((prev) => (prev ? { ...prev, status: newStatus } : null));
         setToast({
-          title: isSuspended
-            ? "✓ Account Reactivated!"
-            : "✓ Account Suspended!",
+          title: isSuspended ? "✓ Account Reactivated!" : "✓ Account Suspended!",
           sub: `${selectedUser.name}'s account status has been updated to ${newStatus}.`,
         });
       });
     }
   };
 
-  const filteredUsers = useMemo(() => {
-    return userList.filter((u) => {
-      const normalizedUserPlan = u.plan.endsWith(" Plan")
-        ? u.plan
-        : `${u.plan === "Growth" ? "Pro" : u.plan} Plan`;
-      let matchPlan =
-        planFilter === "All Plans" || normalizedUserPlan === planFilter;
-      let matchStatus =
-        statusFilter === "All Status" || u.status === statusFilter;
-      let matchSearch = true;
-      const term = searchQuery.toLowerCase();
-      if (term) {
-        matchSearch =
-          u.name.toLowerCase().includes(term) ||
-          u.business.toLowerCase().includes(term) ||
-          u.email.toLowerCase().includes(term) ||
-          u.phone.includes(term);
-      }
-      return matchPlan && matchStatus && matchSearch;
-    });
-  }, [userList, planFilter, statusFilter, searchQuery]);
-
-  const paginatedUsers = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return filteredUsers.slice(start, start + itemsPerPage);
-  }, [filteredUsers, currentPage]);
-
-  const totalPages = Math.max(
-    1,
-    Math.ceil(filteredUsers.length / itemsPerPage),
-  );
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, planFilter, statusFilter]);
-
-  const clearAllFilters = () => {
-    setSearchQuery("");
-    setPlanFilter("All Plans");
-    setStatusFilter("All Status");
+  const formatLastActivity = (dateVal: any) => {
+    if (!dateVal) return "N/A";
+    const date = new Date(dateVal);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - date.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    if (diffDays <= 1) {
+      return "Just now";
+    } else if (diffDays === 2) {
+      return "Yesterday";
+    } else {
+      return date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+    }
   };
-
-  const hasActiveFilters =
-    searchQuery || planFilter !== "All Plans" || statusFilter !== "All Status";
 
   return (
     <div className="space-y-6">
-      <h1
-        className="text-2xl font-bold"
-        style={{ color: "var(--color-mm-dark)" }}
-      >
-        User Management
-      </h1>
+      {/* Header Block */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1
+            className="text-2xl font-bold"
+            style={{ color: "var(--color-mm-dark)" }}
+          >
+            User Management
+          </h1>
+          <p className="text-sm mt-1" style={{ color: "var(--color-mm-gray)" }}>
+            Review and manage platform users and their associated business ventures.
+          </p>
+        </div>
+
+        {/* Expand/Collapse All triggers */}
+        {!selectedUser && (
+          <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-wider text-mm-gray self-start md:self-center">
+            <button
+              onClick={expandAll}
+              className="hover:text-mm-orange transition-colors cursor-pointer"
+            >
+              Expand All
+            </button>
+            <span className="text-mm-border">|</span>
+            <button
+              onClick={collapseAll}
+              className="hover:text-mm-orange transition-colors cursor-pointer"
+            >
+              Collapse All
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* ── USER DETAIL FULL-WIDTH INLINE VIEW ── */}
       {selectedUser ? (
@@ -450,7 +542,16 @@ function UsersPage() {
           >
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-4">
-                <Avatar name={selectedUser.name} size={72} />
+                {selectedUser.image ? (
+                  <img
+                    src={selectedUser.image}
+                    alt={selectedUser.name}
+                    className="rounded-full object-cover shrink-0"
+                    style={{ width: 72, height: 72 }}
+                  />
+                ) : (
+                  <Avatar name={selectedUser.name} size={72} />
+                )}
                 <div>
                   <h2
                     className="text-2xl font-bold"
@@ -466,7 +567,7 @@ function UsersPage() {
                   </div>
                   <div className="mt-2 flex items-center gap-3">
                     <StatusBadge status={selectedUser.status} />
-                    <PlanBadge plan={selectedUser.plan} />
+                    <PlanBadge plan={selectedUser.plan.replace(" Plan", "")} />
                   </div>
                 </div>
               </div>
@@ -493,7 +594,7 @@ function UsersPage() {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className="pb-3 text-sm font-semibold transition-colors"
+                className="pb-3 text-sm font-semibold transition-colors cursor-pointer"
                 style={{
                   color:
                     activeTab === tab
@@ -531,7 +632,7 @@ function UsersPage() {
                       }}
                     >
                       <div
-                        className="w-9 h-9 rounded-lg flex items-center justify-center"
+                        className="w-9 h-9 rounded-lg flex items-center justify-center animate-pulse"
                         style={{ background: "rgba(224, 86, 36, 0.1)" }}
                       >
                         <Mail
@@ -581,7 +682,7 @@ function UsersPage() {
                           className="text-sm font-semibold"
                           style={{ color: "var(--color-mm-dark)" }}
                         >
-                          {selectedUser.phone}
+                          {selectedUser.phone || "N/A"}
                         </div>
                       </div>
                     </div>
@@ -610,7 +711,7 @@ function UsersPage() {
                       >
                         Current Plan
                       </span>
-                      <PlanBadge plan={selectedUser.plan} />
+                      <PlanBadge plan={selectedUser.plan.replace(" Plan", "")} />
                     </div>
                     <div
                       className="h-px my-3"
@@ -674,7 +775,7 @@ function UsersPage() {
                   </div>
                   <button
                     onClick={() => handleViewDocument("Q2 Marketing Audit")}
-                    className="px-4 py-1.5 rounded-lg text-sm font-semibold hover:opacity-80 transition-opacity cursor-pointer"
+                    className="px-4 py-1.5 rounded-lg text-sm font-semibold hover:opacity-80 transition-opacity cursor-pointer animate-pulse"
                     style={{
                       background: "rgba(224, 86, 36, 0.1)",
                       border: "1px solid var(--color-mm-orange)",
@@ -750,21 +851,21 @@ function UsersPage() {
                   className="w-full text-left p-5 rounded-xl border hover:opacity-80 transition-opacity cursor-pointer"
                   style={{
                     borderColor:
-                      selectedUser.status === "Inactive"
+                      selectedUser.status === "Inactive" || selectedUser.status === "Suspended"
                         ? "var(--color-mm-green)"
                         : "var(--color-mm-red)",
                     background:
-                      selectedUser.status === "Inactive"
+                      selectedUser.status === "Inactive" || selectedUser.status === "Suspended"
                         ? "rgba(92, 177, 62, 0.1)"
                         : "rgba(224, 86, 36, 0.1)",
                     color:
-                      selectedUser.status === "Inactive"
+                      selectedUser.status === "Inactive" || selectedUser.status === "Suspended"
                         ? "var(--color-mm-green)"
                         : "var(--color-mm-red)",
                     fontWeight: 600,
                   }}
                 >
-                  {selectedUser.status === "Inactive"
+                  {selectedUser.status === "Inactive" || selectedUser.status === "Suspended"
                     ? "Reactivate Account"
                     : "Suspend Account"}
                 </button>
@@ -830,7 +931,7 @@ function UsersPage() {
                       paddingLeft: "4px",
                     }}
                   >
-                    Showing {filteredUsers.length} of {userList.length} users
+                    Showing {filteredUsers.length} of {mappedUsers.length} users
                   </div>
                 )}
               </div>
@@ -838,7 +939,7 @@ function UsersPage() {
               <div className="relative" ref={planRef}>
                 <button
                   onClick={() => setIsPlanOpen(!isPlanOpen)}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm transition-colors"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm transition-colors cursor-pointer"
                   style={{
                     background: "white",
                     border:
@@ -906,8 +1007,8 @@ function UsersPage() {
                     ].map((opt) => {
                       const count =
                         opt.label === "All Plans"
-                          ? userList.length
-                          : userList.filter((u) => {
+                          ? mappedUsers.length
+                          : mappedUsers.filter((u) => {
                               const normalized = u.plan.endsWith(" Plan")
                                 ? u.plan
                                 : `${u.plan === "Growth" ? "Pro" : u.plan} Plan`;
@@ -995,7 +1096,7 @@ function UsersPage() {
               <div className="relative" ref={statusRef}>
                 <button
                   onClick={() => setIsStatusOpen(!isStatusOpen)}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm transition-colors"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm transition-colors cursor-pointer"
                   style={{
                     background: "white",
                     border:
@@ -1041,8 +1142,8 @@ function UsersPage() {
                     ].map((opt) => {
                       const count =
                         opt.label === "All Status"
-                          ? userList.length
-                          : userList.filter((u) => u.status === opt.label)
+                          ? mappedUsers.length
+                          : mappedUsers.filter((u) => u.status === opt.label)
                               .length;
                       return (
                         <div
@@ -1123,7 +1224,7 @@ function UsersPage() {
               {hasActiveFilters && (
                 <button
                   onClick={clearAllFilters}
-                  className="text-xs hover:underline"
+                  className="text-xs hover:underline cursor-pointer"
                   style={{ color: "var(--color-mm-orange)" }}
                 >
                   Clear all filters
@@ -1131,7 +1232,7 @@ function UsersPage() {
               )}
               <button
                 onClick={() => setIsAddUserOpen(true)}
-                className="px-4 py-2 bg-mm-orange hover:bg-mm-orange/95 text-white font-semibold rounded-xl transition-colors inline-flex items-center gap-2"
+                className="px-4 py-2 bg-mm-orange hover:bg-mm-orange/95 text-white font-semibold rounded-xl transition-colors inline-flex items-center gap-2 cursor-pointer"
               >
                 <Plus size={16} /> Add User
               </button>
@@ -1140,16 +1241,15 @@ function UsersPage() {
 
           <div className="bg-white border border-mm-border rounded-[24px] shadow-[0_2px_12px_rgba(0,0,0,0.02)] overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm min-w-[900px]">
                 <thead>
                   <tr className="bg-mm-subtle border-b border-mm-border text-mm-gray font-semibold">
+                    <th className="w-10"></th>
                     {[
-                      "User & Business",
-                      "Email",
-                      "Contact",
-                      "Plan",
+                      "User & Email",
+                      "Phone",
                       "Status",
-                      "Joined On",
+                      "No. of Businesses",
                       "Actions",
                     ].map((h) => (
                       <th
@@ -1162,121 +1262,208 @@ function UsersPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {isLoading ? (
-                    <tr>
-                      <td colSpan={7} className="px-5 py-12 text-center">
-                        <div className="flex flex-col items-center justify-center gap-2">
-                          <div className="w-6 h-6 border-2 border-mm-orange border-t-transparent rounded-full animate-spin"></div>
-                          <span
-                            className="text-xs font-semibold"
-                            style={{ color: "var(--color-mm-gray)" }}
+                  {paginatedUsers.length > 0 ? (
+                    paginatedUsers.map((u) => {
+                      const isExpanded = expandedUserIds.has(u.id);
+                      return (
+                        <Fragment key={u.id}>
+                          <tr
+                            className="transition-colors hover:bg-mm-subtle cursor-pointer"
+                            onClick={() => toggleUserExpanded(u.id)}
+                            style={{ borderTop: "1px solid var(--color-mm-border)" }}
                           >
-                            Loading users...
-                          </span>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : paginatedUsers.length > 0 ? (
-                    paginatedUsers.map((u) => (
-                      <tr
-                        key={u.id}
-                        className="transition-colors hover:bg-mm-subtle"
-                        style={{ borderTop: "1px solid var(--color-mm-border)" }}
-                      >
-                        <td className="px-5 py-3">
-                          <div className="flex items-center gap-3">
-                            <Avatar name={u.name} size={32} />
-                            <div>
-                              <div
-                                className="font-semibold"
-                                style={{ color: "var(--color-mm-dark)" }}
-                              >
-                                {u.name}
+                            <td className="pl-4 py-4 text-center">
+                              <span className="text-mm-gray hover:text-mm-orange transition-colors">
+                                <ChevronDown
+                                  size={18}
+                                  style={{
+                                    transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
+                                    transition: "transform 150ms ease",
+                                  }}
+                                />
+                              </span>
+                            </td>
+                            <td className="px-5 py-4">
+                              <div className="flex items-center gap-3">
+                                {u.image ? (
+                                  <img
+                                    src={u.image}
+                                    alt={u.name}
+                                    className="rounded-full object-cover shrink-0"
+                                    style={{ width: 36, height: 36 }}
+                                  />
+                                ) : (
+                                  <Avatar name={u.name} size={36} />
+                                )}
+                                <div>
+                                  <div
+                                    className="font-semibold text-mm-dark"
+                                  >
+                                    {u.name}
+                                  </div>
+                                  <a
+                                    href={`mailto:${u.email}`}
+                                    className="text-xs text-mm-gray hover:text-mm-orange hover:underline block"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    {u.email}
+                                  </a>
+                                </div>
                               </div>
-                              <div
-                                className="text-xs mt-0.5"
-                                style={{ color: "var(--color-mm-gray)" }}
-                              >
-                                {u.business}
+                            </td>
+                            <td className="px-5 py-4 text-mm-gray" onClick={(e) => e.stopPropagation()}>
+                              {u.phone ? (
+                                <a
+                                  href={`tel:${u.phone}`}
+                                  className="hover:text-mm-orange hover:underline"
+                                >
+                                  {u.phone}
+                                </a>
+                              ) : (
+                                "N/A"
+                              )}
+                            </td>
+                            <td className="px-5 py-4">
+                              <StatusBadge status={u.status} />
+                            </td>
+                            <td className="px-5 py-4 font-semibold text-mm-dark">
+                              {u.associatedBusinesses.length} {u.associatedBusinesses.length === 1 ? "Business" : "Businesses"}
+                            </td>
+                            <td className="px-5 py-4" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex items-center gap-3">
+                                <button
+                                  onClick={() => {
+                                    setSelectedUser(u);
+                                    setActiveTab("Profile");
+                                  }}
+                                  className="hover:text-mm-orange transition-colors cursor-pointer"
+                                >
+                                  <Eye
+                                    size={16}
+                                    style={{ color: "var(--color-mm-gray)" }}
+                                  />
+                                </button>
+                                <button
+                                  onClick={() => handleEditClick(u)}
+                                  className="hover:text-mm-orange transition-colors cursor-pointer"
+                                >
+                                  <Edit2
+                                    size={16}
+                                    style={{ color: "var(--color-mm-gray)" }}
+                                  />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteUser(u.id)}
+                                  className="hover:text-mm-red transition-colors cursor-pointer"
+                                >
+                                  <Trash2
+                                    size={16}
+                                    style={{ color: "var(--color-mm-gray)" }}
+                                  />
+                                </button>
                               </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-5 py-3">
-                          <div
-                            className="flex items-center gap-2 text-sm"
-                            style={{ color: "var(--color-mm-gray)" }}
-                          >
-                            <Mail
-                              size={14}
-                              style={{ color: "var(--color-mm-gray)" }}
-                            />{" "}
-                            {u.email}
-                          </div>
-                        </td>
-                        <td className="px-5 py-3">
-                          <div
-                            className="flex items-center gap-2 text-sm"
-                            style={{ color: "var(--color-mm-gray)" }}
-                          >
-                            <Phone
-                              size={14}
-                              style={{ color: "var(--color-mm-gray)" }}
-                            />{" "}
-                            {u.phone}
-                          </div>
-                        </td>
-                        <td className="px-5 py-3">
-                          <PlanBadge plan={u.plan} />
-                        </td>
-                        <td className="px-5 py-3">
-                          <StatusBadge status={u.status} />
-                        </td>
-                        <td
-                          className="px-5 py-3 text-xs"
-                          style={{ color: "var(--color-mm-gray)" }}
-                        >
-                          {u.joinedOn}
-                        </td>
-                        <td className="px-5 py-3">
-                          <div className="flex items-center gap-3">
-                            <button
-                              onClick={() => {
-                                setSelectedUser(u);
-                                setActiveTab("Profile");
-                              }}
-                              className="hover:opacity-70 cursor-pointer"
-                            >
-                              <Eye
-                                size={16}
-                                style={{ color: "var(--color-mm-gray)" }}
-                              />
-                            </button>
-                            <button
-                              onClick={() => handleEditClick(u)}
-                              className="hover:opacity-70 cursor-pointer"
-                            >
-                              <Edit2
-                                size={16}
-                                style={{ color: "var(--color-mm-gray)" }}
-                              />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteUser(u.id)}
-                              className="hover:opacity-70 cursor-pointer"
-                            >
-                              <Trash2
-                                size={16}
-                                style={{ color: "var(--color-mm-gray)" }}
-                              />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
+                            </td>
+                          </tr>
+                          {isExpanded && (
+                            <tr>
+                              <td colSpan={6} className="bg-[#FAF9F6] px-10 py-5" style={{ borderTop: "1px solid var(--color-mm-border)" }}>
+                                <div className="space-y-3">
+                                  <h4 className="text-sm font-bold text-mm-dark">Associated Businesses</h4>
+                                  {u.associatedBusinesses.length === 0 ? (
+                                    <div className="text-xs text-mm-gray">No business accounts associated with this user.</div>
+                                  ) : (
+                                    <div className="overflow-x-auto">
+                                      <table className="w-full text-xs min-w-[700px]">
+                                        <thead>
+                                          <tr className="text-mm-gray border-b border-mm-border pb-2 text-left font-semibold">
+                                            <th className="pb-2 font-semibold">BUSINESS NAME</th>
+                                            <th className="pb-2 font-semibold">TYPE / INDUSTRY</th>
+                                            <th className="pb-2 font-semibold">WEBSITE</th>
+                                            <th className="pb-2 font-semibold">CONTACT PHONE</th>
+                                            <th className="pb-2 font-semibold">PLAN</th>
+                                            <th className="pb-2 font-semibold">PAYMENT STATUS</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          {u.associatedBusinesses.map((b) => (
+                                            <tr key={b.id} className="text-mm-dark border-b border-mm-subtle last:border-0">
+                                              <td className="py-2.5 font-medium">
+                                                <div className="flex items-center gap-2.5">
+                                                  {b.image ? (
+                                                    <img
+                                                      src={b.image}
+                                                      alt={b.businessName}
+                                                      className="w-8 h-8 rounded-full object-cover shrink-0"
+                                                    />
+                                                  ) : (
+                                                    <Avatar name={b.businessName} size={32} />
+                                                  )}
+                                                  <div>
+                                                    <div className="font-semibold text-mm-dark">{b.businessName}</div>
+                                                    {b.contactEmail ? (
+                                                      <a
+                                                        href={`mailto:${b.contactEmail}`}
+                                                        className="text-[10px] text-mm-gray hover:text-mm-orange hover:underline block"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                      >
+                                                        {b.contactEmail}
+                                                      </a>
+                                                    ) : (
+                                                      <div className="text-[10px] text-mm-gray">No email</div>
+                                                    )}
+                                                  </div>
+                                                </div>
+                                              </td>
+                                              <td className="py-2.5 text-mm-gray">{b.businessType || "Consulting"}</td>
+                                              <td className="py-2.5 text-mm-gray">
+                                                {b.websiteUrl ? (
+                                                  <a
+                                                    href={b.websiteUrl.startsWith("http") ? b.websiteUrl : `https://${b.websiteUrl}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-mm-orange hover:underline"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                  >
+                                                    {b.websiteUrl}
+                                                  </a>
+                                                ) : (
+                                                  "N/A"
+                                                )}
+                                              </td>
+                                              <td className="py-2.5 text-mm-gray" onClick={(e) => e.stopPropagation()}>
+                                                {b.contactPhone ? (
+                                                  <a
+                                                    href={`tel:${b.contactPhone}`}
+                                                    className="hover:text-mm-orange hover:underline"
+                                                  >
+                                                    {b.contactPhone}
+                                                  </a>
+                                                ) : (
+                                                  "N/A"
+                                                )}
+                                              </td>
+                                              <td className="py-2.5">
+                                                <PlanBadge plan={b.plan} />
+                                              </td>
+                                              <td className="py-2.5">
+                                                <StatusBadge status={b.paymentStatus} />
+                                              </td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
+                      );
+                    })
                   ) : (
                     <tr>
-                      <td colSpan={7} className="px-4 py-12">
+                      <td colSpan={6} className="px-4 py-12">
                         <div className="flex flex-col items-center justify-center">
                           <SearchX
                             size={32}
@@ -1361,7 +1548,7 @@ function UsersPage() {
                     >
                       {p}
                     </button>
-                  ),
+                  )
                 )}
                 <button
                   onClick={() =>
@@ -1422,7 +1609,7 @@ function UsersPage() {
                   Add New User
                 </h2>
               </div>
-              <button onClick={handleAddClose} className="hover:opacity-70">
+              <button onClick={handleAddClose} className="hover:opacity-70 cursor-pointer">
                 <X size={20} style={{ color: "var(--color-mm-gray)" }} />
               </button>
             </div>
@@ -1452,7 +1639,7 @@ function UsersPage() {
                 <div className="flex gap-2 justify-end">
                   <button
                     onClick={() => setConfirmClose(false)}
-                    className="text-xs font-semibold px-3 py-1.5 rounded-lg hover:opacity-80 transition-opacity"
+                    className="text-xs font-semibold px-3 py-1.5 rounded-lg hover:opacity-80 transition-opacity cursor-pointer"
                     style={{
                       color: "var(--color-mm-gray)",
                       background: "white",
@@ -1466,7 +1653,7 @@ function UsersPage() {
                       setConfirmClose(false);
                       setIsAddUserOpen(false);
                     }}
-                    className="text-xs font-semibold px-3 py-1.5 rounded-lg text-white hover:opacity-90 transition-opacity"
+                    className="text-xs font-semibold px-3 py-1.5 rounded-lg text-white hover:opacity-90 transition-opacity cursor-pointer"
                     style={{ background: "var(--color-mm-red)" }}
                   >
                     Discard
@@ -1573,7 +1760,7 @@ function UsersPage() {
             >
               <button
                 onClick={handleAddClose}
-                className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors hover:opacity-80"
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors hover:opacity-80 cursor-pointer"
                 style={{
                   background: "white",
                   border: "1px solid var(--color-mm-border)",
@@ -1585,7 +1772,7 @@ function UsersPage() {
               <button
                 onClick={handleAddSubmit}
                 disabled={isCreatingUser}
-                className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer"
                 style={{
                   background: "var(--color-mm-orange)",
                   color: "white",
@@ -1657,7 +1844,7 @@ function UsersPage() {
               </h2>
               <button
                 onClick={() => setEditingUser(null)}
-                className="hover:opacity-70 transition-opacity"
+                className="hover:opacity-70 transition-opacity cursor-pointer"
               >
                 <X
                   size={20}
@@ -2109,7 +2296,7 @@ function UsersPage() {
             >
               <button
                 onClick={() => setEditingUser(null)}
-                className="px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-80 transition-opacity"
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-80 transition-opacity cursor-pointer"
                 style={{
                   background: "white",
                   border: "1px solid var(--color-mm-border)",
@@ -2120,7 +2307,7 @@ function UsersPage() {
               </button>
               <button
                 onClick={handleEditSubmit}
-                className="px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity"
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity cursor-pointer"
                 style={{ background: "var(--color-mm-orange)", color: "white" }}
               >
                 Save Changes
