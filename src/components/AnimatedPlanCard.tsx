@@ -15,7 +15,7 @@ const simWidth = 96;
 const simHeight = 144;
 const size = simWidth * simHeight;
 
-export default function PriceCard({ plan, i, cardType, animate = "yes" }: Props) {
+export default function AnimatedPlanCard({ plan, i, cardType, animate = "yes" }: Props) {
   const [isWarping, setIsWarping] = useState(false);
 
   const cardRef = useRef<HTMLDivElement | null>(null);

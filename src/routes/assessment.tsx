@@ -23,7 +23,7 @@ import {
   Unlock
 } from "lucide-react";
 import Loader from "@/components/Loader";
-import PriceCard from "@/components/AnimatedPlanCard";
+import AnimatedPlanCard from "@/components/AnimatedPlanCard";
 import { questions } from "@/data/questions";
 
 export const Route = createFileRoute("/assessment")({
@@ -981,7 +981,7 @@ function RoadmapPanel({ report, slideDirection, renderSlideFooter }: PanelProps)
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch pt-4">
             {/* Plan Card */}
             <div className="lg:col-span-6 flex justify-center">
-              <PriceCard plan={planData} i={0} />
+              <AnimatedPlanCard plan={planData} i={0} />
             </div>
 
             {/* Recommended Services Grid */}
