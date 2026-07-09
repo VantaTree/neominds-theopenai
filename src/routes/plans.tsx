@@ -55,7 +55,7 @@ function PlansPage() {
 
       {/* Main Pricing Section */}
       <section className="w-full py-24 md:py-32">
-        <div className="mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center">
+        <div className="mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center w-full max-w-screen-2xl">
           {/* Header Text */}
           <motion.p
             initial={{ opacity: 0, y: 12 }}

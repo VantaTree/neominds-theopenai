@@ -14,7 +14,7 @@ export function MymindDownloads() {
       }}
       id="downloads"
     >
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8">
         <motion.p
           initial={{ opacity: 0, y: 12 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -50,7 +50,7 @@ export function MymindDownloads() {
             <AnimatedPlanCard key={plan.name} plan={plan} i={i} cardType="default" />
           ))}
           {PLANS.slice(3, 4).map((plan, i) => (
-            <AnimatedPlanCard key={plan.name} plan={plan} i={i} cardType="custom" />
+            <AnimatedPlanCard key={plan.name} plan={plan} i={i} cardType="custom" animate="no" />
           ))}
         </div>
 

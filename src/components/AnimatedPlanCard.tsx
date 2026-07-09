@@ -8,13 +8,14 @@ type Props = {
   plan: Plan;
   i: number;
   cardType: string;
+  animate?: "yes" | "no";
 };
 
 const simWidth = 96;
 const simHeight = 144;
 const size = simWidth * simHeight;
 
-export default function PriceCard({ plan, i, cardType }: Props) {
+export default function PriceCard({ plan, i, cardType, animate = "yes" }: Props) {
   const [isWarping, setIsWarping] = useState(false);
 
   const cardRef = useRef<HTMLDivElement | null>(null);
@@ -460,34 +461,38 @@ export default function PriceCard({ plan, i, cardType }: Props) {
     lastMousePos.current = { x: 0, y: 0, time: 0 };
   };
 
+  const isAnimated = animate === "yes";
+
   return (
     <motion.div
       ref={cardRef}
-      onMouseMove={handleMouseMove}
-      onMouseEnter={handleMouseEnter}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
+      onMouseMove={isAnimated ? handleMouseMove : undefined}
+      onMouseEnter={isAnimated ? handleMouseEnter : undefined}
+      onTouchStart={isAnimated ? handleTouchStart : undefined}
+      onTouchMove={isAnimated ? handleTouchMove : undefined}
+      onTouchEnd={isAnimated ? handleTouchEnd : undefined}
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-40px" }}
       transition={{ duration: 0.4, delay: i * 0.08 }}
-      whileHover={{ y: -5, scale: 1.03 }}
+      whileHover={isAnimated ? { y: -5, scale: 1.03 } : undefined}
       className="flex flex-col rounded-2xl overflow-hidden relative will-change-[filter]"
       style={{
         background: plan.highlight ? "#FF5924" : "#fff",
         border: plan.highlight ? "none" : "1px solid #E2E6EE",
         boxShadow: plan.highlight ? "0 20px 60px rgba(255,89,36,0.25)" : "none",
-        filter: isWarping ? `url(#${filterId})` : "none",
+        filter: isAnimated && isWarping ? `url(#${filterId})` : "none",
       }}
     >
       {/* Water Ripple Simulation Canvas */}
-      <canvas
-        ref={canvasRef}
-        width={simWidth}
-        height={simHeight}
-        className="absolute inset-0 w-full h-full -z-10 rounded-[inherit] pointer-events-none opacity-85 transition-opacity duration-300"
-      />
+      {isAnimated && (
+        <canvas
+          ref={canvasRef}
+          width={simWidth}
+          height={simHeight}
+          className="absolute inset-0 w-full h-full -z-10 rounded-[inherit] pointer-events-none opacity-85 transition-opacity duration-300"
+        />
+      )}
 
       {cardType === "custom" ?
         (<CustomPlanCard plan={plan} buttonRef={buttonRef} buttonCanvasRef={buttonCanvasRef} />)
