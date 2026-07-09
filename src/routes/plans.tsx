@@ -4,8 +4,8 @@ import Lenis from "lenis";
 import { motion } from "framer-motion";
 import { MymindNav } from "@/components/mymind/MymindNav";
 import { MymindFooter } from "@/components/mymind/MymindFooter";
-import PriceCard from "@/components/PriceCard";
 import PLANS from "@/data/plans";
+import AnimatedPlanCard from "@/components/AnimatedPlanCard";
 
 export const Route = createFileRoute("/plans")({
   head: () => ({
@@ -55,7 +55,7 @@ function PlansPage() {
 
       {/* Main Pricing Section */}
       <section className="w-full py-24 md:py-32">
-        <div className="mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center">
+        <div className="mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center w-full max-w-screen-2xl">
           {/* Header Text */}
           <motion.p
             initial={{ opacity: 0, y: 12 }}
@@ -87,8 +87,11 @@ function PlansPage() {
 
           {/* Pricing Grid */}
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-4 w-full mb-16">
-            {PLANS.map((plan, i) => (
-              <PriceCard key={plan.name} plan={plan} i={i} />
+            {PLANS.slice(0, 3).map((plan, i) => (
+              <AnimatedPlanCard key={plan.name} plan={plan} i={i} cardType="default" />
+            ))}
+            {PLANS.slice(3, 4).map((plan, i) => (
+              <AnimatedPlanCard key={plan.name} plan={plan} i={i} cardType="custom" />
             ))}
           </div>
 

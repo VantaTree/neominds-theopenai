@@ -1,6 +1,16 @@
-const PLANS = [
+export interface Plan {
+  name: string;
+  price: string;
+  period: string;
+  action: string;
+  features: string[];
+  highlight: boolean;
+  buttonText: string;
+}
+
+const PLANS:Plan[] = [
   {
-    name: "Starter",
+    name: "Basic",
     price: "$29.99",
     period: "/mo",
     action: "GET STARTED",
@@ -19,7 +29,7 @@ const PLANS = [
     buttonText: "Get started",
   },
   {
-    name: "Growth",
+    name: "Plus",
     price: "$59.99",
     period: "/mo",
     action: "GET STARTED",
@@ -37,7 +47,7 @@ const PLANS = [
     buttonText: "Get started",
   },
   {
-    name: "Enterprise",
+    name: "Pro",
     price: "$89.99",
     period: "/mo",
     action: "GET STARTED",
@@ -65,5 +75,21 @@ const PLANS = [
     buttonText: "Get in touch",
   },
 ];
+
+export const AddOns = [
+  "one",
+  "two",
+  "three",
+  "four",
+  "five",
+  "six",
+  "seven",
+  "three",
+  "four",
+  "five",
+  "six",
+  "seven",
+]
+
 
 export default PLANS;

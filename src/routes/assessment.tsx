@@ -23,7 +23,7 @@ import {
   Unlock
 } from "lucide-react";
 import Loader from "@/components/Loader";
-import PriceCard from "@/components/PriceCard";
+import AnimatedPlanCard from "@/components/AnimatedPlanCard";
 import { questions } from "@/data/questions";
 
 export const Route = createFileRoute("/assessment")({
@@ -203,7 +203,7 @@ function AuditReportDashboard({ report, onReset }: AuditReportDashboardProps) {
   const [slideDirection, setSlideDirection] = useState<"left" | "right">("left");
   const [cooldown, setCooldown] = useState(false);
   const dashboardRef = useRef<HTMLDivElement>(null);
-  
+
   const [bottomProgress, setBottomProgress] = useState(0);
   const bottomProgressRef = useRef(0);
   const updateBottomProgress = (newVal: number) => {
@@ -519,7 +519,7 @@ function AuditReportDashboard({ report, onReset }: AuditReportDashboardProps) {
       </div>
       {bottomProgress > 0 && (
         <div className="fixed bottom-0 left-0 w-full h-1 bg-transparent z-[9999] pointer-events-none no-print">
-          <div 
+          <div
             className="h-full bg-mm-orange transition-all duration-75 ease-out shadow-[0_0_8px_#FF5924]"
             style={{ width: `${bottomProgress}%` }}
           />
@@ -641,7 +641,7 @@ function TeaserGatePanel({ slideDirection, triggerSlideTransition }: TeaserGateP
 
   return (
     <div className={`flex flex-col items-center justify-center py-6 text-center space-y-8 max-w-2xl mx-auto ${slideDirection === "left" ? "animate-slideInRight" : "animate-slideInLeft"}`}>
-      
+
       {/* Circular Lock Badge */}
       <div className="relative">
         <div className="absolute -inset-1.5 bg-mm-red/20 rounded-full blur-md opacity-50 animate-pulse"></div>
@@ -981,7 +981,7 @@ function RoadmapPanel({ report, slideDirection, renderSlideFooter }: PanelProps)
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch pt-4">
             {/* Plan Card */}
             <div className="lg:col-span-6 flex justify-center">
-              <PriceCard plan={planData} i={0} />
+              <AnimatedPlanCard plan={planData} i={0} />
             </div>
 
             {/* Recommended Services Grid */}
