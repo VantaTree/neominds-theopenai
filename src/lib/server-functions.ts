@@ -123,28 +123,48 @@ export const getMyBusinessesFn = createServerFn({ method: "GET" })
 
 export const getUsersFn = createServerFn({ method: "GET" })
   .handler(async () => {
-    await verifyServerSession();
+    const decoded = await verifyServerSession();
+    if (decoded.admin !== true) {
+      throw new Error("Unauthorized: Only admins can list users.");
+    }
     return (await getDb()).getUsers();
   });
 
 export const getUserFn = createServerFn({ method: "GET" })
   .validator((d: unknown) => z.string().parse(d))
   .handler(async ({ data }) => {
-    await verifyServerSession();
+    const decoded = await verifyServerSession();
+    if (decoded.uid !== data && decoded.admin !== true) {
+      throw new Error("Unauthorized: You cannot access another user's document.");
+    }
     return (await getDb()).getUser(data);
   });
 
 export const saveUserFn = createServerFn({ method: "POST" })
   .validator((d: unknown) => UserSchema.parse(d))
   .handler(async ({ data }) => {
-    await verifyServerSession();
+    const decoded = await verifyServerSession();
+    
+    // Security check: only allow updating own profile, unless it is an admin
+    if (decoded.uid !== data.id && decoded.admin !== true) {
+      throw new Error("Unauthorized: You can only update your own user document.");
+    }
+    
+    // Security check: ignore or throw on attempts to change account email
+    if (decoded.admin !== true && data.email !== decoded.email) {
+      throw new Error("BadRequest: You cannot change your account email address.");
+    }
+
     return (await getDb()).saveUser(data);
   });
 
 export const deleteUserFn = createServerFn({ method: "POST" })
   .validator((d: unknown) => z.string().parse(d))
   .handler(async ({ data }) => {
-    await verifyServerSession();
+    const decoded = await verifyServerSession();
+    if (decoded.admin !== true) {
+      throw new Error("Unauthorized: Only admins can delete user documents.");
+    }
     return (await getDb()).deleteUser(data);
   });
 
@@ -162,35 +182,58 @@ export const ensureUserDocumentFn = createServerFn({ method: "POST" })
 
 export const getBusinessesFn = createServerFn({ method: "GET" })
   .handler(async () => {
-    await verifyServerSession();
+    const decoded = await verifyServerSession();
+    if (decoded.admin !== true) {
+      throw new Error("Unauthorized: Only admins can list all businesses.");
+    }
     return (await getDb()).getBusinesses();
   });
 
 export const getBusinessFn = createServerFn({ method: "GET" })
   .validator((d: unknown) => z.string().parse(d))
   .handler(async ({ data }) => {
-    await verifyServerSession();
-    return (await getDb()).getBusiness(data);
+    const decoded = await verifyServerSession();
+    const biz = await (await getDb()).getBusiness(data);
+    if (!biz) return null;
+    const bizUserId = typeof biz.userId === "string" ? biz.userId : biz.userId?.id;
+    if (bizUserId !== decoded.uid && decoded.admin !== true) {
+      throw new Error("Unauthorized: You do not own this business.");
+    }
+    return biz;
   });
 
 export const getBusinessesByUserFn = createServerFn({ method: "GET" })
   .validator((d: unknown) => z.string().parse(d))
   .handler(async ({ data }) => {
-    await verifyServerSession();
+    const decoded = await verifyServerSession();
+    if (decoded.uid !== data && decoded.admin !== true) {
+      throw new Error("Unauthorized: Cannot retrieve businesses for another user.");
+    }
     return (await getDb()).getBusinessesByUser(data);
   });
 
 export const saveBusinessFn = createServerFn({ method: "POST" })
   .validator((d: unknown) => BusinessSchema.parse(d))
   .handler(async ({ data }) => {
-    await verifyServerSession();
+    const decoded = await verifyServerSession();
+    const bizUserId = typeof data.userId === "string" ? data.userId : data.userId?.id;
+    if (bizUserId !== decoded.uid && decoded.admin !== true) {
+      throw new Error("Unauthorized: You do not own this business.");
+    }
     return (await getDb()).saveBusiness(data);
   });
 
 export const deleteBusinessFn = createServerFn({ method: "POST" })
   .validator((d: unknown) => z.string().parse(d))
   .handler(async ({ data }) => {
-    await verifyServerSession();
+    const decoded = await verifyServerSession();
+    const biz = await (await getDb()).getBusiness(data);
+    if (biz) {
+      const bizUserId = typeof biz.userId === "string" ? biz.userId : biz.userId?.id;
+      if (bizUserId !== decoded.uid && decoded.admin !== true) {
+        throw new Error("Unauthorized: You do not own this business.");
+      }
+    }
     return (await getDb()).deleteBusiness(data);
   });
 
@@ -198,21 +241,30 @@ export const deleteBusinessFn = createServerFn({ method: "POST" })
 
 export const getProjectsFn = createServerFn({ method: "GET" })
   .handler(async () => {
-    await verifyServerSession();
+    const decoded = await verifyServerSession();
+    if (decoded.admin !== true) {
+      throw new Error("Unauthorized: Only admins can list all projects.");
+    }
     return (await getDb()).getProjects();
   });
 
 export const saveProjectFn = createServerFn({ method: "POST" })
   .validator((d: unknown) => ProjectSchema.parse(d))
   .handler(async ({ data }) => {
-    await verifyServerSession();
+    const decoded = await verifyServerSession();
+    if (decoded.admin !== true) {
+      throw new Error("Unauthorized: Only admins can save projects.");
+    }
     return (await getDb()).saveProject(data);
   });
 
 export const deleteProjectFn = createServerFn({ method: "POST" })
   .validator((d: unknown) => z.string().parse(d))
   .handler(async ({ data }) => {
-    await verifyServerSession();
+    const decoded = await verifyServerSession();
+    if (decoded.admin !== true) {
+      throw new Error("Unauthorized: Only admins can delete projects.");
+    }
     return (await getDb()).deleteProject(data);
   });
 
@@ -220,14 +272,20 @@ export const deleteProjectFn = createServerFn({ method: "POST" })
 
 export const getPaymentsFn = createServerFn({ method: "GET" })
   .handler(async () => {
-    await verifyServerSession();
+    const decoded = await verifyServerSession();
+    if (decoded.admin !== true) {
+      throw new Error("Unauthorized: Only admins can list payments.");
+    }
     return (await getDb()).getPayments();
   });
 
 export const savePaymentsFn = createServerFn({ method: "POST" })
   .validator((d: unknown) => z.array(PaymentSchema).parse(d))
   .handler(async ({ data }) => {
-    await verifyServerSession();
+    const decoded = await verifyServerSession();
+    if (decoded.admin !== true) {
+      throw new Error("Unauthorized: Only admins can save payments.");
+    }
     return (await getDb()).savePayments(data);
   });
 
@@ -235,14 +293,20 @@ export const savePaymentsFn = createServerFn({ method: "POST" })
 
 export const getNotificationSettingsFn = createServerFn({ method: "GET" })
   .handler(async () => {
-    await verifyServerSession();
+    const decoded = await verifyServerSession();
+    if (decoded.admin !== true) {
+      throw new Error("Unauthorized: Only admins can retrieve notification settings.");
+    }
     return (await getDb()).getNotificationSettings();
   });
 
 export const saveNotificationSettingsFn = createServerFn({ method: "POST" })
   .validator((d: { emailNotif: boolean; smsNotif: boolean; auditNotif: boolean; weeklyNotif: boolean }) => d)
   .handler(async ({ data }) => {
-    await verifyServerSession();
+    const decoded = await verifyServerSession();
+    if (decoded.admin !== true) {
+      throw new Error("Unauthorized: Only admins can save notification settings.");
+    }
     return (await getDb()).saveNotificationSettings(data);
   });
 
@@ -251,14 +315,28 @@ export const saveNotificationSettingsFn = createServerFn({ method: "POST" })
 export const getProfileFn = createServerFn({ method: "GET" })
   .validator((d: string) => d)
   .handler(async ({ data }) => {
-    await verifyServerSession();
+    const decoded = await verifyServerSession();
+    if (decoded.uid !== data && decoded.admin !== true) {
+      throw new Error("Unauthorized: You cannot access another user's profile.");
+    }
     return (await getDb()).getProfile(data);
   });
 
 export const saveProfileFn = createServerFn({ method: "POST" })
   .validator((d: { uid: string; data: any }) => d)
   .handler(async ({ data }) => {
-    await verifyServerSession();
+    const decoded = await verifyServerSession();
+    
+    // Security check: only allow updating own profile, unless it is an admin
+    if (decoded.uid !== data.uid && decoded.admin !== true) {
+      throw new Error("Unauthorized: You can only update your own profile.");
+    }
+    
+    // Security check: reject if attempting to change account email
+    if (decoded.admin !== true && data.data?.email && data.data.email !== decoded.email) {
+      throw new Error("BadRequest: You cannot change your account email address.");
+    }
+
     return (await getDb()).saveProfile(data.uid, data.data);
   });
 
@@ -273,14 +351,20 @@ export const getPlansFn = createServerFn({ method: "GET" })
 export const savePlanFn = createServerFn({ method: "POST" })
   .validator((d: any) => d)
   .handler(async ({ data }) => {
-    await verifyServerSession();
+    const decoded = await verifyServerSession();
+    if (decoded.admin !== true) {
+      throw new Error("Unauthorized: Only admins can save plans.");
+    }
     return (await getDb()).savePlan(data);
   });
 
 export const deletePlanFn = createServerFn({ method: "POST" })
   .validator((d: string) => d)
   .handler(async ({ data }) => {
-    await verifyServerSession();
+    const decoded = await verifyServerSession();
+    if (decoded.admin !== true) {
+      throw new Error("Unauthorized: Only admins can delete plans.");
+    }
     return (await getDb()).deletePlan(data);
   });
 
@@ -288,21 +372,30 @@ export const deletePlanFn = createServerFn({ method: "POST" })
 
 export const getSubscriptionsFn = createServerFn({ method: "GET" })
   .handler(async () => {
-    await verifyServerSession();
+    const decoded = await verifyServerSession();
+    if (decoded.admin !== true) {
+      throw new Error("Unauthorized: Only admins can view all subscriptions.");
+    }
     return (await getDb()).getSubscriptions();
   });
 
 export const getUserSubscriptionFn = createServerFn({ method: "GET" })
   .validator((d: string) => d)
   .handler(async ({ data }) => {
-    await verifyServerSession();
+    const decoded = await verifyServerSession();
+    if (decoded.uid !== data && decoded.admin !== true) {
+      throw new Error("Unauthorized: Cannot retrieve subscription for another user.");
+    }
     return (await getDb()).getUserSubscription(data);
   });
 
 export const saveSubscriptionFn = createServerFn({ method: "POST" })
   .validator((d: any) => d)
   .handler(async ({ data }) => {
-    await verifyServerSession();
+    const decoded = await verifyServerSession();
+    if (decoded.uid !== data.uid && decoded.admin !== true) {
+      throw new Error("Unauthorized: Cannot modify subscription for another user.");
+    }
     return (await getDb()).saveSubscription(data);
   });
 
@@ -310,28 +403,40 @@ export const saveSubscriptionFn = createServerFn({ method: "POST" })
 
 export const getReportsFn = createServerFn({ method: "GET" })
   .handler(async () => {
-    await verifyServerSession();
+    const decoded = await verifyServerSession();
+    if (decoded.admin !== true) {
+      throw new Error("Unauthorized: Only admins can view all reports.");
+    }
     return (await getDb()).getReports();
   });
 
 export const getReportsByUserFn = createServerFn({ method: "GET" })
   .validator((d: string) => d)
   .handler(async ({ data }) => {
-    await verifyServerSession();
+    const decoded = await verifyServerSession();
+    if (decoded.uid !== data && decoded.admin !== true) {
+      throw new Error("Unauthorized: Cannot retrieve reports for another user.");
+    }
     return (await getDb()).getReportsByUser(data);
   });
 
 export const saveReportFn = createServerFn({ method: "POST" })
   .validator((d: unknown) => ReportSchema.parse(d))
   .handler(async ({ data }) => {
-    await verifyServerSession();
+    const decoded = await verifyServerSession();
+    if (decoded.admin !== true) {
+      throw new Error("Unauthorized: Only admins can create or update reports.");
+    }
     return (await getDb()).saveReport(data);
   });
 
 export const deleteReportFn = createServerFn({ method: "POST" })
   .validator((d: unknown) => z.string().parse(d))
   .handler(async ({ data }) => {
-    await verifyServerSession();
+    const decoded = await verifyServerSession();
+    if (decoded.admin !== true) {
+      throw new Error("Unauthorized: Only admins can delete reports.");
+    }
     return (await getDb()).deleteReport(data);
   });
 
@@ -340,14 +445,20 @@ export const deleteReportFn = createServerFn({ method: "POST" })
 export const getAuditLogFn = createServerFn({ method: "GET" })
   .validator((d: unknown) => z.number().optional().parse(d))
   .handler(async ({ data }) => {
-    await verifyServerSession();
+    const decoded = await verifyServerSession();
+    if (decoded.admin !== true) {
+      throw new Error("Unauthorized: Only admins can view audit logs.");
+    }
     return (await getDb()).getAuditLog(data);
   });
 
 export const logAuditEventFn = createServerFn({ method: "POST" })
   .validator((d: { uid: string; action: string; payload: Record<string, any>; userName?: string }) => d)
   .handler(async ({ data }) => {
-    await verifyServerSession();
+    const decoded = await verifyServerSession();
+    if (decoded.uid !== data.uid && decoded.admin !== true) {
+      throw new Error("Unauthorized: Cannot log audit event for another user.");
+    }
     return (await getDb()).logAuditEvent(data.uid, data.action, data.payload, data.userName);
   });
 
@@ -368,14 +479,20 @@ export const fetchBlogBySlugFn = createServerFn({ method: "GET" })
 export const createBlogFn = createServerFn({ method: "POST" })
   .validator((d: unknown) => BlogSchema.omit({ id: true, createdAt: true, updatedAt: true }).parse(d))
   .handler(async ({ data }) => {
-    await verifyServerSession();
+    const decoded = await verifyServerSession();
+    if (decoded.admin !== true) {
+      throw new Error("Unauthorized: Only admins can create blog posts.");
+    }
     return (await getDb()).createBlog(data);
   });
 
 export const updateBlogFn = createServerFn({ method: "POST" })
   .validator((d: { id: string; data: any }) => d)
   .handler(async ({ data }) => {
-    await verifyServerSession();
+    const decoded = await verifyServerSession();
+    if (decoded.admin !== true) {
+      throw new Error("Unauthorized: Only admins can update blog posts.");
+    }
     // Validate only updated parts through partial blog schema
     const validatedData = BlogSchema.partial().parse(data.data);
     return (await getDb()).updateBlog(data.id, validatedData);
@@ -384,7 +501,10 @@ export const updateBlogFn = createServerFn({ method: "POST" })
 export const deleteBlogFn = createServerFn({ method: "POST" })
   .validator((d: unknown) => z.string().parse(d))
   .handler(async ({ data }) => {
-    await verifyServerSession();
+    const decoded = await verifyServerSession();
+    if (decoded.admin !== true) {
+      throw new Error("Unauthorized: Only admins can delete blog posts.");
+    }
     return (await getDb()).deleteBlog(data);
   });
 
@@ -392,7 +512,10 @@ export const deleteBlogFn = createServerFn({ method: "POST" })
 
 export const testFirestoreConnectionFn = createServerFn({ method: "POST" })
   .handler(async () => {
-    await verifyServerSession();
+    const decoded = await verifyServerSession();
+    if (decoded.admin !== true) {
+      throw new Error("Unauthorized: Admin privilege required.");
+    }
     try {
       const adDb = await getAdminDb();
       if (!adDb) {
@@ -414,7 +537,10 @@ export const testFirestoreConnectionFn = createServerFn({ method: "POST" })
 export const seedDatabaseFn = createServerFn({ method: "POST" })
   .validator((d: { emailNotif: boolean; smsNotif: boolean; auditNotif: boolean; weeklyNotif: boolean }) => d)
   .handler(async ({ data }) => {
-    await verifyServerSession();
+    const decoded = await verifyServerSession();
+    if (decoded.admin !== true) {
+      throw new Error("Unauthorized: Admin privilege required to seed database.");
+    }
     
     const adDb = await getAdminDb();
     if (!adDb) {
