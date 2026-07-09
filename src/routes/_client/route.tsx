@@ -16,10 +16,18 @@ function PageTransitionWrapper({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (location.pathname !== prevPath.current) {
-      setPrevChildren(displayChildren);
-      setDisplayChildren(children);
-      setAnimating(true);
-      prevPath.current = location.pathname;
+      const isChatTransition =
+        location.pathname.startsWith("/chat") && prevPath.current.startsWith("/chat");
+
+      if (isChatTransition) {
+        setDisplayChildren(children);
+        prevPath.current = location.pathname;
+      } else {
+        setPrevChildren(displayChildren);
+        setDisplayChildren(children);
+        setAnimating(true);
+        prevPath.current = location.pathname;
+      }
     } else {
       setDisplayChildren(children);
     }
@@ -31,7 +39,7 @@ function PageTransitionWrapper({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="relative w-full">
+    <div className="relative w-full h-full flex-1 flex flex-col">
       <style>{`
         @keyframes slideOutToBottom {
           0% {
@@ -63,18 +71,18 @@ function PageTransitionWrapper({ children }: { children: React.ReactNode }) {
       `}</style>
 
       {animating ? (
-        <div className="relative w-full min-h-[60vh] overflow-hidden">
+        <div className="relative w-full h-full flex-1 overflow-hidden">
           {/* Old Page */}
-          <div className="absolute inset-x-0 top-0 w-full page-exit">
+          <div className="absolute inset-x-0 top-0 w-full h-full flex flex-col page-exit">
             {prevChildren}
           </div>
           {/* New Page */}
-          <div className="w-full page-enter" onAnimationEnd={handleAnimationEnd}>
+          <div className="w-full h-full flex flex-col page-enter" onAnimationEnd={handleAnimationEnd}>
             {displayChildren}
           </div>
         </div>
       ) : (
-        <div className="w-full">{displayChildren}</div>
+        <div className="w-full h-full flex-1 flex flex-col">{displayChildren}</div>
       )}
     </div>
   );
@@ -92,9 +100,23 @@ function RouteComponent() {
     return () => media.removeEventListener("change", listener);
   }, []);
 
+  const isChatDomainMobile = isMobile && location.pathname.startsWith("/chat/") && location.pathname !== "/chat";
+
+  if (isChatDomainMobile) {
+    return (
+      <div className="h-[100dvh] w-screen bg-white flex flex-col font-sans relative overflow-hidden">
+        <main className="flex-1 w-full flex flex-col overflow-hidden">
+          <PageTransitionWrapper>
+            <Outlet />
+          </PageTransitionWrapper>
+        </main>
+      </div>
+    );
+  }
+
   if (isMobile) {
     return (
-      <div className="min-h-screen bg-[#F9FAFC] flex flex-col font-sans relative pb-16">
+      <div className="h-[100dvh] w-screen bg-[#F9FAFC] flex flex-col font-sans relative pb-16 overflow-hidden">
         <ClientNav />
         <div className="h-16 shrink-0" />
 
@@ -109,11 +131,13 @@ function RouteComponent() {
     );
   }
 
+  const isChatRoute = location.pathname.startsWith("/chat");
+
   return (
-    <div className="min-h-screen bg-[#F9FAFC] flex flex-col font-sans">
+    <div className={`${isChatRoute ? "h-screen overflow-hidden" : "min-h-screen"} bg-[#F9FAFC] flex flex-col font-sans`}>
       <ClientNav />
       <div className="h-16 shrink-0" />
-      <main className="flex-1 w-full flex flex-col">
+      <main className={`flex-1 w-full flex flex-col ${isChatRoute ? "overflow-hidden" : ""}`}>
         <PageTransitionWrapper>
           <Outlet />
         </PageTransitionWrapper>

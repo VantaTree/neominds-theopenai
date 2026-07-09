@@ -23,9 +23,11 @@ import { Route as ClientReportRouteImport } from './routes/_client/report'
 import { Route as ClientProjectsRouteImport } from './routes/_client/projects'
 import { Route as ClientProfileRouteImport } from './routes/_client/profile'
 import { Route as ClientPlanRouteImport } from './routes/_client/plan'
-import { Route as ClientMessageRouteImport } from './routes/_client/message'
 import { Route as ClientDashboardRouteImport } from './routes/_client/dashboard'
+import { Route as ClientChatRouteRouteImport } from './routes/_client/chat/route'
+import { Route as ClientChatIndexRouteImport } from './routes/_client/chat/index'
 import { Route as AdminAdminIndexRouteImport } from './routes/_admin/admin/index'
+import { Route as ClientChatDomainRouteImport } from './routes/_client/chat/$domain'
 import { Route as AdminAdminUsersRouteImport } from './routes/_admin/admin/users'
 import { Route as AdminAdminTemplatesRouteImport } from './routes/_admin/admin/templates'
 import { Route as AdminAdminSupportRouteImport } from './routes/_admin/admin/support'
@@ -104,20 +106,30 @@ const ClientPlanRoute = ClientPlanRouteImport.update({
   path: '/plan',
   getParentRoute: () => ClientRouteRoute,
 } as any)
-const ClientMessageRoute = ClientMessageRouteImport.update({
-  id: '/message',
-  path: '/message',
-  getParentRoute: () => ClientRouteRoute,
-} as any)
 const ClientDashboardRoute = ClientDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
   getParentRoute: () => ClientRouteRoute,
 } as any)
+const ClientChatRouteRoute = ClientChatRouteRouteImport.update({
+  id: '/chat',
+  path: '/chat',
+  getParentRoute: () => ClientRouteRoute,
+} as any)
+const ClientChatIndexRoute = ClientChatIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ClientChatRouteRoute,
+} as any)
 const AdminAdminIndexRoute = AdminAdminIndexRouteImport.update({
   id: '/admin/',
   path: '/admin/',
   getParentRoute: () => AdminRouteRoute,
+} as any)
+const ClientChatDomainRoute = ClientChatDomainRouteImport.update({
+  id: '/$domain',
+  path: '/$domain',
+  getParentRoute: () => ClientChatRouteRoute,
 } as any)
 const AdminAdminUsersRoute = AdminAdminUsersRouteImport.update({
   id: '/admin/users',
@@ -173,8 +185,8 @@ export interface FileRoutesByFullPath {
   '/plans': typeof PlansRoute
   '/signup': typeof SignupRoute
   '/why': typeof WhyRoute
+  '/chat': typeof ClientChatRouteRouteWithChildren
   '/dashboard': typeof ClientDashboardRoute
-  '/message': typeof ClientMessageRoute
   '/plan': typeof ClientPlanRoute
   '/profile': typeof ClientProfileRoute
   '/projects': typeof ClientProjectsRoute
@@ -187,7 +199,9 @@ export interface FileRoutesByFullPath {
   '/admin/support': typeof AdminAdminSupportRoute
   '/admin/templates': typeof AdminAdminTemplatesRoute
   '/admin/users': typeof AdminAdminUsersRoute
+  '/chat/$domain': typeof ClientChatDomainRoute
   '/admin/': typeof AdminAdminIndexRoute
+  '/chat/': typeof ClientChatIndexRoute
   '/admin/projects/$id': typeof AdminAdminProjectsIdRoute
   '/admin/projects/': typeof AdminAdminProjectsIndexRoute
 }
@@ -200,7 +214,6 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/why': typeof WhyRoute
   '/dashboard': typeof ClientDashboardRoute
-  '/message': typeof ClientMessageRoute
   '/plan': typeof ClientPlanRoute
   '/profile': typeof ClientProfileRoute
   '/projects': typeof ClientProjectsRoute
@@ -213,7 +226,9 @@ export interface FileRoutesByTo {
   '/admin/support': typeof AdminAdminSupportRoute
   '/admin/templates': typeof AdminAdminTemplatesRoute
   '/admin/users': typeof AdminAdminUsersRoute
+  '/chat/$domain': typeof ClientChatDomainRoute
   '/admin': typeof AdminAdminIndexRoute
+  '/chat': typeof ClientChatIndexRoute
   '/admin/projects/$id': typeof AdminAdminProjectsIdRoute
   '/admin/projects': typeof AdminAdminProjectsIndexRoute
 }
@@ -228,8 +243,8 @@ export interface FileRoutesById {
   '/plans': typeof PlansRoute
   '/signup': typeof SignupRoute
   '/why': typeof WhyRoute
+  '/_client/chat': typeof ClientChatRouteRouteWithChildren
   '/_client/dashboard': typeof ClientDashboardRoute
-  '/_client/message': typeof ClientMessageRoute
   '/_client/plan': typeof ClientPlanRoute
   '/_client/profile': typeof ClientProfileRoute
   '/_client/projects': typeof ClientProjectsRoute
@@ -242,7 +257,9 @@ export interface FileRoutesById {
   '/_admin/admin/support': typeof AdminAdminSupportRoute
   '/_admin/admin/templates': typeof AdminAdminTemplatesRoute
   '/_admin/admin/users': typeof AdminAdminUsersRoute
+  '/_client/chat/$domain': typeof ClientChatDomainRoute
   '/_admin/admin/': typeof AdminAdminIndexRoute
+  '/_client/chat/': typeof ClientChatIndexRoute
   '/_admin/admin/projects/$id': typeof AdminAdminProjectsIdRoute
   '/_admin/admin/projects/': typeof AdminAdminProjectsIndexRoute
 }
@@ -256,8 +273,8 @@ export interface FileRouteTypes {
     | '/plans'
     | '/signup'
     | '/why'
+    | '/chat'
     | '/dashboard'
-    | '/message'
     | '/plan'
     | '/profile'
     | '/projects'
@@ -270,7 +287,9 @@ export interface FileRouteTypes {
     | '/admin/support'
     | '/admin/templates'
     | '/admin/users'
+    | '/chat/$domain'
     | '/admin/'
+    | '/chat/'
     | '/admin/projects/$id'
     | '/admin/projects/'
   fileRoutesByTo: FileRoutesByTo
@@ -283,7 +302,6 @@ export interface FileRouteTypes {
     | '/signup'
     | '/why'
     | '/dashboard'
-    | '/message'
     | '/plan'
     | '/profile'
     | '/projects'
@@ -296,7 +314,9 @@ export interface FileRouteTypes {
     | '/admin/support'
     | '/admin/templates'
     | '/admin/users'
+    | '/chat/$domain'
     | '/admin'
+    | '/chat'
     | '/admin/projects/$id'
     | '/admin/projects'
   id:
@@ -310,8 +330,8 @@ export interface FileRouteTypes {
     | '/plans'
     | '/signup'
     | '/why'
+    | '/_client/chat'
     | '/_client/dashboard'
-    | '/_client/message'
     | '/_client/plan'
     | '/_client/profile'
     | '/_client/projects'
@@ -324,7 +344,9 @@ export interface FileRouteTypes {
     | '/_admin/admin/support'
     | '/_admin/admin/templates'
     | '/_admin/admin/users'
+    | '/_client/chat/$domain'
     | '/_admin/admin/'
+    | '/_client/chat/'
     | '/_admin/admin/projects/$id'
     | '/_admin/admin/projects/'
   fileRoutesById: FileRoutesById
@@ -441,13 +463,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClientPlanRouteImport
       parentRoute: typeof ClientRouteRoute
     }
-    '/_client/message': {
-      id: '/_client/message'
-      path: '/message'
-      fullPath: '/message'
-      preLoaderRoute: typeof ClientMessageRouteImport
-      parentRoute: typeof ClientRouteRoute
-    }
     '/_client/dashboard': {
       id: '/_client/dashboard'
       path: '/dashboard'
@@ -455,12 +470,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClientDashboardRouteImport
       parentRoute: typeof ClientRouteRoute
     }
+    '/_client/chat': {
+      id: '/_client/chat'
+      path: '/chat'
+      fullPath: '/chat'
+      preLoaderRoute: typeof ClientChatRouteRouteImport
+      parentRoute: typeof ClientRouteRoute
+    }
+    '/_client/chat/': {
+      id: '/_client/chat/'
+      path: '/'
+      fullPath: '/chat/'
+      preLoaderRoute: typeof ClientChatIndexRouteImport
+      parentRoute: typeof ClientChatRouteRoute
+    }
     '/_admin/admin/': {
       id: '/_admin/admin/'
       path: '/admin'
       fullPath: '/admin/'
       preLoaderRoute: typeof AdminAdminIndexRouteImport
       parentRoute: typeof AdminRouteRoute
+    }
+    '/_client/chat/$domain': {
+      id: '/_client/chat/$domain'
+      path: '/$domain'
+      fullPath: '/chat/$domain'
+      preLoaderRoute: typeof ClientChatDomainRouteImport
+      parentRoute: typeof ClientChatRouteRoute
     }
     '/_admin/admin/users': {
       id: '/_admin/admin/users'
@@ -558,9 +594,23 @@ const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(
   AdminRouteRouteChildren,
 )
 
+interface ClientChatRouteRouteChildren {
+  ClientChatDomainRoute: typeof ClientChatDomainRoute
+  ClientChatIndexRoute: typeof ClientChatIndexRoute
+}
+
+const ClientChatRouteRouteChildren: ClientChatRouteRouteChildren = {
+  ClientChatDomainRoute: ClientChatDomainRoute,
+  ClientChatIndexRoute: ClientChatIndexRoute,
+}
+
+const ClientChatRouteRouteWithChildren = ClientChatRouteRoute._addFileChildren(
+  ClientChatRouteRouteChildren,
+)
+
 interface ClientRouteRouteChildren {
+  ClientChatRouteRoute: typeof ClientChatRouteRouteWithChildren
   ClientDashboardRoute: typeof ClientDashboardRoute
-  ClientMessageRoute: typeof ClientMessageRoute
   ClientPlanRoute: typeof ClientPlanRoute
   ClientProfileRoute: typeof ClientProfileRoute
   ClientProjectsRoute: typeof ClientProjectsRoute
@@ -569,8 +619,8 @@ interface ClientRouteRouteChildren {
 }
 
 const ClientRouteRouteChildren: ClientRouteRouteChildren = {
+  ClientChatRouteRoute: ClientChatRouteRouteWithChildren,
   ClientDashboardRoute: ClientDashboardRoute,
-  ClientMessageRoute: ClientMessageRoute,
   ClientPlanRoute: ClientPlanRoute,
   ClientProfileRoute: ClientProfileRoute,
   ClientProjectsRoute: ClientProjectsRoute,

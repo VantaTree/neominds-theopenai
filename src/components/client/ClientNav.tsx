@@ -82,7 +82,7 @@ export default function ClientNav() {
           </Link>
 
           <Link
-            to="/"
+            to="/chat"
             className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-200"
             activeProps={{ className: "bg-mm-orange/10 text-mm-orange" }}
             inactiveProps={{ className: "text-mm-gray hover:text-mm-dark hover:bg-mm-subtle" }}

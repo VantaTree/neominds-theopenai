@@ -28,8 +28,8 @@ export default function ClientBottomLinks() {
       </Link>
 
       <Link
-        to="/"
-        className={`flex flex-col items-center justify-center space-y-1 cursor-pointer transition-colors ${location.pathname === "/projects" ? "text-mm-orange" : "text-mm-gray hover:text-mm-dark"}`}
+        to="/chat"
+        className={`flex flex-col items-center justify-center space-y-1 cursor-pointer transition-colors ${location.pathname.startsWith("/chat") ? "text-mm-orange" : "text-mm-gray hover:text-mm-dark"}`}
       >
         <MessageCircle className="h-4.5 w-4.5" />
         <span className="text-[10px] font-extrabold tracking-wide">chat</span>
