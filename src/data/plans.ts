@@ -1,4 +1,14 @@
-const PLANS = [
+export interface Plan {
+  name: string;
+  price: string;
+  period: string;
+  action: string;
+  features: string[];
+  highlight: boolean;
+  buttonText: string;
+}
+
+const PLANS:Plan[] = [
   {
     name: "Starter",
     price: "$29.99",

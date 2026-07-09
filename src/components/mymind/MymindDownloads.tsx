@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import PriceCard from "../PriceCard";
+import AnimatedPlanCard from "../AnimatedPlanCard";
 import PLANS from "@/data/plans";
 
 export function MymindDownloads() {
@@ -46,8 +46,11 @@ export function MymindDownloads() {
 
         {/* Pricing cards */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-4 ">
-          {PLANS.map((plan, i) => (
-            <PriceCard key={plan.name} plan={plan} i={i} />
+          {PLANS.slice(0, 3).map((plan, i) => (
+            <AnimatedPlanCard key={plan.name} plan={plan} i={i} cardType="default" />
+          ))}
+          {PLANS.slice(3, 4).map((plan, i) => (
+            <AnimatedPlanCard key={plan.name} plan={plan} i={i} cardType="custom" />
           ))}
         </div>
 

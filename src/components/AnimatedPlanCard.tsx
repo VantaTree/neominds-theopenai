@@ -1,25 +1,20 @@
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-
-interface Plan {
-  name: string;
-  price: string;
-  period: string;
-  action: string;
-  features: string[];
-  highlight: boolean;
-}
+import PlanCard from "./PlanCard";
+import { Plan } from "@/data/plans";
+import CustomPlanCard from "./CustomPlanCard";
 
 type Props = {
   plan: Plan;
   i: number;
+  cardType: string;
 };
 
 const simWidth = 96;
 const simHeight = 144;
 const size = simWidth * simHeight;
 
-export default function PriceCard({ plan, i }: Props) {
+export default function PriceCard({ plan, i, cardType }: Props) {
   const [isWarping, setIsWarping] = useState(false);
 
   const cardRef = useRef<HTMLDivElement | null>(null);
@@ -99,7 +94,7 @@ export default function PriceCard({ plan, i }: Props) {
             b1[idx + 1] +
             b1[idx - simWidth] +
             b1[idx + simWidth]) /
-            2 -
+          2 -
           b2[idx];
         b2[idx] *= damping;
       }
@@ -494,78 +489,13 @@ export default function PriceCard({ plan, i }: Props) {
         className="absolute inset-0 w-full h-full -z-10 rounded-[inherit] pointer-events-none opacity-85 transition-opacity duration-300"
       />
 
-      <div className="p-6 sm:p-7 flex flex-col flex-1 relative z-10">
-        <p
-          className="mb-1 text-xs font-bold uppercase tracking-widest"
-          style={{
-            color: plan.highlight ? "rgba(255,255,255,0.7)" : "#748297",
-          }}
-        >
-          {plan.name}
-        </p>
-        <div className="mb-6 flex items-end gap-1">
-          <span
-            style={{
-              fontFamily: "'Louize', Georgia, serif",
-              fontSize: "clamp(2rem, 5vw, 2.8rem)",
-              fontWeight: 400,
-              letterSpacing: "-0.04em",
-              color: plan.highlight ? "#fff" : "#111418",
-            }}
-          >
-            {plan.price}
-          </span>
-          {plan.period && (
-            <span
-              className="mb-1 text-sm"
-              style={{
-                color: plan.highlight ? "rgba(255,255,255,0.7)" : "#748297",
-              }}
-            >
-              {plan.period}
-            </span>
-          )}
-        </div>
-        <ul className="flex flex-col gap-2.5 mb-8 flex-1">
-          {plan.features.map((f) => (
-            <li
-              key={f}
-              className="flex items-center gap-2 text-sm"
-              style={{
-                color: plan.highlight ? "rgba(255,255,255,0.9)" : "#748297",
-                fontFamily: "'Inter', sans-serif",
-              }}
-            >
-              <span
-                style={{
-                  color: plan.highlight ? "#fff" : "#FF5924",
-                  fontWeight: 700,
-                }}
-              >
-                ✓
-              </span>
-              {f}
-            </li>
-          ))}
-        </ul>
-        <a
-          ref={buttonRef}
-          href="#"
-          className="flex items-center justify-center rounded-full py-3 text-xs font-bold uppercase tracking-widest transition-all duration-200 hover:opacity-90 relative overflow-hidden"
-          style={{
-            background: plan.highlight ? "#fff" : "#FF5924",
-            color: plan.highlight ? "#FF5924" : "#fff",
-            minHeight: 44,
-          }}
-        >
-          {/* Internal canvas for dynamic, local ripple overlays */}
-          <canvas
-            ref={buttonCanvasRef}
-            className="absolute inset-0 w-full h-full pointer-events-none rounded-[inherit]"
-          />
-          <span className="relative z-10">{plan.action}</span>
-        </a>
-      </div>
+      {cardType === "custom" ?
+        (<CustomPlanCard plan={plan} buttonRef={buttonRef} buttonCanvasRef={buttonCanvasRef} />)
+        : (
+          <PlanCard plan={plan} buttonRef={buttonRef} buttonCanvasRef={buttonCanvasRef} />
+        )
+      }
+
 
       {/* SVG filter for responsive cloth edge warping */}
       <svg
