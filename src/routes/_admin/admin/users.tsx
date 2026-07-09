@@ -24,6 +24,7 @@ import {
   deleteUserFn,
   getBusinessesFn,
   saveBusinessFn,
+  setAdminClaimFn,
 } from "@/lib/server-functions";
 import { AdminLoader } from "@/components/AdminLoader";
 import type { User as DBUser, Business as DBBusiness } from "@/lib/schemas";
@@ -55,6 +56,7 @@ interface MappedUser {
   phone: string;
   plan: string;
   status: string;
+  role: string;
   joinedOn: string;
   createdAt: any;
   associatedBusinesses: DBBusiness[];
@@ -76,6 +78,7 @@ function UsersPage() {
   const [expandedUserIds, setExpandedUserIds] = useState<Set<string>>(new Set());
   const [selectedUser, setSelectedUser] = useState<MappedUser | null>(null);
   const [activeTab, setActiveTab] = useState("Profile");
+  const [roleTab, setRoleTab] = useState<"clients" | "admins">("clients");
 
   const [editingUser, setEditingUser] = useState<MappedUser | null>(null);
   const [editErrors, setEditErrors] = useState<Record<string, string>>({});
@@ -141,6 +144,7 @@ function UsersPage() {
         phone: u.phone || "",
         plan,
         status: u.status || "Active",
+        role: u.role || "client",
         joinedOn: u.createdAt
           ? new Date(u.createdAt).toLocaleDateString("en-US", {
               month: "short",
@@ -159,6 +163,10 @@ function UsersPage() {
 
   const filteredUsers = useMemo(() => {
     return mappedUsers.filter((u) => {
+      const rawUser = users.find(ru => ru.id === u.id);
+      const isRoleMatch = roleTab === "admins" ? (rawUser?.role === "admin") : (rawUser?.role !== "admin");
+      if (!isRoleMatch) return false;
+
       const normalizedUserPlan = u.plan.endsWith(" Plan")
         ? u.plan
         : `${u.plan === "Growth" ? "Pro" : u.plan} Plan`;
@@ -177,7 +185,7 @@ function UsersPage() {
       }
       return matchPlan && matchStatus && matchSearch;
     });
-  }, [mappedUsers, planFilter, statusFilter, searchQuery]);
+  }, [mappedUsers, planFilter, statusFilter, searchQuery, roleTab, users]);
 
   const paginatedUsers = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
@@ -245,11 +253,13 @@ function UsersPage() {
 
     setIsCreatingUser(true);
     const userId = `usr_${Date.now()}`;
+    const isNewUserAdmin = roleTab === "admins";
     const newUserSchema: DBUser = {
       id: userId,
       fullName: addForm.name,
       email: addForm.email,
       phone: addForm.phone,
+      role: isNewUserAdmin ? "admin" : "client",
       status: "Active",
       businessCount: 1,
       createdAt: new Date(),
@@ -270,7 +280,17 @@ function UsersPage() {
       updatedAt: new Date(),
     };
 
+    let claimPromise = Promise.resolve({ success: true });
+    if (isNewUserAdmin) {
+      claimPromise = setAdminClaimFn({ data: { uid: userId, isAdmin: true } })
+        .catch(err => {
+          console.error("Failed to assign admin claims:", err);
+          return { success: false };
+        });
+    }
+
     Promise.all([
+      claimPromise,
       saveUserFn({ data: newUserSchema }),
       saveBusinessFn({ data: newBusinessSchema }),
     ]).then(() => {
@@ -341,6 +361,7 @@ function UsersPage() {
       email: editForm.email,
       phone: editForm.phone,
       status: editForm.status as any,
+      role: editForm.role as any,
       businessCount: users.find((u) => u.id === userId)?.businessCount || 1,
       createdAt: users.find((u) => u.id === userId)?.createdAt || new Date(),
       updatedAt: new Date(),
@@ -366,7 +387,21 @@ function UsersPage() {
       updatedAt: new Date(),
     };
 
+    const prevUser = users.find((u) => u.id === userId);
+    const wasAdmin = prevUser?.role === "admin";
+    const isAdminNow = editForm.role === "admin";
+
+    let claimPromise = Promise.resolve({ success: true });
+    if (wasAdmin !== isAdminNow) {
+      claimPromise = setAdminClaimFn({ data: { uid: userId, isAdmin: isAdminNow } })
+        .catch(err => {
+          console.error("Failed to update Firebase custom claims:", err);
+          return { success: false };
+        });
+    }
+
     Promise.all([
+      claimPromise,
       saveUserFn({ data: userSchemaData }),
       saveBusinessFn({ data: businessSchemaData }),
     ]).then(() => {
@@ -383,6 +418,7 @@ function UsersPage() {
           phone: editForm.phone,
           plan: editForm.plan,
           status: editForm.status,
+          role: editForm.role,
           industry: editForm.industry,
           website: editForm.website,
         });
@@ -876,6 +912,32 @@ function UsersPage() {
       ) : (
         /* ── USERS TABLE VIEW ── */
         <>
+          {/* Role Tab Selector */}
+          <div
+            className="flex border-b mb-6 gap-6"
+            style={{ borderColor: "var(--color-mm-border)" }}
+          >
+            <button
+              onClick={() => setRoleTab("clients")}
+              className="pb-3 text-sm font-semibold px-2 transition-all cursor-pointer"
+              style={{
+                color: roleTab === "clients" ? "var(--color-mm-orange)" : "var(--color-mm-gray)",
+                borderBottom: roleTab === "clients" ? "2px solid var(--color-mm-orange)" : "2px solid transparent",
+              }}
+            >
+              Clients ({users.filter(u => u.role !== "admin").length})
+            </button>
+            <button
+              onClick={() => setRoleTab("admins")}
+              className="pb-3 text-sm font-semibold px-2 transition-all cursor-pointer"
+              style={{
+                color: roleTab === "admins" ? "var(--color-mm-orange)" : "var(--color-mm-gray)",
+                borderBottom: roleTab === "admins" ? "2px solid var(--color-mm-orange)" : "2px solid transparent",
+              }}
+            >
+              Administrators ({users.filter(u => u.role === "admin").length})
+            </button>
+          </div>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-3">
               <div className="flex flex-col gap-1 w-full max-w-[280px]">
@@ -2197,6 +2259,38 @@ function UsersPage() {
                 </select>
               </div>
 
+              <div>
+                <label
+                  style={{
+                    color: "var(--color-mm-gray)",
+                    fontWeight: 600,
+                    fontSize: "13px",
+                    display: "block",
+                    marginBottom: "4px",
+                  }}
+                >
+                  Role
+                </label>
+                <select
+                  value={editForm.role || "client"}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, role: e.target.value })
+                  }
+                  style={{
+                    background: "white",
+                    border: "1px solid var(--color-mm-border)",
+                    borderRadius: "12px",
+                    padding: "10px 14px",
+                    color: "var(--color-mm-dark)",
+                    width: "100%",
+                    outline: "none",
+                  }}
+                >
+                  <option value="client">Client</option>
+                  <option value="admin">Administrator</option>
+                </select>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label
@@ -2319,7 +2413,7 @@ function UsersPage() {
 
       {toast && (
         <div
-          className="fixed bottom-6 right-6 z-[100] px-5 py-3.5 rounded-xl shadow-lg transition-all animate-in fade-in slide-in-from-bottom-5 duration-300 flex items-center gap-2.5"
+          className="fixed bottom-6 right-6 z-100 px-5 py-3.5 rounded-xl shadow-lg transition-all animate-in fade-in slide-in-from-bottom-5 duration-300 flex items-center gap-2.5"
           style={{
             background: "rgba(92, 177, 62, 0.1)",
             border: "1px solid var(--color-mm-green)",

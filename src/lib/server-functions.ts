@@ -56,6 +56,69 @@ export async function verifyServerSession() {
   }
 }
 
+// ==================== ROLE & AUTH MANAGEMENT SERVER FUNCTIONS ====================
+
+export const verifyAdminAccessFn = createServerFn({ method: "GET" })
+  .handler(async () => {
+    try {
+      const decoded = await verifyServerSession();
+      if (decoded.admin !== true) {
+        return { authorized: false, reason: "Not an admin." };
+      }
+      return { authorized: true };
+    } catch (e) {
+      return { authorized: false, reason: "Session verification failed." };
+    }
+  });
+
+export const setAdminClaimFn = createServerFn({ method: "POST" })
+  .validator((d: { uid: string; isAdmin: boolean }) => d)
+  .handler(async ({ data }) => {
+    const decoded = await verifyServerSession();
+    const adminAuth = await getAdminAuth();
+    
+    // Safety check: only allow admins to assign claims, OR the first user to bootstrap development
+    if (decoded.admin !== true) {
+      const db = await getDb();
+      const users = await db.getUsers();
+      const hasAdmins = users.some(u => u.role === "admin");
+      if (hasAdmins) {
+        throw new Error("Unauthorized: Only existing admins can assign admin claims.");
+      }
+    }
+    
+    await adminAuth.setCustomUserClaims(data.uid, { admin: data.isAdmin });
+    
+    const db = await getDb();
+    const userDoc = await db.getUser(data.uid);
+    if (userDoc) {
+      userDoc.role = data.isAdmin ? "admin" : "client";
+      await db.saveUser(userDoc);
+    }
+    
+    return { success: true };
+  });
+
+export const checkUserRoleFn = createServerFn({ method: "GET" })
+  .handler(async () => {
+    try {
+      const decoded = await verifyServerSession();
+      return {
+        role: decoded.admin === true ? "admin" : "client",
+        email: decoded.email,
+        uid: decoded.uid,
+      };
+    } catch {
+      return { role: null };
+    }
+  });
+
+export const getMyBusinessesFn = createServerFn({ method: "GET" })
+  .handler(async () => {
+    const decoded = await verifyServerSession();
+    return (await getDb()).getBusinessesByUser(decoded.uid);
+  });
+
 // ==================== USERS & PROFILES ====================
 
 export const getUsersFn = createServerFn({ method: "GET" })
@@ -386,6 +449,7 @@ export const seedDatabaseFn = createServerFn({ method: "POST" })
           fullName: u.name,
           email: u.email,
           phone: u.phone,
+          role: "client",
           status: "Active",
           businessCount: 1,
           createdAt: new Date(),

@@ -54,12 +54,16 @@ export const Reference = <T extends z.ZodTypeAny>(
 export const UserStatusEnum = z.enum(["Active", "Inactive", "Suspended"]);
 export type UserStatus = z.infer<typeof UserStatusEnum>;
 
+export const UserRoleEnum = z.enum(["admin", "client"]);
+export type UserRole = z.infer<typeof UserRoleEnum>;
+
 export const UserSchema = z.object({
   id: z.string().min(1, "User ID is required"),
   email: z.string().email("Invalid email address").min(1, "Email is required"),
   fullName: z.string().default(""),
   image: z.string().url().optional(),
   phone: z.string().default(""),
+  role: UserRoleEnum.default("client"),
   status: UserStatusEnum.default("Active"),
   businessCount: z.number().int().nonnegative().default(0),
   createdAt: DateField,
@@ -71,14 +75,7 @@ export type User = z.infer<typeof UserSchema>;
 // ============================================================================
 // 2. BUSINESS SCHEMA
 // ============================================================================
-export const BusinessPlanEnum = z.enum([
-  "None",
-  "Basic",
-  "Plus",
-  "Enterprise",
-  "Pro",
-  "pro",
-]);
+export const BusinessPlanEnum = z.enum(["None", "Basic", "Plus", "Pro"]);
 export type BusinessPlan = z.infer<typeof BusinessPlanEnum>;
 
 export const BusinessAddonEnum = z.enum([
@@ -121,7 +118,13 @@ export type Business = z.infer<typeof BusinessSchema>;
 export const ProjectDomainEnum = z.enum(["Website", "Marketing", "Automation"]);
 export type ProjectDomain = z.infer<typeof ProjectDomainEnum>;
 
-export const ProjectStatusEnum = z.enum(["Completed", "In Progress", "Pending", "On Hold", "Cancelled"]);
+export const ProjectStatusEnum = z.enum([
+  "Completed",
+  "In Progress",
+  "Pending",
+  "On Hold",
+  "Cancelled",
+]);
 export type ProjectStatus = z.infer<typeof ProjectStatusEnum>;
 
 export const ProjectPriorityEnum = z.enum(["Low", "Medium", "High"]);

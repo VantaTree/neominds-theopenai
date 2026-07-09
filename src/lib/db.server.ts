@@ -151,6 +151,7 @@ export const ensureUserDocument = async (
     fullName: user.displayName || user.email?.split("@")[0] || "New User",
     email: user.email || "",
     phone: user.phoneNumber || "",
+    role: "client",
     status: "Active",
     businessCount: 0,
     createdAt: new Date(),
@@ -177,8 +178,20 @@ export const getBusiness = async (businessId: string): Promise<Business | null> 
 
 export const getBusinessesByUser = async (userId: string): Promise<Business[]> => {
   const db = getDb();
-  const snap = await db.collection("businesses").where("userId", "==", userId).withConverter(businessConverter).get();
-  return snap.docs.map((d) => d.data());
+  
+  // Query using DocumentReference (standard Firestore relationship format)
+  const userRef = db.collection("users").doc(userId);
+  const snapRef = await db.collection("businesses").where("userId", "==", userRef).withConverter(businessConverter).get();
+  
+  // Query using plain string (for string-based user IDs)
+  const snapStr = await db.collection("businesses").where("userId", "==", userId).withConverter(businessConverter).get();
+  
+  // Merge results uniquely by document ID
+  const map = new Map<string, Business>();
+  snapRef.docs.forEach((d) => map.set(d.id, d.data()));
+  snapStr.docs.forEach((d) => map.set(d.id, d.data()));
+  
+  return Array.from(map.values());
 };
 
 export const saveBusiness = async (business: Business): Promise<void> => {
