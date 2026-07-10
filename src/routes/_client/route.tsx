@@ -1,8 +1,60 @@
 import { useState, useEffect, useRef } from "react";
-import { createFileRoute, Outlet, useLocation } from "@tanstack/react-router";
-import ClientAside from "@/components/ClientAside";
+import { createFileRoute, Outlet, useLocation, redirect } from "@tanstack/react-router";
+import ClientNav from "../../components/client/ClientNav";
+import ClientBottomLinks from "../../components/client/ClientBottomLinks";
+import { checkUserRoleFn, getMyBusinessesFn } from "@/lib/server-functions";
+import { BusinessProvider } from "@/hooks/use-business";
 
 export const Route = createFileRoute("/_client")({
+  beforeLoad: async ({ context, location }) => {
+    let userRole: string | null = null;
+    let isAuthenticated = false;
+
+    try {
+      const res = await checkUserRoleFn();
+      if (res && res.role) {
+        userRole = res.role;
+        isAuthenticated = true;
+      }
+    } catch (e) {
+      // Ignore session check error, fall back to client auth
+    }
+
+    if (!isAuthenticated) {
+      if (typeof window !== "undefined") {
+        await context.auth.waitUntilInitialized();
+        if (!context.auth.user) {
+          throw redirect({
+            to: "/login",
+            search: { redirect: location.pathname },
+          });
+        }
+      } else {
+        throw redirect({
+          to: "/login",
+          search: { redirect: location.pathname },
+        });
+      }
+    }
+
+    if (userRole === "admin") {
+      throw redirect({
+        to: "/admin",
+      });
+    }
+  },
+  loader: async () => {
+    try {
+      const data = await getMyBusinessesFn();
+      return {
+        initialBusinesses: data || [],
+      };
+    } catch (e) {
+      return {
+        initialBusinesses: [],
+      };
+    }
+  },
   component: RouteComponent,
 });
 
@@ -15,10 +67,18 @@ function PageTransitionWrapper({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (location.pathname !== prevPath.current) {
-      setPrevChildren(displayChildren);
-      setDisplayChildren(children);
-      setAnimating(true);
-      prevPath.current = location.pathname;
+      const isChatTransition =
+        location.pathname.startsWith("/chat") && prevPath.current.startsWith("/chat");
+
+      if (isChatTransition) {
+        setDisplayChildren(children);
+        prevPath.current = location.pathname;
+      } else {
+        setPrevChildren(displayChildren);
+        setDisplayChildren(children);
+        setAnimating(true);
+        prevPath.current = location.pathname;
+      }
     } else {
       setDisplayChildren(children);
     }
@@ -29,8 +89,10 @@ function PageTransitionWrapper({ children }: { children: React.ReactNode }) {
     setPrevChildren(null);
   };
 
+  const isChatRoute = location.pathname.startsWith("/chat");
+
   return (
-    <div className="relative w-full">
+    <div className={`relative w-full h-full flex-1 flex flex-col ${isChatRoute ? "overflow-hidden" : ""}`}>
       <style>{`
         @keyframes slideOutToBottom {
           0% {
@@ -62,38 +124,85 @@ function PageTransitionWrapper({ children }: { children: React.ReactNode }) {
       `}</style>
 
       {animating ? (
-        <div className="relative w-full min-h-[60vh] overflow-hidden">
+        <div className="relative w-full h-full flex-1 overflow-hidden">
           {/* Old Page */}
-          <div className="absolute inset-x-0 top-0 w-full page-exit">
+          <div className={`absolute inset-x-0 top-0 w-full h-full flex flex-col page-exit ${isChatRoute ? "overflow-hidden" : ""}`}>
             {prevChildren}
           </div>
           {/* New Page */}
-          <div className="w-full page-enter" onAnimationEnd={handleAnimationEnd}>
+          <div className={`w-full h-full flex flex-col page-enter ${isChatRoute ? "overflow-hidden" : ""}`} onAnimationEnd={handleAnimationEnd}>
             {displayChildren}
           </div>
         </div>
       ) : (
-        <div className="w-full">{displayChildren}</div>
+        <div className={`w-full h-full flex-1 flex flex-col ${isChatRoute ? "overflow-hidden" : ""}`}>{displayChildren}</div>
       )}
     </div>
   );
 }
 
 function RouteComponent() {
-  return (
-    <div className="flex min-h-screen bg-white text-mm-dark font-sans flex-col md:flex-row">
-      {/* Responsive Sidebar & Mobile Header Bar */}
-      <ClientAside />
+  const { initialBusinesses } = Route.useLoaderData();
+  const location = useLocation();
+  const [isMobile, setIsMobile] = useState(false);
 
-      {/* Main Viewport Panel */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Content Area */}
-        <main className="flex-1 overflow-y-auto px-6 py-8 md:px-12 md:py-10">
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 768px)");
+    setIsMobile(media.matches);
+    const listener = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    media.addEventListener("change", listener);
+    return () => media.removeEventListener("change", listener);
+  }, []);
+
+  const isChatDomainMobile = isMobile && location.pathname.startsWith("/chat/") && location.pathname !== "/chat";
+  const isChatRoute = location.pathname.startsWith("/chat");
+
+  const renderContent = () => {
+    if (isChatDomainMobile) {
+      return (
+        <div className="h-dvh w-screen bg-white flex flex-col font-sans relative overflow-hidden">
+          <main className="flex-1 w-full flex flex-col overflow-hidden">
+            <PageTransitionWrapper>
+              <Outlet />
+            </PageTransitionWrapper>
+          </main>
+        </div>
+      );
+    }
+
+    if (isMobile) {
+      return (
+        <div className="h-dvh w-screen bg-[#F9FAFC] flex flex-col font-sans relative pb-16 overflow-hidden">
+          <ClientNav />
+          <div className="h-16 shrink-0" />
+
+          <main className="flex-1 w-full flex flex-col overflow-y-auto">
+            <PageTransitionWrapper>
+              <Outlet />
+            </PageTransitionWrapper>
+          </main>
+
+          <ClientBottomLinks />
+        </div>
+      );
+    }
+
+    return (
+      <div className={`${isChatRoute ? "h-screen overflow-hidden" : "min-h-screen"} bg-[#F9FAFC] flex flex-col font-sans`}>
+        <ClientNav />
+        <div className="h-16 shrink-0" />
+        <main className={`flex-1 w-full flex flex-col ${isChatRoute ? "overflow-hidden" : ""}`}>
           <PageTransitionWrapper>
             <Outlet />
           </PageTransitionWrapper>
         </main>
       </div>
-    </div>
+    );
+  };
+
+  return (
+    <BusinessProvider initialBusinesses={initialBusinesses}>
+      {renderContent()}
+    </BusinessProvider>
   );
 }

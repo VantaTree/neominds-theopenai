@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Compass, BadgeCheck } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface Testimonial {
   id: string;
@@ -9,6 +9,7 @@ interface Testimonial {
   projectDescription: string;
   text: string;
   imagePath: string;
+  clientLogo: string;
   x: number; // coordinate in virtual space
   y: number;
 }
@@ -28,6 +29,7 @@ const rawTestimonials = [
     projectDescription: "AI Resume Screener — Fit Scores & Red Flags",
     text: "The n8n pipeline saves our recruitment team hours every day. Candidates are pre-screened in seconds and graded against live criteria with zero data entry.",
     imagePath: "/images/portfolio/hr-automation.png",
+    clientLogo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&h=120&q=80",
   },
   {
     id: "mindspace_ai",
@@ -36,6 +38,7 @@ const rawTestimonials = [
     projectDescription: "TARA: 24/7 AI Companion PWA",
     text: "TARA offers an incredibly empathetic and low-latency voice and text chat experience for mental wellness. Elevating support with Firebase and ElevenLabs integration.",
     imagePath: "/images/portfolio/mindspace.jpeg",
+    clientLogo: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&h=120&q=80",
   },
   {
     id: "flooringinc_analytics",
@@ -44,6 +47,7 @@ const rawTestimonials = [
     projectDescription: "360° E‑commerce Analytics & AI Queries",
     text: "Connecting Magento to this MySQL dashboard with a Groq NL-to-SQL bot allows anyone on our team to query sales and revenue in plain English.",
     imagePath: "/images/portfolio/dashboard.png",
+    clientLogo: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=120&h=120&q=80",
   },
   {
     id: "project_buddy",
@@ -52,6 +56,7 @@ const rawTestimonials = [
     projectDescription: "Project Buddy: Slack-integrated RAG Bot",
     text: "Finding answers in our Google Drive document corpus was reduced from 20 minutes to 2 seconds. The Slack thread context integration is exceptionally intuitive.",
     imagePath: "/images/portfolio/project-buddy.png",
+    clientLogo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&h=120&q=80",
   },
   {
     id: "mindspace_ai_dashboard",
@@ -60,6 +65,7 @@ const rawTestimonials = [
     projectDescription: "Mindspace.ai Admin Control Panel",
     text: "Our admin team now has absolute control over users, notifications, and engagement analytics. The AI-generated push notifications are a massive productivity boost.",
     imagePath: "/images/portfolio/mindspace-dashboard.png",
+    clientLogo: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=120&h=120&q=80",
   },
   {
     id: "ai_co_teacher",
@@ -68,6 +74,7 @@ const rawTestimonials = [
     projectDescription: "AI Co-Teacher: Lesson & Quiz Generator",
     text: "Teachers at our academy cut lesson planning and quiz prep time down by 80%. We can track attendance and struggling students from a single screen.",
     imagePath: "/images/portfolio/coteacher.png",
+    clientLogo: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=120&h=120&q=80",
   },
   {
     id: "ai_lms",
@@ -76,6 +83,7 @@ const rawTestimonials = [
     projectDescription: "AI LMS: Adaptive Learning & Auto-Grading",
     text: "The adaptive quiz engine and NLP auto-grading are outstanding. Our dropout alerts have significantly improved student completion rates.",
     imagePath: "/images/portfolio/lms.png",
+    clientLogo: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=120&h=120&q=80",
   },
   {
     id: "smart_fee_management",
@@ -84,6 +92,7 @@ const rawTestimonials = [
     projectDescription: "Smart Fee Management & Receipts",
     text: "Automating payment links and WhatsApp reminders cleared our outstanding collections. The financial forecasting dashboard gives perfect clarity.",
     imagePath: "/images/portfolio/fee collection.png",
+    clientLogo: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=120&h=120&q=80",
   },
   {
     id: "ai_social_posts",
@@ -92,6 +101,7 @@ const rawTestimonials = [
     projectDescription: "AI Social Posts: One-Prompt Creator",
     text: "Creating both the graphics and captions in a single prompt and scheduling them directly has scaled our social media presence without extra hires.",
     imagePath: "/images/portfolio/market.jpeg",
+    clientLogo: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=120&h=120&q=80",
   },
   {
     id: "aristotle_practice_buddy",
@@ -100,6 +110,7 @@ const rawTestimonials = [
     projectDescription: "Aristotle: AI Practice & Handwriting Buddy",
     text: "Real-time handwriting recognition and mistake detection guide students step-by-step, turning study struggles into rewarding breakthroughs.",
     imagePath: "/images/portfolio/Aristotle.png",
+    clientLogo: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&w=120&h=120&q=80",
   },
   {
     id: "expirio_inventory",
@@ -108,6 +119,7 @@ const rawTestimonials = [
     projectDescription: "Expirio: Expiry Alerts & Recipe Suggester",
     text: "Expirio completely resolved duplicate orders and inventory waste in our pantry and kitchen. The recipe generator uses up expiring stock beautifully.",
     imagePath: "/images/portfolio/expirio.jpg",
+    clientLogo: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=120&h=120&q=80",
   },
   {
     id: "ai_complaint_classifier",
@@ -116,6 +128,7 @@ const rawTestimonials = [
     projectDescription: "AI Complaint Classifier & Router",
     text: "By reading ticket sentiment and routing complaints automatically, our manual triage workload was cut by 60%. Highly recommend.",
     imagePath: "/images/portfolio/complaint.jpeg",
+    clientLogo: "https://images.unsplash.com/photo-1501196354995-cbb51c65aaea?auto=format&fit=crop&w=120&h=120&q=80",
   },
   {
     id: "ai_textbook_tool",
@@ -124,6 +137,7 @@ const rawTestimonials = [
     projectDescription: "AI Textbook Platform: Summaries & Flashcards",
     text: "Uploading 400-page textbooks and instantly generating matching quizzes and active-recall flashcards has transformed student revision.",
     imagePath: "/images/portfolio/textbook.png",
+    clientLogo: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&h=120&q=80",
   },
   {
     id: "ai_sql_chatbot",
@@ -132,6 +146,7 @@ const rawTestimonials = [
     projectDescription: "AI SQL Chatbot: Natural Language Analytics",
     text: "Our business users can query complex databases in plain English without writing a single line of SQL. Secure, quick, and robust.",
     imagePath: "/images/portfolio/mysql.png",
+    clientLogo: "https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?auto=format&fit=crop&w=120&h=120&q=80",
   },
   {
     id: "aqsa_calligraphy",
@@ -140,6 +155,7 @@ const rawTestimonials = [
     projectDescription: "Luxury Calligraphy Portfolio & Commissions",
     text: "The Gold/Glassmorphism SPA represents my artwork perfectly. The secure Gmail SMTP commission flow has made custom bookings seamless.",
     imagePath: "/images/portfolio/aqsa.png",
+    clientLogo: "https://images.unsplash.com/photo-1554151228-14d9def656e4?auto=format&fit=crop&w=120&h=120&q=80",
   },
   {
     id: "neo_emotion",
@@ -148,6 +164,7 @@ const rawTestimonials = [
     projectDescription: "Neo Emotion: Real-Time Face Emotion AI",
     text: "Real-time webcam facial expression analysis with ResNet-18 has given our interactive apps a stable, high-performance empathy layer.",
     imagePath: "/images/portfolio/neomotion.png",
+    clientLogo: "https://images.unsplash.com/photo-1500048993953-d23a436266cf?auto=format&fit=crop&w=120&h=120&q=80",
   },
   {
     id: "aimc_assistant",
@@ -156,6 +173,7 @@ const rawTestimonials = [
     projectDescription: "AIMC Assistant: Urdu-English Waqf Chat",
     text: "Having a bilingual document assistant has made navigating dense legal judgments and Supreme Court files in Urdu and English incredibly easy.",
     imagePath: "/images/portfolio/aimc.png",
+    clientLogo: "https://images.unsplash.com/photo-1513956589380-bad6acb9b9d4?auto=format&fit=crop&w=120&h=120&q=80",
   },
   {
     id: "neominds_attendance",
@@ -164,6 +182,7 @@ const rawTestimonials = [
     projectDescription: "NeoMinds Attendance: Privacy-First Face AI",
     text: "An enterprise attendance kiosk using face embeddings instead of raw photos is the perfect balance of payroll accuracy and employee privacy.",
     imagePath: "/images/portfolio/attendence.png",
+    clientLogo: "https://images.unsplash.com/photo-1542909168-82c3e7fdca5c?auto=format&fit=crop&w=120&h=120&q=80",
   },
 ];
 
@@ -285,6 +304,7 @@ const BUBBLE_TESTIMONIALS = rawTestimonials.map((t, i) => ({
   name: t.name,
   role: t.projectDescription,
   result: t.businessName,
+  logo: t.clientLogo,
   position: i % 3 === 0 ? "left" : i % 3 === 1 ? "center" : "right",
   delay: (i % 4) * 0.1,
 }));
@@ -306,6 +326,50 @@ export function MymindTestimonials() {
 
   // Active highlighted card
   const [activeIndex, setActiveIndex] = useState(0);
+
+  // Details Side Panel State
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [selectedPanelIndex, setSelectedPanelIndex] = useState(0);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  // Listen for Escape key to close the side panel
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsPanelOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  // Ref to the scrollable area in the side panel
+  const panelScrollRef = useRef<HTMLDivElement | null>(null);
+
+  // Lock body scroll and redirect wheel events to panel when panel is open
+  useEffect(() => {
+    if (!isPanelOpen) return;
+
+    document.body.style.overflow = "hidden";
+
+    const handleWindowWheel = (e: WheelEvent) => {
+      // Prevent the website body/background from scrolling and block other listeners (like Lenis)
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // Redirect scroll delta directly to the side panel container
+      if (panelScrollRef.current) {
+        panelScrollRef.current.scrollTop += e.deltaY;
+      }
+    };
+
+    window.addEventListener("wheel", handleWindowWheel, { passive: false, capture: true });
+
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("wheel", handleWindowWheel, { capture: true });
+    };
+  }, [isPanelOpen]);
 
   // Viewport camera parameters
   const camXRef = useRef(centerX);
@@ -340,8 +404,6 @@ export function MymindTestimonials() {
   // Floating pulses running in the background web
   const pulsesRef = useRef<Pulse[]>(initialPulses);
 
-  const [isVisible, setIsVisible] = useState(false);
-
   // Mymind style colors (mapped statically to fit the light gradient background)
   const colorsRef = useRef({
     foreground: { r: 36, g: 39, b: 45 }, // #24272D
@@ -349,23 +411,8 @@ export function MymindTestimonials() {
     accent2: { r: 255, g: 125, b: 211 }, // #FF7DD3
   });
 
-  // Intersection observer to pause calculations off-screen
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        setIsVisible(entry.isIntersecting);
-      },
-      { threshold: 0.05 },
-    );
-    if (containerRef.current) {
-      observer.observe(containerRef.current);
-    }
-    return () => observer.disconnect();
-  }, []);
-
   // Update loop for camera interpolation and canvas rendering
   useEffect(() => {
-    if (!isVisible) return;
     let animId: number;
     let lastTime = performance.now();
 
@@ -389,7 +436,8 @@ export function MymindTestimonials() {
       if (
         timeSinceInteract > 3000 &&
         !isDraggingController.current &&
-        !isDraggingGraph.current
+        !isDraggingGraph.current &&
+        !isPanelOpen
       ) {
         // Change focused card index
         const elapsedIntervals = Math.floor(timeSinceInteract / 6000);
@@ -417,10 +465,12 @@ export function MymindTestimonials() {
         targetZoom.current = 1.15;
       }
 
-      // Smooth Camera LERP interpolation
-      camXRef.current += (targetCamX.current - camXRef.current) * 0.08 * dt;
-      camYRef.current += (targetCamY.current - camYRef.current) * 0.08 * dt;
-      zoomRef.current += (targetZoom.current - zoomRef.current) * 0.08 * dt;
+      // Smooth Camera LERP interpolation (only when panel is closed to allow animations to stop)
+      if (!isPanelOpen) {
+        camXRef.current += (targetCamX.current - camXRef.current) * 0.08 * dt;
+        camYRef.current += (targetCamY.current - camYRef.current) * 0.08 * dt;
+        zoomRef.current += (targetZoom.current - zoomRef.current) * 0.08 * dt;
+      }
 
       // Sync tracking ball with actual camera position in real-time
       if (!isDraggingController.current) {
@@ -509,7 +559,9 @@ export function MymindTestimonials() {
           // Moving pulses on curved paths
           ctx.fillStyle = `rgba(${acc.r}, ${acc.g}, ${acc.b}, 0.85)`;
           pulsesRef.current.forEach((pulse) => {
-            pulse.progress += pulse.speed * dt;
+            if (!isPanelOpen) {
+              pulse.progress += pulse.speed * dt;
+            }
             if (pulse.progress >= 1) {
               pulse.progress = 0;
               // Reroute to a connected node
@@ -561,7 +613,7 @@ export function MymindTestimonials() {
       window.removeEventListener("resize", handleResize);
       cancelAnimationFrame(animId);
     };
-  }, [isVisible, activeIndex]);
+  }, [activeIndex, isPanelOpen]);
 
   // Window drag/mouse handlers for controller puck and direct canvas dragging
   useEffect(() => {
@@ -801,389 +853,479 @@ export function MymindTestimonials() {
 
   return (
     <section
-      ref={containerRef}
-      id="testimonials"
-      className="relative w-full overflow-hidden"
       style={{
-        background: `
-          radial-gradient(ellipse 80% 60% at 20% 30%, rgba(255, 180, 200, 0.6) 0%, transparent 55%),
-          radial-gradient(ellipse 70% 60% at 80% 70%, rgba(255, 200, 210, 0.5) 0%, transparent 55%),
-          radial-gradient(ellipse 60% 50% at 50% 50%, rgba(255, 210, 220, 0.4) 0%, transparent 60%),
-          linear-gradient(145deg, #ffc8d0 0%, #ffd0c8 25%, #ffc8d8 55%, #f8d0e8 100%)
-        `,
+        backgroundImage: "url('/images/mymind_review_neue-1.jpg')",
+        backgroundSize: "cover",
+        backgroundPosition: "top center",
+        backgroundRepeat: "no-repeat",
       }}
     >
-      {/* 1. MOBILE BUBBLE VIEWPORT (< md) */}
-      <div className="md:hidden mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-20">
-        {/* Floating testimonial bubbles — top 3 */}
-        <div className="flex flex-col gap-12 sm:gap-14 mb-14 sm:mb-20 w-full">
-          {BUBBLE_TESTIMONIALS.slice(0, 3).map((t, i) => {
-            const isLeft = i % 2 === 0;
-            const floatConfigs = [
-              { y: [0, -10, 0] as number[], duration: 4, delay: 0 },
-              { y: [0, -7, 0] as number[], duration: 3.2, delay: 0.5 },
-              { y: [0, -12, 0] as number[], duration: 4.8, delay: 1 },
-            ];
-            const fc = floatConfigs[i % floatConfigs.length];
-            return (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-40px" }}
-                transition={{ duration: 0.6, delay: t.delay }}
-                className={`w-full max-w-[460px] ${isLeft ? "self-end" : "self-start"}`}
-              >
-                <motion.div
-                  animate={{ y: fc.y }}
-                  transition={{
-                    duration: fc.duration,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                    delay: fc.delay,
-                  }}
-                  style={{ willChange: "transform" }}
-                  className="w-full"
-                >
-                  {/* Speech bubble box */}
-                  <div
-                    className="relative rounded-[46px] bg-white px-5 sm:px-6 py-4 sm:py-5"
-                    style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.08)" }}
-                  >
-                    <p className="text-sm leading-relaxed md:text-base text-left font-sans text-mm-dark">
-                      &ldquo;{t.text}&rdquo;
-                    </p>
-                  </div>
-
-                  {/* Speech bubble trail and metadata */}
-                  {isLeft ? (
-                    <div className="relative flex flex-col items-start pl-12 mt-2 w-full">
-                      {/* Trail dots */}
-                      <div className="flex flex-col items-start gap-1.5 -mt-1 mb-2">
-                        <div className="size-3.5 rounded-full bg-white shadow-sm ml-8" />
-                        <div className="size-2 rounded-full bg-white/80 shadow-xs ml-4.5" />
-                      </div>
-
-                      {/* Metadata */}
-                      <div className="flex items-center gap-3">
-                        <div className="text-left">
-                          <p className="text-xs font-semibold text-mm-dark font-sans">
-                            {t.name}
-                          </p>
-                          <p className="text-xs text-mm-gray font-sans mt-0.5">
-                            {t.role}
-                          </p>
-                        </div>
-                        <span
-                          className="shrink-0 text-center rounded-full px-2.5 py-0.5 text-[10px] font-bold"
-                          style={{ background: "#fff0ec", color: "#FF5924" }}
-                        >
-                          {t.result}
-                        </span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="relative flex flex-col items-end pr-12 mt-2 w-full">
-                      {/* Trail dots */}
-                      <div className="flex flex-col items-end gap-1.5 -mt-1 mb-2">
-                        <div className="size-3.5 rounded-full bg-white shadow-sm mr-8" />
-                        <div className="size-2 rounded-full bg-white/80 shadow-xs mr-4.5" />
-                      </div>
-
-                      {/* Metadata */}
-                      <div className="flex items-center gap-3 flex-row-reverse">
-                        <div className="text-right">
-                          <p className="text-xs font-semibold text-mm-dark font-sans">
-                            {t.name}
-                          </p>
-                          <p className="text-xs text-mm-gray font-sans mt-0.5">
-                            {t.role}
-                          </p>
-                        </div>
-                        <span
-                          className="shrink-0 text-center rounded-full px-2.5 py-0.5 text-[10px] font-bold"
-                          style={{ background: "#fff0ec", color: "#FF5924" }}
-                        >
-                          {t.result}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </motion.div>
-              </motion.div>
-            );
-          })}
-        </div>
-
-        {/* Section heading */}
-        <motion.h2
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-60px" }}
-          transition={{ duration: 0.7 }}
-          className="mb-14 sm:mb-20 text-center leading-tight"
+      {/* Section Header */}
+      <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 pt-24 pb-16 text-center flex flex-col items-center gap-3 relative z-30">
+        <h2
+          className="text-[#111418] tracking-tight leading-[1.05]"
           style={{
             fontFamily: "'Louize', Georgia, serif",
-            fontSize: "clamp(2.5rem, 7vw, 6rem)",
+            fontSize: "clamp(2.8rem, 8vw, 5.5rem)",
             letterSpacing: "-0.03em",
-            color: "white",
             fontWeight: 400,
           }}
         >
-          Real results.
-          <br />
-          Real businesses.
-        </motion.h2>
-
-        {/* More bubbles below heading */}
-        <div className="flex flex-col gap-12 sm:gap-14 w-full">
-          {BUBBLE_TESTIMONIALS.slice(3, 5).map((t, i) => {
-            const globalIndex = i + 3;
-            const isLeft = globalIndex % 2 === 0;
-            const floatConfigs = [
-              { y: [0, -8, 0] as number[], duration: 3.6, delay: 0.8 },
-              { y: [0, -11, 0] as number[], duration: 5, delay: 0.3 },
-            ];
-            const fc = floatConfigs[i % floatConfigs.length];
-            return (
-              <motion.div
-                key={globalIndex}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-40px" }}
-                transition={{ duration: 0.6, delay: t.delay }}
-                className={`w-full max-w-[460px] ${isLeft ? "self-end" : "self-start"}`}
-              >
-                <motion.div
-                  animate={{ y: fc.y }}
-                  transition={{
-                    duration: fc.duration,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                    delay: fc.delay,
-                  }}
-                  style={{ willChange: "transform" }}
-                  className="w-full"
-                >
-                  {/* Speech bubble box */}
-                  <div
-                    className="relative rounded-4xl bg-white px-5 sm:px-6 py-4 sm:py-5"
-                    style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.08)" }}
-                  >
-                    <p className="text-sm leading-relaxed md:text-base text-left font-sans text-mm-dark">
-                      &ldquo;{t.text}&rdquo;
-                    </p>
-                  </div>
-
-                  {/* Speech bubble trail and metadata */}
-                  {isLeft ? (
-                    <div className="relative flex flex-col items-start pl-12 mt-2 w-full">
-                      {/* Trail dots */}
-                      <div className="flex flex-col items-start gap-1.5 -mt-1 mb-2">
-                        <div className="size-3.5 rounded-full bg-white shadow-sm ml-8" />
-                        <div className="size-2 rounded-full bg-white/80 shadow-xs ml-4.5" />
-                      </div>
-
-                      {/* Metadata */}
-                      <div className="flex items-center gap-3">
-                        <div className="text-left">
-                          <p className="text-xs font-semibold text-mm-dark font-sans">
-                            {t.name}
-                          </p>
-                          <p className="text-xs text-mm-gray font-sans mt-0.5">
-                            {t.role}
-                          </p>
-                        </div>
-                        <span
-                          className="shrink-0 text-center rounded-full px-2.5 py-0.5 text-[10px] font-bold"
-                          style={{ background: "#fff0ec", color: "#FF5924" }}
-                        >
-                          {t.result}
-                        </span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="relative flex flex-col items-end pr-12 mt-2 w-full">
-                      {/* Trail dots */}
-                      <div className="flex flex-col items-end gap-1.5 -mt-1 mb-2">
-                        <div className="size-3.5 rounded-full bg-white shadow-sm mr-8" />
-                        <div className="size-2 rounded-full bg-white/80 shadow-xs mr-4.5" />
-                      </div>
-
-                      {/* Metadata */}
-                      <div className="flex items-center gap-3 flex-row-reverse">
-                        <div className="text-right">
-                          <p className="text-xs font-semibold text-mm-dark font-sans">
-                            {t.name}
-                          </p>
-                          <p className="text-xs text-mm-gray font-sans mt-0.5">
-                            {t.role}
-                          </p>
-                        </div>
-                        <span
-                          className="shrink-0 text-center rounded-full px-2.5 py-0.5 text-[10px] font-bold"
-                          style={{ background: "#fff0ec", color: "#FF5924" }}
-                        >
-                          {t.result}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </motion.div>
-              </motion.div>
-            );
-          })}
-        </div>
+          Client Testimonials
+        </h2>
       </div>
 
-      {/* 2. DESKTOP INTERACTIVE GRAPH VIEWPORT (>= md) */}
       <div
-        className="hidden md:block w-full h-[800px] select-none cursor-grab active:cursor-grabbing relative"
-        onMouseDown={handleGraphMouseDown}
-        onTouchStart={handleGraphTouchStart}
+        ref={containerRef}
+        id="testimonials"
+        className="relative w-full overflow-hidden"
       >
-        {/* Background canvas connections web */}
-        <canvas
-          ref={canvasRef}
-          className="absolute inset-0 w-full h-full pointer-events-none"
-        />
-
-        {/* Tilted / Panned graph layout wrapper */}
-        <div
-          ref={graphWrapperRef}
-          className="absolute inset-0 pointer-events-none will-change-transform"
-          style={{ transformOrigin: "0 0" }}
-        >
-          {testimonials.map((card, idx) => {
-            const isActive = idx === activeIndex;
-            return (
-              <div
-                key={card.id}
-                style={{
-                  position: "absolute",
-                  left: `${card.x}px`,
-                  top: `${card.y}px`,
-                  transform: "translate(-50%, -50%)",
-                  pointerEvents: "auto",
-                  zIndex: isActive ? 40 : 10,
-                }}
-                onClick={(e) => handleCardClick(idx, e)}
-              >
-                {/* Premium Testimonial Card */}
-                <div
-                  className={`w-[230px] sm:w-[285px] rounded-2xl border bg-white border-mm-border shadow-2xl flex flex-col transition-all duration-500 will-change-transform ${
-                    isActive
-                      ? "ring-1 ring-mm-orange border-mm-orange/40 scale-115 md:scale-150 shadow-[0_15px_45px_rgba(255,89,36,0.12)]"
-                      : "opacity-60 scale-90 saturate-50 hover:opacity-90"
-                  }`}
+        {/* 1. MOBILE BUBBLE VIEWPORT (< md) */}
+        <div className="md:hidden mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-20">
+          {/* Floating testimonial bubbles — top 3 */}
+          <div className="flex flex-col gap-12 sm:gap-14 mb-14 sm:mb-20 w-full">
+            {BUBBLE_TESTIMONIALS.slice(0, 3).map((t, i) => {
+              const isLeft = i % 2 === 0;
+              const floatConfigs = [
+                { y: [0, -10, 0] as number[], duration: 4, delay: 0 },
+                { y: [0, -7, 0] as number[], duration: 3.2, delay: 0.5 },
+                { y: [0, -12, 0] as number[], duration: 4.8, delay: 1 },
+              ];
+              const fc = floatConfigs[i % floatConfigs.length];
+              return (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-40px" }}
+                  transition={{ duration: 0.6, delay: t.delay }}
+                  className={`w-full max-w-[460px] ${isLeft ? "self-end" : "self-start"}`}
                 >
-                  {/* Large Project Image - Flush with top card boundary */}
-                  <div className="w-full aspect-16/10 overflow-hidden rounded-t-2xl bg-[#f0f2f5] border-b border-black/5 relative">
-                    <img
-                      src={card.imagePath}
-                      alt={card.businessName}
-                      className="w-full h-full object-cover select-none pointer-events-none"
-                      style={{
-                        objectFit: "cover",
-                        height: "100%",
-                      }}
-                    />
-                    <div className="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
-                  </div>
-
-                  {/* Card Details & Quote Body - Inner padding applied here */}
-                  <div className="p-4 flex flex-col gap-3">
-                    {/* Meta details */}
-                    <div className="flex flex-col gap-0.5">
-                      <div className="flex items-center justify-between">
-                        <span className="font-extrabold text-sm sm:text-base text-mm-orange tracking-tight leading-none font-sans">
-                          {card.businessName}
-                        </span>
-                        <span className="flex items-center gap-0.5 text-[10px] text-mm-gray font-bold uppercase tracking-wider font-sans">
-                          {card.name}
-                          <BadgeCheck className="h-3 w-3 text-mm-orange shrink-0" />
-                        </span>
-                      </div>
-                      <span className="text-xs text-mm-dark/60 font-medium leading-tight mt-1 font-sans">
-                        {card.projectDescription}
-                      </span>
+                  <motion.div
+                    animate={{ y: fc.y }}
+                    transition={{
+                      duration: fc.duration,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                      delay: fc.delay,
+                    }}
+                    style={{ willChange: "transform" }}
+                    className="w-full"
+                  >
+                    {/* Speech bubble box */}
+                    <div
+                      className="relative rounded-[46px] bg-white px-5 sm:px-6 py-4 sm:py-5"
+                      style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.08)" }}
+                    >
+                      <p className="text-sm leading-relaxed md:text-base text-left font-sans text-mm-dark">
+                        &ldquo;{t.text}&rdquo;
+                      </p>
                     </div>
 
-                    {/* 2-line Review Text */}
-                    <p className="text-mm-dark/85 text-xs sm:text-sm italic leading-relaxed line-clamp-2 font-sans">
-                      "{card.text}"
-                    </p>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                    {/* Speech bubble trail and metadata */}
+                    {isLeft ? (
+                      <div className="relative flex flex-col items-start pl-12 mt-2 w-full">
+                        {/* Trail dots */}
+                        <div className="flex flex-col items-start gap-1.5 -mt-1 mb-2">
+                          <div className="size-3.5 rounded-full bg-white shadow-sm ml-8" />
+                          <div className="size-2 rounded-full bg-white/80 shadow-xs ml-4.5" />
+                        </div>
 
-        {/* Floating HUD Section Header */}
-        <div className="absolute top-8 left-8 sm:top-12 sm:left-12 pointer-events-none space-y-2 z-10 max-w-sm sm:max-w-md">
-          <div className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1 text-[10px] font-bold uppercase tracking-wider text-mm-orange bg-mm-orange/10 backdrop-blur-md border border-mm-orange/10 shadow-sm">
-            <Compass className="h-3 w-3 animate-spin" />
-            Interactive Graph
+                        {/* Metadata info */}
+                        <div className="flex items-center gap-3">
+                          {/* Business Logo */}
+                          <div className="size-10 rounded-full overflow-hidden border border-mm-border bg-white flex items-center justify-center shrink-0 shadow-sm">
+                            <img src={t.logo} alt={t.result} className="size-full object-cover" />
+                          </div>
+                          <div className="text-left">
+                            <p className="text-xs font-bold text-mm-dark font-sans">
+                              {t.name}
+                            </p>
+                            <p className="text-[10px] font-semibold text-mm-orange font-sans mt-0.5">
+                              {t.result}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="relative flex flex-col items-end pr-12 mt-2 w-full">
+                        {/* Trail dots */}
+                        <div className="flex flex-col items-end gap-1.5 -mt-1 mb-2">
+                          <div className="size-3.5 rounded-full bg-white shadow-sm mr-8" />
+                          <div className="size-2 rounded-full bg-white/80 shadow-xs mr-4.5" />
+                        </div>
+
+                        {/* Metadata info */}
+                        <div className="flex items-center gap-3 flex-row-reverse">
+                          {/* Business Logo */}
+                          <div className="size-10 rounded-full overflow-hidden border border-mm-border bg-white flex items-center justify-center shrink-0 shadow-sm">
+                            <img src={t.logo} alt={t.result} className="size-full object-cover" />
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs font-bold text-mm-dark font-sans">
+                              {t.name}
+                            </p>
+                            <p className="text-[10px] font-semibold text-mm-orange font-sans mt-0.5">
+                              {t.result}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </motion.div>
+                </motion.div>
+              );
+            })}
           </div>
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-mm-dark tracking-tight drop-shadow-sm">
-            Client Testimonials
-          </h2>
-          <p className="text-mm-dark/60 text-xs sm:text-sm leading-relaxed drop-shadow-sm font-sans">
-            Drag the canvas directly or slide the relative tracking ball on the
-            control pad below to explore the project web.
-          </p>
+
+          {/* Section heading */}
+          <motion.h2
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-60px" }}
+            transition={{ duration: 0.7 }}
+            className="mb-14 sm:mb-20 text-center leading-tight"
+            style={{
+              fontFamily: "'Louize', Georgia, serif",
+              fontSize: "clamp(2.5rem, 7vw, 6rem)",
+              letterSpacing: "-0.03em",
+              color: "white",
+              fontWeight: 400,
+            }}
+          >
+            Real results.
+            <br />
+            Real businesses.
+          </motion.h2>
+
+          {/* More bubbles below heading */}
+          <div className="flex flex-col gap-12 sm:gap-14 w-full">
+            {BUBBLE_TESTIMONIALS.slice(3, 5).map((t, i) => {
+              const globalIndex = i + 3;
+              const isLeft = globalIndex % 2 === 0;
+              const floatConfigs = [
+                { y: [0, -8, 0] as number[], duration: 3.6, delay: 0.8 },
+                { y: [0, -11, 0] as number[], duration: 5, delay: 0.3 },
+              ];
+              const fc = floatConfigs[i % floatConfigs.length];
+              return (
+                <motion.div
+                  key={globalIndex}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-40px" }}
+                  transition={{ duration: 0.6, delay: t.delay }}
+                  className={`w-full max-w-[460px] ${isLeft ? "self-end" : "self-start"}`}
+                >
+                  <motion.div
+                    animate={{ y: fc.y }}
+                    transition={{
+                      duration: fc.duration,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                      delay: fc.delay,
+                    }}
+                    style={{ willChange: "transform" }}
+                    className="w-full"
+                  >
+                    {/* Speech bubble box */}
+                    <div
+                      className="relative rounded-4xl bg-white px-5 sm:px-6 py-4 sm:py-5"
+                      style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.08)" }}
+                    >
+                      <p className="text-sm leading-relaxed md:text-base text-left font-sans text-mm-dark">
+                        &ldquo;{t.text}&rdquo;
+                      </p>
+                    </div>
+
+                    {/* Speech bubble trail and metadata */}
+                    {isLeft ? (
+                      <div className="relative flex flex-col items-start pl-12 mt-2 w-full">
+                        {/* Trail dots */}
+                        <div className="flex flex-col items-start gap-1.5 -mt-1 mb-2">
+                          <div className="size-3.5 rounded-full bg-white shadow-sm ml-8" />
+                          <div className="size-2 rounded-full bg-white/80 shadow-xs ml-4.5" />
+                        </div>
+
+                        {/* Metadata info */}
+                        <div className="flex items-center gap-3">
+                          {/* Business Logo */}
+                          <div className="size-10 rounded-full overflow-hidden border border-mm-border bg-white flex items-center justify-center shrink-0 shadow-sm">
+                            <img src={t.logo} alt={t.result} className="size-full object-cover" />
+                          </div>
+                          <div className="text-left">
+                            <p className="text-xs font-bold text-mm-dark font-sans">
+                              {t.name}
+                            </p>
+                            <p className="text-[10px] font-semibold text-mm-orange font-sans mt-0.5">
+                              {t.result}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="relative flex flex-col items-end pr-12 mt-2 w-full">
+                        {/* Trail dots */}
+                        <div className="flex flex-col items-end gap-1.5 -mt-1 mb-2">
+                          <div className="size-3.5 rounded-full bg-white shadow-sm mr-8" />
+                          <div className="size-2 rounded-full bg-white/80 shadow-xs mr-4.5" />
+                        </div>
+
+                        {/* Metadata info */}
+                        <div className="flex items-center gap-3 flex-row-reverse">
+                          {/* Business Logo */}
+                          <div className="size-10 rounded-full overflow-hidden border border-mm-border bg-white flex items-center justify-center shrink-0 shadow-sm">
+                            <img src={t.logo} alt={t.result} className="size-full object-cover" />
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs font-bold text-mm-dark font-sans">
+                              {t.name}
+                            </p>
+                            <p className="text-[10px] font-semibold text-mm-orange font-sans mt-0.5">
+                              {t.result}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </motion.div>
+                </motion.div>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Floating Control Pad Controller */}
-        <div className="absolute bottom-8 right-8 sm:bottom-12 sm:right-12 z-20 flex flex-col items-center gap-1">
-          <span className="text-[9px] uppercase font-extrabold tracking-widest text-mm-dark/40 leading-none">
-            Tracking HUD
-          </span>
-          <div
-            ref={controllerRef}
-            className="relative w-[160px] h-[100px] rounded-2xl bg-white/50 border border-black/5 backdrop-blur-lg shadow-2xl flex items-center justify-center cursor-grab active:cursor-grabbing"
-            onMouseDown={handleControllerMouseDown}
-            onTouchStart={handleControllerTouchStart}
-          >
-            {/* Inner Grid & Guides */}
-            <div className="absolute inset-1.5 rounded-[10px] border border-dashed border-mm-dark/10 pointer-events-none flex items-center justify-center">
-              <div className="absolute w-[95%] h-px bg-mm-dark/5" />
-              <div className="absolute h-[90%] w-px bg-mm-dark/5" />
-            </div>
+        {/* 2. DESKTOP INTERACTIVE GRAPH VIEWPORT (>= md) */}
+        <div
+          className="hidden md:block w-full h-[800px] select-none cursor-grab active:cursor-grabbing relative"
+          onMouseDown={handleGraphMouseDown}
+          onTouchStart={handleGraphTouchStart}
+        >
+          {/* Background canvas connections web */}
+          <canvas
+            ref={canvasRef}
+            className={`absolute inset-0 w-full h-full pointer-events-none transition-[filter,opacity] duration-300 ${
+              isPanelOpen ? "blur-md opacity-40" : ""
+            }`}
+          />
 
-            {/* Mini Testimonial Node Markers on the pad */}
-            {testimonials.map((node, idx) => {
-              const nodePctX = (node.x - centerX) / rangeX;
-              const nodePctY = (node.y - centerY) / rangeY;
+          {/* Tilted / Panned graph layout wrapper */}
+          <div
+            ref={graphWrapperRef}
+            className={`absolute inset-0 pointer-events-none will-change-transform transition-[filter,opacity] duration-300 ${
+              isPanelOpen ? "blur-md pointer-events-none opacity-40" : ""
+            }`}
+            style={{ transformOrigin: "0 0" }}
+          >
+            {testimonials.map((card, idx) => {
               const isActive = idx === activeIndex;
               return (
                 <div
-                  key={node.id}
-                  className={`absolute size-1.5 rounded-full transition-all duration-300 pointer-events-none ${
-                    isActive
-                      ? "bg-mm-orange scale-150 shadow-[0_0_6px_rgba(255,89,36,0.6)]"
-                      : "bg-mm-dark/20"
-                  }`}
+                  key={card.id}
                   style={{
-                    transform: `translate3d(${nodePctX * 70}px, ${nodePctY * 40}px, 0)`,
+                    position: "absolute",
+                    left: `${card.x}px`,
+                    top: `${card.y}px`,
+                    transform: "translate(-50%, -50%)",
+                    pointerEvents: "auto",
+                    zIndex: isActive ? 40 : 10,
                   }}
-                />
+                  onClick={(e) => handleCardClick(idx, e)}
+                >
+                  {/* Premium Testimonial Card */}
+                  <div
+                    className={`w-[230px] sm:w-[285px] aspect-[16/11] rounded-2xl border bg-white border-mm-border shadow-2xl flex flex-col transition-all duration-500 will-change-transform overflow-hidden relative ${isActive
+                        ? "ring-1 ring-mm-orange border-mm-orange/40 scale-115 md:scale-150 shadow-[0_15px_45px_rgba(255,89,36,0.12)]"
+                        : "opacity-60 scale-90 saturate-50 hover:opacity-90"
+                      }`}
+                  >
+                    {/* The centered image contained inside the card */}
+                    <img
+                      src={card.imagePath}
+                      alt={card.businessName}
+                      className="absolute inset-0 w-full h-full object-contain object-center select-none pointer-events-none"
+                    />
+
+                    {/* Semi-transparent / blurred bottom overlay bar */}
+                    <div className="absolute bottom-0 inset-x-0 bg-white/90 backdrop-blur-xs py-2 px-3 flex flex-col gap-1 z-10">
+                      <div className="flex items-center justify-between w-full">
+                        <span className="font-extrabold text-xs sm:text-sm text-mm-dark tracking-tight leading-none font-sans truncate max-w-[120px] sm:max-w-[160px]">
+                          {card.businessName}
+                        </span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Snap camera instantly to selected card (jumping selection animation)
+                            camXRef.current = card.x;
+                            camYRef.current = card.y;
+                            zoomRef.current = 1.15;
+
+                            setActiveIndex(idx);
+                            targetCamX.current = card.x;
+                            targetCamY.current = card.y;
+                            targetZoom.current = 1.15;
+
+                            setSelectedPanelIndex(idx);
+                            setIsPanelOpen(true);
+                          }}
+                          className="text-[10px] sm:text-xs font-bold text-mm-orange hover:text-mm-orange/80 transition-colors shrink-0 flex items-center gap-0.5 font-sans cursor-pointer"
+                        >
+                          View More &gt;
+                        </button>
+                      </div>
+                      <div className="text-[9px] sm:text-[10px] text-mm-gray font-bold uppercase tracking-wider font-sans leading-none flex items-center gap-0.5">
+                        {card.name}
+                        <BadgeCheck className="h-2.5 w-2.5 text-mm-orange shrink-0" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
               );
             })}
+          </div>
 
-            {/* Draggable Tracking Ball */}
+          {/* Floating Control Pad Controller */}
+          <div className="absolute bottom-8 right-8 sm:bottom-12 sm:right-12 z-20 flex flex-col items-center gap-1">
+            <span className="text-[9px] uppercase font-extrabold tracking-widest text-mm-dark/40 leading-none">
+              Tracking HUD
+            </span>
             <div
-              className="absolute size-6 rounded-full bg-mm-orange hover:bg-mm-pink shadow-[0_0_12px_rgba(255,89,36,0.5)] flex items-center justify-center pointer-events-none transition-colors duration-200"
-              style={{
-                transform: `translate3d(${ballPos.x}px, ${ballPos.y}px, 0)`,
-              }}
+              ref={controllerRef}
+              className="relative w-[160px] h-[100px] rounded-2xl bg-white/50 border border-black/5 backdrop-blur-lg shadow-2xl flex items-center justify-center cursor-grab active:cursor-grabbing"
+              onMouseDown={handleControllerMouseDown}
+              onTouchStart={handleControllerTouchStart}
             >
-              <div className="size-2 rounded-full bg-white opacity-90" />
+              {/* Inner Grid & Guides */}
+              <div className="absolute inset-1.5 rounded-[10px] border border-dashed border-mm-dark/10 pointer-events-none flex items-center justify-center">
+                <div className="absolute w-[95%] h-px bg-mm-dark/5" />
+                <div className="absolute h-[90%] w-px bg-mm-dark/5" />
+              </div>
+
+              {/* Mini Testimonial Node Markers on the pad */}
+              {testimonials.map((node, idx) => {
+                const nodePctX = (node.x - centerX) / rangeX;
+                const nodePctY = (node.y - centerY) / rangeY;
+                const isActive = idx === activeIndex;
+                return (
+                  <div
+                    key={node.id}
+                    className={`absolute size-1.5 rounded-full transition-all duration-300 pointer-events-none ${isActive
+                        ? "bg-mm-orange scale-150 shadow-[0_0_6px_rgba(255,89,36,0.6)]"
+                        : "bg-mm-dark/20"
+                      }`}
+                    style={{
+                      transform: `translate3d(${nodePctX * 70}px, ${nodePctY * 40}px, 0)`,
+                    }}
+                  />
+                );
+              })}
+
+              {/* Draggable Tracking Ball */}
+              <div
+                className="absolute size-6 rounded-full bg-mm-orange hover:bg-mm-pink shadow-[0_0_12px_rgba(255,89,36,0.5)] flex items-center justify-center pointer-events-none transition-colors duration-200"
+                style={{
+                  transform: `translate3d(${ballPos.x}px, ${ballPos.y}px, 0)`,
+                }}
+              >
+                <div className="size-2 rounded-full bg-white opacity-90" />
+              </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Side Panel Drawer (slides from right) */}
+      <AnimatePresence>
+        {isPanelOpen && (
+          <>
+            {/* Backdrop Blur Overlay */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => { setIsPanelOpen(false); setIsDropdownOpen(false); }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50"
+            />
+
+            {/* Slide-out Panel */}
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="fixed right-0 top-0 bottom-0 h-full w-full md:w-1/2 bg-white/90 backdrop-blur-lg border-l border-mm-border z-50 shadow-2xl flex flex-col font-sans text-mm-dark overflow-hidden"
+            >
+              {/* Panel Header */}
+              <div className="p-6 border-b border-mm-border flex items-center justify-between">
+                <h3 className="text-lg font-bold text-mm-dark">Project Client Testimonial</h3>
+                <button
+                  onClick={() => { setIsPanelOpen(false); setIsDropdownOpen(false); }}
+                  className="p-2 rounded-full hover:bg-black/5 text-mm-gray hover:text-mm-dark transition-colors cursor-pointer"
+                  aria-label="Close panel"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Scrollable Content */}
+              <div ref={panelScrollRef} className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6">
+                {/* Main Selected Project Details */}
+                {(() => {
+                  const activeProject = rawTestimonials[selectedPanelIndex];
+                  if (!activeProject) return null;
+                  return (
+                    <div className="space-y-6 animate-in fade-in-50 duration-300">
+                      {/* Project Image - completely showed */}
+                      <div className="w-full aspect-[16/10] bg-mm-bg-gray/50 rounded-2xl overflow-hidden border border-mm-border flex items-center justify-center">
+                        <img
+                          src={activeProject.imagePath}
+                          alt={activeProject.businessName}
+                          className="w-full h-full object-contain p-2 select-none pointer-events-none"
+                        />
+                      </div>
+
+                      {/* Project Metadata */}
+                      <div className="space-y-2">
+                        <span className="text-xs font-semibold uppercase tracking-widest text-mm-orange">
+                          {activeProject.projectDescription}
+                        </span>
+                        <h2 className="text-3xl font-extrabold tracking-tight text-mm-dark leading-tight">
+                          {activeProject.businessName}
+                        </h2>
+                        <div className="flex items-center gap-1.5 text-sm text-mm-gray pt-1 font-medium">
+                          <span>Client: {activeProject.name}</span>
+                          <span className="w-1.5 h-1.5 rounded-full bg-mm-border" />
+                          <span className="text-emerald-600 font-bold">Verified Partner</span>
+                        </div>
+                      </div>
+
+                      {/* Divider */}
+                      <div className="h-px bg-mm-border" />
+
+                      {/* Testimonial Quote */}
+                      <div className="space-y-2">
+                        <span className="text-[10px] uppercase font-bold tracking-wider text-mm-gray block">
+                          Client Feedback
+                        </span>
+                        <div className="relative bg-linear-to-b from-black/[0.02] to-black/[0.005] rounded-2xl p-6 border border-mm-border shadow-[inset_0_1px_1px_rgba(0,0,0,0.02)] overflow-hidden">
+                          <p 
+                            className="text-lg text-mm-dark leading-relaxed pl-3 pt-2 relative z-10 font-semibold"
+                            style={{ fontFamily: "'Louize', Georgia, serif", fontStyle: "italic" }}
+                          >
+                            {activeProject.text}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </section>
   );
 }

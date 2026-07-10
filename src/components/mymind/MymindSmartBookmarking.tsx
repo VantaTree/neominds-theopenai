@@ -3,7 +3,10 @@ import FeatureProjector from "../FeatureProjector";
 
 export function MymindSmartBookmarking() {
   return (
-    <section className="w-full overflow-x-hidden bg-white py-20 md:py-28" id="smart-bookmarking">
+    <section
+      className="w-full overflow-x-hidden"
+      id="smart-bookmarking"
+    >
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 text-center mb-12">
         <motion.h2
           initial={{ opacity: 0, y: 24 }}
@@ -34,8 +37,8 @@ export function MymindSmartBookmarking() {
             lineHeight: 1.7,
           }}
         >
-          From websites and CRM to content creation, collabs, and paid ads.
-          We handle it all so you can focus on running your business.
+           From websites to Digital marketing and AI automations.
+           <p>We handle it all so you can focus on running your business.</p>
         </motion.p>
       </div>
 

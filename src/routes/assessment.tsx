@@ -22,9 +22,9 @@ import {
   Lock,
   Unlock
 } from "lucide-react";
-import Loader from "../components/Loader";
-import PriceCard from "../components/PriceCard";
-import { questions } from "../utils/questions";
+import Loader from "@/components/Loader";
+import AnimatedPlanCard from "@/components/AnimatedPlanCard";
+import { questions } from "@/data/questions";
 
 export const Route = createFileRoute("/assessment")({
   component: AssessmentPage,
@@ -203,7 +203,7 @@ function AuditReportDashboard({ report, onReset }: AuditReportDashboardProps) {
   const [slideDirection, setSlideDirection] = useState<"left" | "right">("left");
   const [cooldown, setCooldown] = useState(false);
   const dashboardRef = useRef<HTMLDivElement>(null);
-  
+
   const [bottomProgress, setBottomProgress] = useState(0);
   const bottomProgressRef = useRef(0);
   const updateBottomProgress = (newVal: number) => {
@@ -519,7 +519,7 @@ function AuditReportDashboard({ report, onReset }: AuditReportDashboardProps) {
       </div>
       {bottomProgress > 0 && (
         <div className="fixed bottom-0 left-0 w-full h-1 bg-transparent z-[9999] pointer-events-none no-print">
-          <div 
+          <div
             className="h-full bg-mm-orange transition-all duration-75 ease-out shadow-[0_0_8px_#FF5924]"
             style={{ width: `${bottomProgress}%` }}
           />
@@ -641,7 +641,7 @@ function TeaserGatePanel({ slideDirection, triggerSlideTransition }: TeaserGateP
 
   return (
     <div className={`flex flex-col items-center justify-center py-6 text-center space-y-8 max-w-2xl mx-auto ${slideDirection === "left" ? "animate-slideInRight" : "animate-slideInLeft"}`}>
-      
+
       {/* Circular Lock Badge */}
       <div className="relative">
         <div className="absolute -inset-1.5 bg-mm-red/20 rounded-full blur-md opacity-50 animate-pulse"></div>
@@ -975,13 +975,14 @@ function RoadmapPanel({ report, slideDirection, renderSlideFooter }: PanelProps)
           action: "Choose Plan",
           features: parsedFeatures,
           highlight: recommendedPlan.plan_name?.toLowerCase().includes("premium") || recommendedPlan.plan_name?.toLowerCase().includes("pro") || false,
+          buttonText: "Choose Plan",
         };
 
         return (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch pt-4">
             {/* Plan Card */}
             <div className="lg:col-span-6 flex justify-center">
-              <PriceCard plan={planData} i={0} />
+              <AnimatedPlanCard plan={planData} i={0} cardType="default" />
             </div>
 
             {/* Recommended Services Grid */}
@@ -1126,7 +1127,7 @@ function AssessmentPage() {
   }
 
   return (
-    <div className="min-h-screen w-full lg:h-screen lg:overflow-hidden bg-[var(--color-mm-subtle)]/30 relative flex flex-col items-center justify-center font-sans py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen w-full lg:h-screen overflow-x-hidden lg:overflow-hidden bg-[var(--color-mm-subtle)]/30 relative flex flex-col items-center justify-center font-sans pt-24 pb-12 lg:py-12 px-4 sm:px-6 lg:px-8">
       <Link
         to="/"
         className="absolute top-8 left-8 sm:left-12 sm:top-10 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-mm-border hover:bg-mm-subtle/40 text-mm-dark text-xs font-semibold shadow-sm transition-all select-none cursor-pointer z-50 no-print"
@@ -1140,18 +1141,12 @@ function AssessmentPage() {
       <div className="max-w-7xl w-full grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
         {/* Left Side: Descriptive Text with Orange-Red Gradient Accent */}
         <div className="lg:col-span-5 space-y-8">
-          <div className="inline-flex items-center gap-2 rounded-full border border-mm-orange/30 bg-mm-orange/10 px-3.5 py-1.5 text-xs font-bold tracking-wider text-mm-orange uppercase select-none w-fit">
-            <Zap className="h-3.5 w-3.5 text-mm-orange animate-bounce" />
-            AI BUSINESS ANALYZER
-          </div>
-
           <div className="space-y-4">
             <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-mm-dark leading-[1.15]">
               Before You Invest
               <br />
               <span className="relative inline-block text-transparent bg-clip-text bg-gradient-to-r from-mm-orange to-mm-pink">
                 Know What You Actually Need.
-                <span className="absolute bottom-1 left-0 h-[6px] w-full bg-mm-orange/25 -z-10 rounded-full"></span>
               </span>
             </h1>
             <p className="text-base text-mm-gray leading-relaxed">

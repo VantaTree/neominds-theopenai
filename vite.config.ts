@@ -12,4 +12,16 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  nitro: {
+    preset: "vercel",
+  },
+  vite: {
+    server: {
+      host: "0.0.0.0",
+      allowedHosts: ["talented-albacore-utterly.ngrok-free.app"],
+    },
+    resolve: {
+      tsconfigPaths: true,
+    },
+  },
 });

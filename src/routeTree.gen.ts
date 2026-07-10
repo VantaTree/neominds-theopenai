@@ -9,22 +9,68 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WhyRouteImport } from './routes/why'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as PlansRouteImport } from './routes/plans'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as HowRouteImport } from './routes/how'
+import { Route as BlogsRouteImport } from './routes/blogs'
 import { Route as AssessmentRouteImport } from './routes/assessment'
 import { Route as ClientRouteRouteImport } from './routes/_client/route'
+import { Route as AdminRouteRouteImport } from './routes/_admin/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as BlogsIndexRouteImport } from './routes/blogs.index'
+import { Route as BlogsSlugRouteImport } from './routes/blogs.$slug'
+import { Route as ClientSettingsRouteImport } from './routes/_client/settings'
+import { Route as ClientReportRouteImport } from './routes/_client/report'
 import { Route as ClientProjectsRouteImport } from './routes/_client/projects'
+import { Route as ClientProfileRouteImport } from './routes/_client/profile'
+import { Route as ClientPlanRouteImport } from './routes/_client/plan'
 import { Route as ClientDashboardRouteImport } from './routes/_client/dashboard'
+import { Route as ClientChatRouteRouteImport } from './routes/_client/chat/route'
+import { Route as ClientChatIndexRouteImport } from './routes/_client/chat/index'
+import { Route as AdminAdminIndexRouteImport } from './routes/_admin/admin/index'
+import { Route as ClientChatDomainRouteImport } from './routes/_client/chat/$domain'
+import { Route as AdminAdminUsersRouteImport } from './routes/_admin/admin/users'
+import { Route as AdminAdminTemplatesRouteImport } from './routes/_admin/admin/templates'
+import { Route as AdminAdminSupportRouteImport } from './routes/_admin/admin/support'
+import { Route as AdminAdminSettingsRouteImport } from './routes/_admin/admin/settings'
+import { Route as AdminAdminReportsRouteImport } from './routes/_admin/admin/reports'
+import { Route as AdminAdminPaymentsRouteImport } from './routes/_admin/admin/payments'
+import { Route as AdminAdminChatRouteImport } from './routes/_admin/admin/chat'
+import { Route as AdminAdminProjectsIndexRouteImport } from './routes/_admin/admin/projects/index'
+import { Route as AdminAdminBlogsIndexRouteImport } from './routes/_admin/admin/blogs/index'
+import { Route as AdminAdminProjectsIdRouteImport } from './routes/_admin/admin/projects/$id'
+import { Route as AdminAdminBlogsIdRouteImport } from './routes/_admin/admin/blogs/$id'
 
+const WhyRoute = WhyRouteImport.update({
+  id: '/why',
+  path: '/why',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PlansRoute = PlansRouteImport.update({
+  id: '/plans',
+  path: '/plans',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HowRoute = HowRouteImport.update({
+  id: '/how',
+  path: '/how',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BlogsRoute = BlogsRouteImport.update({
+  id: '/blogs',
+  path: '/blogs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AssessmentRoute = AssessmentRouteImport.update({
@@ -36,14 +82,48 @@ const ClientRouteRoute = ClientRouteRouteImport.update({
   id: '/_client',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminRouteRoute = AdminRouteRouteImport.update({
+  id: '/_admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BlogsIndexRoute = BlogsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => BlogsRoute,
+} as any)
+const BlogsSlugRoute = BlogsSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => BlogsRoute,
+} as any)
+const ClientSettingsRoute = ClientSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => ClientRouteRoute,
+} as any)
+const ClientReportRoute = ClientReportRouteImport.update({
+  id: '/report',
+  path: '/report',
+  getParentRoute: () => ClientRouteRoute,
+} as any)
 const ClientProjectsRoute = ClientProjectsRouteImport.update({
   id: '/projects',
   path: '/projects',
+  getParentRoute: () => ClientRouteRoute,
+} as any)
+const ClientProfileRoute = ClientProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => ClientRouteRoute,
+} as any)
+const ClientPlanRoute = ClientPlanRouteImport.update({
+  id: '/plan',
+  path: '/plan',
   getParentRoute: () => ClientRouteRoute,
 } as any)
 const ClientDashboardRoute = ClientDashboardRouteImport.update({
@@ -51,60 +131,306 @@ const ClientDashboardRoute = ClientDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => ClientRouteRoute,
 } as any)
+const ClientChatRouteRoute = ClientChatRouteRouteImport.update({
+  id: '/chat',
+  path: '/chat',
+  getParentRoute: () => ClientRouteRoute,
+} as any)
+const ClientChatIndexRoute = ClientChatIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ClientChatRouteRoute,
+} as any)
+const AdminAdminIndexRoute = AdminAdminIndexRouteImport.update({
+  id: '/admin/',
+  path: '/admin/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const ClientChatDomainRoute = ClientChatDomainRouteImport.update({
+  id: '/$domain',
+  path: '/$domain',
+  getParentRoute: () => ClientChatRouteRoute,
+} as any)
+const AdminAdminUsersRoute = AdminAdminUsersRouteImport.update({
+  id: '/admin/users',
+  path: '/admin/users',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminAdminTemplatesRoute = AdminAdminTemplatesRouteImport.update({
+  id: '/admin/templates',
+  path: '/admin/templates',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminAdminSupportRoute = AdminAdminSupportRouteImport.update({
+  id: '/admin/support',
+  path: '/admin/support',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminAdminSettingsRoute = AdminAdminSettingsRouteImport.update({
+  id: '/admin/settings',
+  path: '/admin/settings',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminAdminReportsRoute = AdminAdminReportsRouteImport.update({
+  id: '/admin/reports',
+  path: '/admin/reports',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminAdminPaymentsRoute = AdminAdminPaymentsRouteImport.update({
+  id: '/admin/payments',
+  path: '/admin/payments',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminAdminChatRoute = AdminAdminChatRouteImport.update({
+  id: '/admin/chat',
+  path: '/admin/chat',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminAdminProjectsIndexRoute = AdminAdminProjectsIndexRouteImport.update({
+  id: '/admin/projects/',
+  path: '/admin/projects/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminAdminBlogsIndexRoute = AdminAdminBlogsIndexRouteImport.update({
+  id: '/admin/blogs/',
+  path: '/admin/blogs/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminAdminProjectsIdRoute = AdminAdminProjectsIdRouteImport.update({
+  id: '/admin/projects/$id',
+  path: '/admin/projects/$id',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminAdminBlogsIdRoute = AdminAdminBlogsIdRouteImport.update({
+  id: '/admin/blogs/$id',
+  path: '/admin/blogs/$id',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/assessment': typeof AssessmentRoute
+  '/blogs': typeof BlogsRouteWithChildren
+  '/how': typeof HowRoute
   '/login': typeof LoginRoute
+  '/plans': typeof PlansRoute
   '/signup': typeof SignupRoute
+  '/why': typeof WhyRoute
+  '/chat': typeof ClientChatRouteRouteWithChildren
   '/dashboard': typeof ClientDashboardRoute
+  '/plan': typeof ClientPlanRoute
+  '/profile': typeof ClientProfileRoute
   '/projects': typeof ClientProjectsRoute
+  '/report': typeof ClientReportRoute
+  '/settings': typeof ClientSettingsRoute
+  '/blogs/$slug': typeof BlogsSlugRoute
+  '/blogs/': typeof BlogsIndexRoute
+  '/admin/chat': typeof AdminAdminChatRoute
+  '/admin/payments': typeof AdminAdminPaymentsRoute
+  '/admin/reports': typeof AdminAdminReportsRoute
+  '/admin/settings': typeof AdminAdminSettingsRoute
+  '/admin/support': typeof AdminAdminSupportRoute
+  '/admin/templates': typeof AdminAdminTemplatesRoute
+  '/admin/users': typeof AdminAdminUsersRoute
+  '/chat/$domain': typeof ClientChatDomainRoute
+  '/admin/': typeof AdminAdminIndexRoute
+  '/chat/': typeof ClientChatIndexRoute
+  '/admin/blogs/$id': typeof AdminAdminBlogsIdRoute
+  '/admin/projects/$id': typeof AdminAdminProjectsIdRoute
+  '/admin/blogs/': typeof AdminAdminBlogsIndexRoute
+  '/admin/projects/': typeof AdminAdminProjectsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/assessment': typeof AssessmentRoute
+  '/how': typeof HowRoute
   '/login': typeof LoginRoute
+  '/plans': typeof PlansRoute
   '/signup': typeof SignupRoute
+  '/why': typeof WhyRoute
   '/dashboard': typeof ClientDashboardRoute
+  '/plan': typeof ClientPlanRoute
+  '/profile': typeof ClientProfileRoute
   '/projects': typeof ClientProjectsRoute
+  '/report': typeof ClientReportRoute
+  '/settings': typeof ClientSettingsRoute
+  '/blogs/$slug': typeof BlogsSlugRoute
+  '/blogs': typeof BlogsIndexRoute
+  '/admin/chat': typeof AdminAdminChatRoute
+  '/admin/payments': typeof AdminAdminPaymentsRoute
+  '/admin/reports': typeof AdminAdminReportsRoute
+  '/admin/settings': typeof AdminAdminSettingsRoute
+  '/admin/support': typeof AdminAdminSupportRoute
+  '/admin/templates': typeof AdminAdminTemplatesRoute
+  '/admin/users': typeof AdminAdminUsersRoute
+  '/chat/$domain': typeof ClientChatDomainRoute
+  '/admin': typeof AdminAdminIndexRoute
+  '/chat': typeof ClientChatIndexRoute
+  '/admin/blogs/$id': typeof AdminAdminBlogsIdRoute
+  '/admin/projects/$id': typeof AdminAdminProjectsIdRoute
+  '/admin/blogs': typeof AdminAdminBlogsIndexRoute
+  '/admin/projects': typeof AdminAdminProjectsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_admin': typeof AdminRouteRouteWithChildren
   '/_client': typeof ClientRouteRouteWithChildren
   '/assessment': typeof AssessmentRoute
+  '/blogs': typeof BlogsRouteWithChildren
+  '/how': typeof HowRoute
   '/login': typeof LoginRoute
+  '/plans': typeof PlansRoute
   '/signup': typeof SignupRoute
+  '/why': typeof WhyRoute
+  '/_client/chat': typeof ClientChatRouteRouteWithChildren
   '/_client/dashboard': typeof ClientDashboardRoute
+  '/_client/plan': typeof ClientPlanRoute
+  '/_client/profile': typeof ClientProfileRoute
   '/_client/projects': typeof ClientProjectsRoute
+  '/_client/report': typeof ClientReportRoute
+  '/_client/settings': typeof ClientSettingsRoute
+  '/blogs/$slug': typeof BlogsSlugRoute
+  '/blogs/': typeof BlogsIndexRoute
+  '/_admin/admin/chat': typeof AdminAdminChatRoute
+  '/_admin/admin/payments': typeof AdminAdminPaymentsRoute
+  '/_admin/admin/reports': typeof AdminAdminReportsRoute
+  '/_admin/admin/settings': typeof AdminAdminSettingsRoute
+  '/_admin/admin/support': typeof AdminAdminSupportRoute
+  '/_admin/admin/templates': typeof AdminAdminTemplatesRoute
+  '/_admin/admin/users': typeof AdminAdminUsersRoute
+  '/_client/chat/$domain': typeof ClientChatDomainRoute
+  '/_admin/admin/': typeof AdminAdminIndexRoute
+  '/_client/chat/': typeof ClientChatIndexRoute
+  '/_admin/admin/blogs/$id': typeof AdminAdminBlogsIdRoute
+  '/_admin/admin/projects/$id': typeof AdminAdminProjectsIdRoute
+  '/_admin/admin/blogs/': typeof AdminAdminBlogsIndexRoute
+  '/_admin/admin/projects/': typeof AdminAdminProjectsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/assessment' | '/login' | '/signup' | '/dashboard' | '/projects'
+    | '/'
+    | '/assessment'
+    | '/blogs'
+    | '/how'
+    | '/login'
+    | '/plans'
+    | '/signup'
+    | '/why'
+    | '/chat'
+    | '/dashboard'
+    | '/plan'
+    | '/profile'
+    | '/projects'
+    | '/report'
+    | '/settings'
+    | '/blogs/$slug'
+    | '/blogs/'
+    | '/admin/chat'
+    | '/admin/payments'
+    | '/admin/reports'
+    | '/admin/settings'
+    | '/admin/support'
+    | '/admin/templates'
+    | '/admin/users'
+    | '/chat/$domain'
+    | '/admin/'
+    | '/chat/'
+    | '/admin/blogs/$id'
+    | '/admin/projects/$id'
+    | '/admin/blogs/'
+    | '/admin/projects/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/assessment' | '/login' | '/signup' | '/dashboard' | '/projects'
+  to:
+    | '/'
+    | '/assessment'
+    | '/how'
+    | '/login'
+    | '/plans'
+    | '/signup'
+    | '/why'
+    | '/dashboard'
+    | '/plan'
+    | '/profile'
+    | '/projects'
+    | '/report'
+    | '/settings'
+    | '/blogs/$slug'
+    | '/blogs'
+    | '/admin/chat'
+    | '/admin/payments'
+    | '/admin/reports'
+    | '/admin/settings'
+    | '/admin/support'
+    | '/admin/templates'
+    | '/admin/users'
+    | '/chat/$domain'
+    | '/admin'
+    | '/chat'
+    | '/admin/blogs/$id'
+    | '/admin/projects/$id'
+    | '/admin/blogs'
+    | '/admin/projects'
   id:
     | '__root__'
     | '/'
+    | '/_admin'
     | '/_client'
     | '/assessment'
+    | '/blogs'
+    | '/how'
     | '/login'
+    | '/plans'
     | '/signup'
+    | '/why'
+    | '/_client/chat'
     | '/_client/dashboard'
+    | '/_client/plan'
+    | '/_client/profile'
     | '/_client/projects'
+    | '/_client/report'
+    | '/_client/settings'
+    | '/blogs/$slug'
+    | '/blogs/'
+    | '/_admin/admin/chat'
+    | '/_admin/admin/payments'
+    | '/_admin/admin/reports'
+    | '/_admin/admin/settings'
+    | '/_admin/admin/support'
+    | '/_admin/admin/templates'
+    | '/_admin/admin/users'
+    | '/_client/chat/$domain'
+    | '/_admin/admin/'
+    | '/_client/chat/'
+    | '/_admin/admin/blogs/$id'
+    | '/_admin/admin/projects/$id'
+    | '/_admin/admin/blogs/'
+    | '/_admin/admin/projects/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRouteRoute: typeof AdminRouteRouteWithChildren
   ClientRouteRoute: typeof ClientRouteRouteWithChildren
   AssessmentRoute: typeof AssessmentRoute
+  BlogsRoute: typeof BlogsRouteWithChildren
+  HowRoute: typeof HowRoute
   LoginRoute: typeof LoginRoute
+  PlansRoute: typeof PlansRoute
   SignupRoute: typeof SignupRoute
+  WhyRoute: typeof WhyRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/why': {
+      id: '/why'
+      path: '/why'
+      fullPath: '/why'
+      preLoaderRoute: typeof WhyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/signup': {
       id: '/signup'
       path: '/signup'
@@ -112,11 +438,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/plans': {
+      id: '/plans'
+      path: '/plans'
+      fullPath: '/plans'
+      preLoaderRoute: typeof PlansRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/how': {
+      id: '/how'
+      path: '/how'
+      fullPath: '/how'
+      preLoaderRoute: typeof HowRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/blogs': {
+      id: '/blogs'
+      path: '/blogs'
+      fullPath: '/blogs'
+      preLoaderRoute: typeof BlogsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/assessment': {
@@ -133,6 +480,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClientRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_admin': {
+      id: '/_admin'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AdminRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -140,11 +494,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/blogs/': {
+      id: '/blogs/'
+      path: '/'
+      fullPath: '/blogs/'
+      preLoaderRoute: typeof BlogsIndexRouteImport
+      parentRoute: typeof BlogsRoute
+    }
+    '/blogs/$slug': {
+      id: '/blogs/$slug'
+      path: '/$slug'
+      fullPath: '/blogs/$slug'
+      preLoaderRoute: typeof BlogsSlugRouteImport
+      parentRoute: typeof BlogsRoute
+    }
+    '/_client/settings': {
+      id: '/_client/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof ClientSettingsRouteImport
+      parentRoute: typeof ClientRouteRoute
+    }
+    '/_client/report': {
+      id: '/_client/report'
+      path: '/report'
+      fullPath: '/report'
+      preLoaderRoute: typeof ClientReportRouteImport
+      parentRoute: typeof ClientRouteRoute
+    }
     '/_client/projects': {
       id: '/_client/projects'
       path: '/projects'
       fullPath: '/projects'
       preLoaderRoute: typeof ClientProjectsRouteImport
+      parentRoute: typeof ClientRouteRoute
+    }
+    '/_client/profile': {
+      id: '/_client/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ClientProfileRouteImport
+      parentRoute: typeof ClientRouteRoute
+    }
+    '/_client/plan': {
+      id: '/_client/plan'
+      path: '/plan'
+      fullPath: '/plan'
+      preLoaderRoute: typeof ClientPlanRouteImport
       parentRoute: typeof ClientRouteRoute
     }
     '/_client/dashboard': {
@@ -154,29 +550,209 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClientDashboardRouteImport
       parentRoute: typeof ClientRouteRoute
     }
+    '/_client/chat': {
+      id: '/_client/chat'
+      path: '/chat'
+      fullPath: '/chat'
+      preLoaderRoute: typeof ClientChatRouteRouteImport
+      parentRoute: typeof ClientRouteRoute
+    }
+    '/_client/chat/': {
+      id: '/_client/chat/'
+      path: '/'
+      fullPath: '/chat/'
+      preLoaderRoute: typeof ClientChatIndexRouteImport
+      parentRoute: typeof ClientChatRouteRoute
+    }
+    '/_admin/admin/': {
+      id: '/_admin/admin/'
+      path: '/admin'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminAdminIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/_client/chat/$domain': {
+      id: '/_client/chat/$domain'
+      path: '/$domain'
+      fullPath: '/chat/$domain'
+      preLoaderRoute: typeof ClientChatDomainRouteImport
+      parentRoute: typeof ClientChatRouteRoute
+    }
+    '/_admin/admin/users': {
+      id: '/_admin/admin/users'
+      path: '/admin/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminAdminUsersRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/_admin/admin/templates': {
+      id: '/_admin/admin/templates'
+      path: '/admin/templates'
+      fullPath: '/admin/templates'
+      preLoaderRoute: typeof AdminAdminTemplatesRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/_admin/admin/support': {
+      id: '/_admin/admin/support'
+      path: '/admin/support'
+      fullPath: '/admin/support'
+      preLoaderRoute: typeof AdminAdminSupportRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/_admin/admin/settings': {
+      id: '/_admin/admin/settings'
+      path: '/admin/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AdminAdminSettingsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/_admin/admin/reports': {
+      id: '/_admin/admin/reports'
+      path: '/admin/reports'
+      fullPath: '/admin/reports'
+      preLoaderRoute: typeof AdminAdminReportsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/_admin/admin/payments': {
+      id: '/_admin/admin/payments'
+      path: '/admin/payments'
+      fullPath: '/admin/payments'
+      preLoaderRoute: typeof AdminAdminPaymentsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/_admin/admin/chat': {
+      id: '/_admin/admin/chat'
+      path: '/admin/chat'
+      fullPath: '/admin/chat'
+      preLoaderRoute: typeof AdminAdminChatRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/_admin/admin/projects/': {
+      id: '/_admin/admin/projects/'
+      path: '/admin/projects'
+      fullPath: '/admin/projects/'
+      preLoaderRoute: typeof AdminAdminProjectsIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/_admin/admin/blogs/': {
+      id: '/_admin/admin/blogs/'
+      path: '/admin/blogs'
+      fullPath: '/admin/blogs/'
+      preLoaderRoute: typeof AdminAdminBlogsIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/_admin/admin/projects/$id': {
+      id: '/_admin/admin/projects/$id'
+      path: '/admin/projects/$id'
+      fullPath: '/admin/projects/$id'
+      preLoaderRoute: typeof AdminAdminProjectsIdRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/_admin/admin/blogs/$id': {
+      id: '/_admin/admin/blogs/$id'
+      path: '/admin/blogs/$id'
+      fullPath: '/admin/blogs/$id'
+      preLoaderRoute: typeof AdminAdminBlogsIdRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
   }
 }
 
+interface AdminRouteRouteChildren {
+  AdminAdminChatRoute: typeof AdminAdminChatRoute
+  AdminAdminPaymentsRoute: typeof AdminAdminPaymentsRoute
+  AdminAdminReportsRoute: typeof AdminAdminReportsRoute
+  AdminAdminSettingsRoute: typeof AdminAdminSettingsRoute
+  AdminAdminSupportRoute: typeof AdminAdminSupportRoute
+  AdminAdminTemplatesRoute: typeof AdminAdminTemplatesRoute
+  AdminAdminUsersRoute: typeof AdminAdminUsersRoute
+  AdminAdminIndexRoute: typeof AdminAdminIndexRoute
+  AdminAdminBlogsIdRoute: typeof AdminAdminBlogsIdRoute
+  AdminAdminProjectsIdRoute: typeof AdminAdminProjectsIdRoute
+  AdminAdminBlogsIndexRoute: typeof AdminAdminBlogsIndexRoute
+  AdminAdminProjectsIndexRoute: typeof AdminAdminProjectsIndexRoute
+}
+
+const AdminRouteRouteChildren: AdminRouteRouteChildren = {
+  AdminAdminChatRoute: AdminAdminChatRoute,
+  AdminAdminPaymentsRoute: AdminAdminPaymentsRoute,
+  AdminAdminReportsRoute: AdminAdminReportsRoute,
+  AdminAdminSettingsRoute: AdminAdminSettingsRoute,
+  AdminAdminSupportRoute: AdminAdminSupportRoute,
+  AdminAdminTemplatesRoute: AdminAdminTemplatesRoute,
+  AdminAdminUsersRoute: AdminAdminUsersRoute,
+  AdminAdminIndexRoute: AdminAdminIndexRoute,
+  AdminAdminBlogsIdRoute: AdminAdminBlogsIdRoute,
+  AdminAdminProjectsIdRoute: AdminAdminProjectsIdRoute,
+  AdminAdminBlogsIndexRoute: AdminAdminBlogsIndexRoute,
+  AdminAdminProjectsIndexRoute: AdminAdminProjectsIndexRoute,
+}
+
+const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(
+  AdminRouteRouteChildren,
+)
+
+interface ClientChatRouteRouteChildren {
+  ClientChatDomainRoute: typeof ClientChatDomainRoute
+  ClientChatIndexRoute: typeof ClientChatIndexRoute
+}
+
+const ClientChatRouteRouteChildren: ClientChatRouteRouteChildren = {
+  ClientChatDomainRoute: ClientChatDomainRoute,
+  ClientChatIndexRoute: ClientChatIndexRoute,
+}
+
+const ClientChatRouteRouteWithChildren = ClientChatRouteRoute._addFileChildren(
+  ClientChatRouteRouteChildren,
+)
+
 interface ClientRouteRouteChildren {
+  ClientChatRouteRoute: typeof ClientChatRouteRouteWithChildren
   ClientDashboardRoute: typeof ClientDashboardRoute
+  ClientPlanRoute: typeof ClientPlanRoute
+  ClientProfileRoute: typeof ClientProfileRoute
   ClientProjectsRoute: typeof ClientProjectsRoute
+  ClientReportRoute: typeof ClientReportRoute
+  ClientSettingsRoute: typeof ClientSettingsRoute
 }
 
 const ClientRouteRouteChildren: ClientRouteRouteChildren = {
+  ClientChatRouteRoute: ClientChatRouteRouteWithChildren,
   ClientDashboardRoute: ClientDashboardRoute,
+  ClientPlanRoute: ClientPlanRoute,
+  ClientProfileRoute: ClientProfileRoute,
   ClientProjectsRoute: ClientProjectsRoute,
+  ClientReportRoute: ClientReportRoute,
+  ClientSettingsRoute: ClientSettingsRoute,
 }
 
 const ClientRouteRouteWithChildren = ClientRouteRoute._addFileChildren(
   ClientRouteRouteChildren,
 )
 
+interface BlogsRouteChildren {
+  BlogsSlugRoute: typeof BlogsSlugRoute
+  BlogsIndexRoute: typeof BlogsIndexRoute
+}
+
+const BlogsRouteChildren: BlogsRouteChildren = {
+  BlogsSlugRoute: BlogsSlugRoute,
+  BlogsIndexRoute: BlogsIndexRoute,
+}
+
+const BlogsRouteWithChildren = BlogsRoute._addFileChildren(BlogsRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRouteRoute: AdminRouteRouteWithChildren,
   ClientRouteRoute: ClientRouteRouteWithChildren,
   AssessmentRoute: AssessmentRoute,
+  BlogsRoute: BlogsRouteWithChildren,
+  HowRoute: HowRoute,
   LoginRoute: LoginRoute,
+  PlansRoute: PlansRoute,
   SignupRoute: SignupRoute,
+  WhyRoute: WhyRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

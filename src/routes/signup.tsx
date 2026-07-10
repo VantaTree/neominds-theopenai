@@ -1,13 +1,21 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
-import GradientGlow from "../components/GradientGlow";
+import GradientGlow from "@/components/GradientGlow";
 import { MymindNav } from "@/components/mymind/MymindNav";
+import {
+  createUserWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
+} from "firebase/auth";
+import { auth } from "@/lib/firebase";
+import { ensureUserDocumentFn } from "@/lib/server-functions";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export const Route = createFileRoute("/signup")({
   head: () => ({
     meta: [
-      { title: "Sign Up — theopenai" },
+      { title: "Sign Up" },
       { name: "description", content: "Create your account on theopenai" },
     ],
   }),
@@ -19,44 +27,107 @@ function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const isMobile = useIsMobile();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
       setError("Please fill in all fields.");
       return;
     }
+    if (!auth) {
+      setError("Firebase Auth is not initialized.");
+      return;
+    }
     setIsLoading(true);
     setError("");
 
-    // Simulate API request
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password,
+      );
+      const user = userCredential.user;
+      const token = await user.getIdToken();
+
+      // Set session cookie for SSR
+      const isSecure = window.location.protocol === "https:";
+      document.cookie = `__session=${token}; path=/; max-age=3600;${isSecure ? " Secure;" : ""} SameSite=Lax`;
+
+      // Create new user row/document referencing the auth user uid via server function
+      await ensureUserDocumentFn({
+        data: {
+          user: {
+            uid: user.uid,
+            displayName: user.displayName,
+            email: user.email,
+            phoneNumber: user.phoneNumber,
+          },
+        },
+      });
+
       localStorage.setItem("audit_unlocked", "true");
-      alert(`Signed up successfully with: ${email}`);
+      alert("Account created successfully!");
       navigate({ to: "/assessment" });
-    }, 1500);
+    } catch (err: any) {
+      console.error("Signup error:", err);
+      setError(
+        err.message || "Failed to create account. Email may already be in use.",
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSignup = async () => {
+    if (!auth) {
+      setError("Firebase Auth is not initialized.");
+      return;
+    }
+    setIsLoading(true);
+    setError("");
+
+    try {
+      const provider = new GoogleAuthProvider();
+      const userCredential = await signInWithPopup(auth, provider);
+      const user = userCredential.user;
+      const token = await user.getIdToken();
+
+      // Set session cookie for SSR
+      const isSecure = window.location.protocol === "https:";
+      document.cookie = `__session=${token}; path=/; max-age=3600;${isSecure ? " Secure;" : ""} SameSite=Lax`;
+
+      // Ensure user document exists in database via server function
+      await ensureUserDocumentFn({
+        data: {
+          user: {
+            uid: user.uid,
+            displayName: user.displayName,
+            email: user.email,
+            phoneNumber: user.phoneNumber,
+          },
+        },
+      });
+
+      localStorage.setItem("audit_unlocked", "true");
+      navigate({ to: "/assessment" });
+    } catch (err: any) {
+      console.error("Google signup error:", err);
+      setError(err.message || "Google Sign-Up failed.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-[var(--color-mm-subtle)]/30 py-12 px-4 font-sans">
-      <MymindNav/>
-      <div className="w-full max-w-[860px] bg-white rounded-[24px] shadow-2xl shadow-mm-dark/5 flex flex-col md:flex-row overflow-hidden border border-mm-border">
+    <div className="min-h-screen w-full flex items-center justify-center bg-mm-subtle/30 py-12 px-4 font-sans">
+      <MymindNav />
+      <div className="w-full max-w-[860px] bg-white rounded-[24px] shadow-2xl shadow-mm-dark/5 flex flex-col md:flex-row overflow-hidden border border-mm-border animate-fadeIn">
         {/* Left Side: Brand Hero Background Gradient */}
         <div className="w-full md:w-[45%] min-h-[200px] md:min-h-full relative overflow-hidden flex items-center justify-center p-8">
-          {/* Glowing Filled Orange Circle using GradientGlow */}
           <GradientGlow
             position="absolute"
             size="380px"
@@ -67,11 +138,19 @@ function SignupPage() {
             blur="10px"
             inset="-20%"
             maskCenter={true}
-            glowOpacity={0.85} // Make the colors shine and glow brightly
+            glowOpacity={0.85}
             style={
               isMobile
-                ? { left: "50%", top: "100%", transform: "translate(-50%, -50%)" }
-                : { left: "100%", top: "50%", transform: "translate(-50%, -50%)" }
+                ? {
+                    left: "50%",
+                    top: "100%",
+                    transform: "translate(-50%, -50%)",
+                  }
+                : {
+                    left: "100%",
+                    top: "50%",
+                    transform: "translate(-50%, -50%)",
+                  }
             }
           />
         </div>
@@ -80,21 +159,65 @@ function SignupPage() {
         <div className="w-full md:w-[55%] bg-white p-8 md:p-12 flex flex-col justify-between relative z-20">
           <div>
             {/* Header */}
-            <div className="text-center md:text-left mb-8">
-              <h1 className="font-serif text-3xl font-semibold text-mm-dark leading-tight">Create Account</h1>
+            <div className="text-center md:text-left mb-6">
+              <h1 className="font-serif text-3xl font-semibold text-mm-dark leading-tight">
+                Create Account
+              </h1>
               <p className="text-sm text-mm-gray mt-2 font-sans font-normal">
                 Please fill in details to create your account.
               </p>
             </div>
 
+            {/* Error Message */}
+            {error && (
+              <div className="mb-4 p-3 text-xs rounded-xl bg-mm-red/10 border border-mm-red/20 text-mm-red text-center font-semibold animate-fadeIn">
+                {error}
+              </div>
+            )}
+
+            {/* Google Sign-up Button */}
+            <button
+              type="button"
+              onClick={handleGoogleSignup}
+              disabled={isLoading}
+              className="w-full py-3.5 bg-white border border-mm-border hover:bg-mm-subtle/50 active:scale-[0.98] text-mm-dark font-semibold text-sm rounded-[14px] transition-all flex items-center justify-center cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg
+                className="w-5 h-5 mr-2.5"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                  fill="#4285F4"
+                />
+                <path
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                  fill="#34A853"
+                />
+                <path
+                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                  fill="#FBBC05"
+                />
+                <path
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                  fill="#EA4335"
+                />
+              </svg>
+              Sign up with Google
+            </button>
+
+            {/* Separator line */}
+            <div className="flex items-center my-5">
+              <div className="grow border-t border-mm-border"></div>
+              <span className="px-3 text-[10px] text-mm-gray/60 font-semibold uppercase tracking-wider">
+                or
+              </span>
+              <div className="grow border-t border-mm-border"></div>
+            </div>
+
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-4">
-              {error && (
-                <div className="p-3 text-xs rounded-xl bg-mm-red/10 border border-mm-red/20 text-mm-red text-center font-semibold animate-fadeIn">
-                  {error}
-                </div>
-              )}
-
               {/* Email Input */}
               <div>
                 <label className="block text-[10px] font-semibold tracking-wider text-mm-gray uppercase mb-1.5">
@@ -108,12 +231,12 @@ function SignupPage() {
                     placeholder="name@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-transparent border-none outline-none text-sm text-mm-dark placeholder:text-mm-gray/45"
+                    className="w-full bg-transparent border-none outline-none text-sm text-mm-dark placeholder:text-mm-gray/45 font-semibold"
                   />
                 </div>
               </div>
 
-              {/* Password Input (No "Forgot?" for signup) */}
+              {/* Password Input */}
               <div>
                 <label className="block text-[10px] font-semibold tracking-wider text-mm-gray uppercase mb-1.5">
                   Password
@@ -126,12 +249,12 @@ function SignupPage() {
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-transparent border-none outline-none text-sm text-mm-dark placeholder:text-mm-gray/45"
+                    className="w-full bg-transparent border-none outline-none text-sm text-mm-dark placeholder:text-mm-gray/45 font-semibold"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="text-mm-gray/50 hover:text-mm-dark transition-colors focus:outline-none"
+                    className="text-mm-gray/50 hover:text-mm-dark transition-colors focus:outline-none cursor-pointer"
                   >
                     {showPassword ? (
                       <EyeOff className="w-5 h-5" strokeWidth={1.5} />
@@ -162,16 +285,23 @@ function SignupPage() {
 
           {/* Footer Navigation */}
           <div className="text-center mt-8">
-            <p className="text-xs text-mm-gray">
+            <p className="text-xs text-mm-gray font-semibold">
               Already have an account?{" "}
-              <Link to="/login" className="text-mm-orange font-semibold hover:underline">
+              <Link
+                to="/login"
+                className="text-mm-orange font-bold hover:underline"
+              >
                 Sign in here.
               </Link>
             </p>
             <div className="flex justify-center gap-3 mt-6 text-[10px] text-mm-gray/50 font-medium">
-              <a href="#" className="hover:text-mm-gray transition-colors">Terms of Use</a>
+              <a href="#" className="hover:text-mm-gray transition-colors">
+                Terms of Use
+              </a>
               <span>|</span>
-              <a href="#" className="hover:text-mm-gray transition-colors">Privacy Policy</a>
+              <a href="#" className="hover:text-mm-gray transition-colors">
+                Privacy Policy
+              </a>
             </div>
           </div>
         </div>

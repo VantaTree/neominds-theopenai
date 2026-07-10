@@ -1,0 +1,95 @@
+export interface Plan {
+  name: string;
+  price: string;
+  period: string;
+  action: string;
+  features: string[];
+  highlight: boolean;
+  buttonText: string;
+}
+
+const PLANS:Plan[] = [
+  {
+    name: "Basic",
+    price: "$29.99",
+    period: "/mo",
+    action: "GET STARTED",
+    features: [
+      "Website (Template)",
+      "Mobile Responsive Design",
+      "3 Posts + 1 Reel per month",
+      "AI Chatbot",
+      "AI Voice Support",
+      "Basic SEO optimization",
+      "Google Business Profile",
+      "Performance Analytics (Basic)",
+      "Monthly Reports",
+    ],
+    highlight: false,
+    buttonText: "Get started",
+  },
+  {
+    name: "Plus",
+    price: "$59.99",
+    period: "/mo",
+    action: "GET STARTED",
+    features: [
+      "Website (Customized)",
+      "5 Posts + 2 Reels per month",
+      "AI Voicebot integration",
+      "Advanced SEO optimization",
+      "Email marketing campaigns",
+      "Performance Analytics (Advanced)",
+      "Growth Consultation",
+      "Includes all Basic features",
+    ],
+    highlight: true,
+    buttonText: "Get started",
+  },
+  {
+    name: "Pro",
+    price: "$89.99",
+    period: "/mo",
+    action: "GET STARTED",
+    features: [
+      "Modern 3D Website design",
+      "7 Posts + 3 Reels per month",
+      "AI Voice + Chatbot agents",
+      "Deep performance analytics",
+      "SEO + GEO + AEO optimization",
+      "Paid Ads (Google & Meta)",
+      "Performance Analytics (Deep)",
+      "Priority Support",
+      "Includes all Plus features",
+    ],
+    highlight: false,
+    buttonText: "Get started",
+  },
+  {
+    name: "Customize",
+    price: "Custom",
+    period: "",
+    action: "CONTACT US",
+    features: ["Includes Custom Add Ons", "Includes all Enterprise features"],
+    highlight: true,
+    buttonText: "Get in touch",
+  },
+];
+
+export const AddOns = [
+  "one",
+  "two",
+  "three",
+  "four",
+  "five",
+  "six",
+  "seven",
+  "three",
+  "four",
+  "five",
+  "six",
+  "seven",
+]
+
+
+export default PLANS;

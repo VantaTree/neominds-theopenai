@@ -107,7 +107,7 @@ export default function FeatureProjector() {
 
         .vintage-projection {
           overflow: hidden;
-          filter: sepia(0.35) contrast(1.1) brightness(0.9);
+          // filter: sepia(0.35) contrast(1.1) brightness(0.9);
           animation: film-flicker 0.12s infinite;
           background-color: #1a1a1a;
           box-shadow: inset 0 0 40px rgba(0,0,0,0.8), 0 10px 30px rgba(0,0,0,0.15);
