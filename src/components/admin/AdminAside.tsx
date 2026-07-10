@@ -11,6 +11,7 @@ import {
   Settings,
   X,
   Menu,
+  MessageSquare,
 } from "lucide-react";
 
 export default function AdminAside() {
@@ -60,6 +61,12 @@ export default function AdminAside() {
       href: "/admin/audit",
       isRealRoute: true,
       Icon: Shield,
+    },
+    {
+      name: "Chat",
+      href: "/admin/chat",
+      isRealRoute: true,
+      Icon: MessageSquare,
     },
     {
       name: "Settings",

@@ -68,8 +68,10 @@ function PageTransitionWrapper({ children }: { children: React.ReactNode }) {
     setPrevChildren(null);
   };
 
+  const isChatRoute = location.pathname.startsWith("/admin/chat");
+
   return (
-    <div className="relative w-full">
+    <div className={`relative w-full ${isChatRoute ? "h-full flex flex-col" : ""}`}>
       <style>{`
         @keyframes slideOutToBottom {
           0% {
@@ -101,21 +103,21 @@ function PageTransitionWrapper({ children }: { children: React.ReactNode }) {
       `}</style>
 
       {animating ? (
-        <div className="relative w-full min-h-[60vh] overflow-hidden">
+        <div className={`relative w-full overflow-hidden ${isChatRoute ? "flex-1 flex flex-col" : "min-h-[60vh]"}`}>
           {/* Old Page */}
-          <div className="absolute inset-x-0 top-0 w-full page-exit">
+          <div className={`absolute inset-x-0 top-0 w-full page-exit ${isChatRoute ? "h-full flex flex-col" : ""}`}>
             {prevChildren}
           </div>
           {/* New Page */}
           <div
-            className="w-full page-enter"
+            className={`w-full page-enter ${isChatRoute ? "flex-1 flex flex-col h-full" : ""}`}
             onAnimationEnd={handleAnimationEnd}
           >
             {displayChildren}
           </div>
         </div>
       ) : (
-        <div className="w-full">{displayChildren}</div>
+        <div className={`w-full ${isChatRoute ? "flex-1 flex flex-col h-full" : ""}`}>{displayChildren}</div>
       )}
     </div>
   );
@@ -123,6 +125,9 @@ function PageTransitionWrapper({ children }: { children: React.ReactNode }) {
 
 function RouteComponent() {
   const { queryClient } = Route.useRouteContext();
+  const location = useLocation();
+  const isChatRoute = location.pathname.startsWith("/admin/chat");
+
   return (
     <QueryClientProvider client={queryClient}>
       <div className="flex min-h-screen bg-white text-mm-dark font-sans flex-col md:flex-row">
@@ -132,7 +137,7 @@ function RouteComponent() {
         {/* Main Viewport Panel */}
         <div className="flex-1 flex flex-col min-w-0 bg-mm-bg-wrap">
           {/* Content Area */}
-          <main className="flex-1 overflow-y-auto px-6 py-8 md:px-12 md:py-10">
+          <main className={`flex-1 ${isChatRoute ? "h-screen overflow-hidden flex flex-col" : "overflow-y-auto px-6 py-8 md:px-12 md:py-10"}`}>
             <PageTransitionWrapper>
               <Outlet />
             </PageTransitionWrapper>

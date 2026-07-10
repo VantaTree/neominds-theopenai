@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Search,
   Plus,
@@ -17,6 +17,7 @@ import {
   CheckCircle2,
   Camera,
   User,
+  MessageSquare,
 } from "lucide-react";
 import { useState, useEffect, useRef, useMemo, Fragment } from "react";
 import { Avatar, PlanBadge, StatusBadge } from "@/components/admin/shared";
@@ -1592,15 +1593,31 @@ function UsersPage() {
                                                 <StatusBadge status={b.paymentStatus} />
                                               </td>
                                               <td className="py-2.5 text-right">
-                                                <button
-                                                  onClick={() => handleEditBusinessClick(b)}
-                                                  className="hover:text-mm-orange transition-colors cursor-pointer inline-flex items-center"
-                                                >
-                                                  <Edit2
-                                                    size={14}
-                                                    style={{ color: "var(--color-mm-gray)" }}
-                                                  />
-                                                </button>
+                                                <div className="flex items-center justify-end gap-2">
+                                                  <Link
+                                                    to="/admin/chat"
+                                                    search={{
+                                                      user: typeof b.userId === "string" ? b.userId : b.userId?.id || "",
+                                                      business: b.id,
+                                                    }}
+                                                    className="hover:text-mm-orange transition-colors cursor-pointer inline-flex items-center"
+                                                    title="Chat"
+                                                  >
+                                                    <MessageSquare
+                                                      size={14}
+                                                      style={{ color: "var(--color-mm-gray)" }}
+                                                    />
+                                                  </Link>
+                                                  <button
+                                                    onClick={() => handleEditBusinessClick(b)}
+                                                    className="hover:text-mm-orange transition-colors cursor-pointer inline-flex items-center"
+                                                  >
+                                                    <Edit2
+                                                      size={14}
+                                                      style={{ color: "var(--color-mm-gray)" }}
+                                                    />
+                                                  </button>
+                                                </div>
                                               </td>
                                             </tr>
                                           ))}

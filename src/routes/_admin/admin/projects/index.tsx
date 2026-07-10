@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Search, Plus, Eye, Edit2, Trash2 } from "lucide-react";
+import { Search, Plus, Eye, Edit2, Trash2, MessageSquare } from "lucide-react";
 import { statusColors } from "@/lib/mock-data";
 import type { Project } from "@/lib/schemas";
 import { Avatar, ProgressBar, StatusBadge, Card } from "@/components/admin/shared";
@@ -527,6 +527,18 @@ function ProjectsPage() {
                           </Link>
                           <Link to="/admin/projects/$id" params={{ id: p.id }} search={{ edit: true }} className="hover:opacity-70" title="Edit">
                             <Edit2 size={16} style={{ color: "var(--color-mm-gray)" }} />
+                          </Link>
+                          <Link
+                            to="/admin/chat"
+                            search={{
+                              user: userIdStr || "",
+                              business: (typeof p.businessId === "string" ? p.businessId : biz?.id) || "",
+                              domain: p.domain,
+                            }}
+                            className="hover:opacity-70 text-mm-orange"
+                            title="Chat"
+                          >
+                            <MessageSquare size={16} />
                           </Link>
                           <button onClick={() => setConfirmDelete(p)} className="hover:opacity-70 text-mm-red" title="Delete">
                             <Trash2 size={16} />
