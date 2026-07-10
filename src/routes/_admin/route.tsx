@@ -71,7 +71,7 @@ function PageTransitionWrapper({ children }: { children: React.ReactNode }) {
   const isChatRoute = location.pathname.startsWith("/admin/chat");
 
   return (
-    <div className={`relative w-full ${isChatRoute ? "h-full flex flex-col" : ""}`}>
+    <div className={`relative w-full ${isChatRoute ? "h-full flex flex-col overflow-hidden" : ""}`}>
       <style>{`
         @keyframes slideOutToBottom {
           0% {
@@ -105,19 +105,19 @@ function PageTransitionWrapper({ children }: { children: React.ReactNode }) {
       {animating ? (
         <div className={`relative w-full overflow-hidden ${isChatRoute ? "flex-1 flex flex-col" : "min-h-[60vh]"}`}>
           {/* Old Page */}
-          <div className={`absolute inset-x-0 top-0 w-full page-exit ${isChatRoute ? "h-full flex flex-col" : ""}`}>
+          <div className={`absolute inset-x-0 top-0 w-full page-exit ${isChatRoute ? "h-full flex flex-col overflow-hidden" : ""}`}>
             {prevChildren}
           </div>
           {/* New Page */}
           <div
-            className={`w-full page-enter ${isChatRoute ? "flex-1 flex flex-col h-full" : ""}`}
+            className={`w-full page-enter ${isChatRoute ? "flex-1 flex flex-col h-full overflow-hidden" : ""}`}
             onAnimationEnd={handleAnimationEnd}
           >
             {displayChildren}
           </div>
         </div>
       ) : (
-        <div className={`w-full ${isChatRoute ? "flex-1 flex flex-col h-full" : ""}`}>{displayChildren}</div>
+        <div className={`w-full ${isChatRoute ? "flex-1 flex flex-col h-full overflow-hidden" : ""}`}>{displayChildren}</div>
       )}
     </div>
   );
@@ -130,14 +130,14 @@ function RouteComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="flex min-h-screen bg-white text-mm-dark font-sans flex-col md:flex-row">
+      <div className={`flex bg-white text-mm-dark font-sans flex-col md:flex-row ${isChatRoute ? "h-screen overflow-hidden" : "min-h-screen"}`}>
         {/* Responsive Sidebar & Mobile Header Bar */}
         <AdminAside />
 
         {/* Main Viewport Panel */}
-        <div className="flex-1 flex flex-col min-w-0 bg-mm-bg-wrap">
+        <div className={`flex-1 flex flex-col min-w-0 bg-mm-bg-wrap ${isChatRoute ? "h-full overflow-hidden" : ""}`}>
           {/* Content Area */}
-          <main className={`flex-1 ${isChatRoute ? "h-screen overflow-hidden flex flex-col" : "overflow-y-auto px-6 py-8 md:px-12 md:py-10"}`}>
+          <main className={`flex-1 ${isChatRoute ? "h-full overflow-hidden flex flex-col" : "overflow-y-auto px-6 py-8 md:px-12 md:py-10"}`}>
             <PageTransitionWrapper>
               <Outlet />
             </PageTransitionWrapper>

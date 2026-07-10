@@ -57,7 +57,7 @@ export default function ClientDashboardDesktop() {
 
         {/* Card 3: Automation (Locked for Basic/None, Unlocked for Pro+) */}
         <PlanGate
-          requiredPlan="Plus"
+          requiredPlan="Pro"
           fallback={
             <BusinessTaskCard
               name="Automation"

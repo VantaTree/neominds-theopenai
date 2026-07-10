@@ -89,8 +89,10 @@ function PageTransitionWrapper({ children }: { children: React.ReactNode }) {
     setPrevChildren(null);
   };
 
+  const isChatRoute = location.pathname.startsWith("/chat");
+
   return (
-    <div className="relative w-full h-full flex-1 flex flex-col">
+    <div className={`relative w-full h-full flex-1 flex flex-col ${isChatRoute ? "overflow-hidden" : ""}`}>
       <style>{`
         @keyframes slideOutToBottom {
           0% {
@@ -124,16 +126,16 @@ function PageTransitionWrapper({ children }: { children: React.ReactNode }) {
       {animating ? (
         <div className="relative w-full h-full flex-1 overflow-hidden">
           {/* Old Page */}
-          <div className="absolute inset-x-0 top-0 w-full h-full flex flex-col page-exit">
+          <div className={`absolute inset-x-0 top-0 w-full h-full flex flex-col page-exit ${isChatRoute ? "overflow-hidden" : ""}`}>
             {prevChildren}
           </div>
           {/* New Page */}
-          <div className="w-full h-full flex flex-col page-enter" onAnimationEnd={handleAnimationEnd}>
+          <div className={`w-full h-full flex flex-col page-enter ${isChatRoute ? "overflow-hidden" : ""}`} onAnimationEnd={handleAnimationEnd}>
             {displayChildren}
           </div>
         </div>
       ) : (
-        <div className="w-full h-full flex-1 flex flex-col">{displayChildren}</div>
+        <div className={`w-full h-full flex-1 flex flex-col ${isChatRoute ? "overflow-hidden" : ""}`}>{displayChildren}</div>
       )}
     </div>
   );

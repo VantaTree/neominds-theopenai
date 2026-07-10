@@ -20,14 +20,22 @@ export function BusinessProvider({
   initialBusinesses?: Business[];
 }) {
   const [businesses, setBusinesses] = useState<Business[]>(initialBusinesses);
-  const [activeBusiness, setActiveBusiness] = useState<Business | null>(() => {
-    if (initialBusinesses.length > 0) {
-      const savedId = typeof window !== "undefined" ? localStorage.getItem("active_business_id") : null;
-      return initialBusinesses.find((b) => b.id === savedId) || initialBusinesses[0];
-    }
-    return null;
-  });
+  const [activeBusiness, setActiveBusiness] = useState<Business | null>(
+    initialBusinesses.length > 0 ? initialBusinesses[0] : null
+  );
   const [loading, setLoading] = useState(initialBusinesses.length === 0);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && initialBusinesses.length > 0) {
+      const savedId = localStorage.getItem("active_business_id");
+      if (savedId) {
+        const found = initialBusinesses.find((b) => b.id === savedId);
+        if (found) {
+          setActiveBusiness(found);
+        }
+      }
+    }
+  }, [initialBusinesses]);
 
   const fetchBusinesses = async () => {
     try {

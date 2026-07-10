@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
 import {
   LayoutDashboard,
@@ -13,11 +13,57 @@ import {
   Menu,
   MessageSquare,
 } from "lucide-react";
+import { getStreamCredentialsFn } from "@/lib/server-functions";
 
 export default function AdminAside() {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
   const currentPath = location.pathname;
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    let client: any = null;
+
+    async function checkUnread() {
+      try {
+        const creds = await getStreamCredentialsFn();
+        if (!active) return;
+        const { StreamChat } = await import("stream-chat");
+        client = StreamChat.getInstance(creds.apiKey);
+        const userState = await client.connectUser(
+          { id: "admin", name: "Admin Manager" },
+          creds.token
+        );
+        if (!active) return;
+        setUnreadChatCount(userState.me.total_unread_count || 0);
+
+        // Listen for new messages / read receipts globally to update count in real-time
+        client.on((event: any) => {
+          if (!active) return;
+          if (
+            event.type === "message.new" ||
+            event.type === "message.read" ||
+            event.type === "notification.message_new" ||
+            event.type === "notification.mark_read"
+          ) {
+            setUnreadChatCount(client.user?.total_unread_count || 0);
+          }
+        });
+      } catch (err) {
+        // Silent error
+      }
+    }
+
+    checkUnread();
+
+    return () => {
+      active = false;
+      if (client) {
+        client.disconnectUser();
+      }
+    };
+  }, []);
 
   const menuItems = [
     {
@@ -177,6 +223,11 @@ export default function AdminAside() {
                     }`}
                   />
                   {item.name}
+                  {item.name === "Chat" && unreadChatCount > 0 && (
+                    <span className="ml-auto h-5 min-w-5 px-1.5 flex items-center justify-center bg-mm-green text-white text-[9px] font-black rounded-full shadow-xs animate-pulse">
+                      {unreadChatCount}
+                    </span>
+                  )}
                 </Link>
               );
             } else {
@@ -189,6 +240,11 @@ export default function AdminAside() {
                 >
                   <Icon className="h-4.5 w-4.5 text-mm-gray/80 group-hover:text-mm-dark group-hover:scale-105 transition-all duration-200" />
                   {item.name}
+                  {item.name === "Chat" && unreadChatCount > 0 && (
+                    <span className="ml-auto h-5 min-w-5 px-1.5 flex items-center justify-center bg-mm-green text-white text-[9px] font-black rounded-full shadow-xs animate-pulse">
+                      {unreadChatCount}
+                    </span>
+                  )}
                 </a>
               );
             }
