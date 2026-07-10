@@ -9,6 +9,7 @@ interface Testimonial {
   projectDescription: string;
   text: string;
   imagePath: string;
+  clientLogo: string;
   x: number; // coordinate in virtual space
   y: number;
 }
@@ -28,6 +29,7 @@ const rawTestimonials = [
     projectDescription: "AI Resume Screener — Fit Scores & Red Flags",
     text: "The n8n pipeline saves our recruitment team hours every day. Candidates are pre-screened in seconds and graded against live criteria with zero data entry.",
     imagePath: "/images/portfolio/hr-automation.png",
+    clientLogo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&h=120&q=80",
   },
   {
     id: "mindspace_ai",
@@ -36,6 +38,7 @@ const rawTestimonials = [
     projectDescription: "TARA: 24/7 AI Companion PWA",
     text: "TARA offers an incredibly empathetic and low-latency voice and text chat experience for mental wellness. Elevating support with Firebase and ElevenLabs integration.",
     imagePath: "/images/portfolio/mindspace.jpeg",
+    clientLogo: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&h=120&q=80",
   },
   {
     id: "flooringinc_analytics",
@@ -44,6 +47,7 @@ const rawTestimonials = [
     projectDescription: "360° E‑commerce Analytics & AI Queries",
     text: "Connecting Magento to this MySQL dashboard with a Groq NL-to-SQL bot allows anyone on our team to query sales and revenue in plain English.",
     imagePath: "/images/portfolio/dashboard.png",
+    clientLogo: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=120&h=120&q=80",
   },
   {
     id: "project_buddy",
@@ -52,6 +56,7 @@ const rawTestimonials = [
     projectDescription: "Project Buddy: Slack-integrated RAG Bot",
     text: "Finding answers in our Google Drive document corpus was reduced from 20 minutes to 2 seconds. The Slack thread context integration is exceptionally intuitive.",
     imagePath: "/images/portfolio/project-buddy.png",
+    clientLogo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&h=120&q=80",
   },
   {
     id: "mindspace_ai_dashboard",
@@ -60,6 +65,7 @@ const rawTestimonials = [
     projectDescription: "Mindspace.ai Admin Control Panel",
     text: "Our admin team now has absolute control over users, notifications, and engagement analytics. The AI-generated push notifications are a massive productivity boost.",
     imagePath: "/images/portfolio/mindspace-dashboard.png",
+    clientLogo: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=120&h=120&q=80",
   },
   {
     id: "ai_co_teacher",
@@ -68,6 +74,7 @@ const rawTestimonials = [
     projectDescription: "AI Co-Teacher: Lesson & Quiz Generator",
     text: "Teachers at our academy cut lesson planning and quiz prep time down by 80%. We can track attendance and struggling students from a single screen.",
     imagePath: "/images/portfolio/coteacher.png",
+    clientLogo: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=120&h=120&q=80",
   },
   {
     id: "ai_lms",
@@ -76,6 +83,7 @@ const rawTestimonials = [
     projectDescription: "AI LMS: Adaptive Learning & Auto-Grading",
     text: "The adaptive quiz engine and NLP auto-grading are outstanding. Our dropout alerts have significantly improved student completion rates.",
     imagePath: "/images/portfolio/lms.png",
+    clientLogo: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=120&h=120&q=80",
   },
   {
     id: "smart_fee_management",
@@ -84,6 +92,7 @@ const rawTestimonials = [
     projectDescription: "Smart Fee Management & Receipts",
     text: "Automating payment links and WhatsApp reminders cleared our outstanding collections. The financial forecasting dashboard gives perfect clarity.",
     imagePath: "/images/portfolio/fee collection.png",
+    clientLogo: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=120&h=120&q=80",
   },
   {
     id: "ai_social_posts",
@@ -92,6 +101,7 @@ const rawTestimonials = [
     projectDescription: "AI Social Posts: One-Prompt Creator",
     text: "Creating both the graphics and captions in a single prompt and scheduling them directly has scaled our social media presence without extra hires.",
     imagePath: "/images/portfolio/market.jpeg",
+    clientLogo: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=120&h=120&q=80",
   },
   {
     id: "aristotle_practice_buddy",
@@ -100,6 +110,7 @@ const rawTestimonials = [
     projectDescription: "Aristotle: AI Practice & Handwriting Buddy",
     text: "Real-time handwriting recognition and mistake detection guide students step-by-step, turning study struggles into rewarding breakthroughs.",
     imagePath: "/images/portfolio/Aristotle.png",
+    clientLogo: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&w=120&h=120&q=80",
   },
   {
     id: "expirio_inventory",
@@ -108,6 +119,7 @@ const rawTestimonials = [
     projectDescription: "Expirio: Expiry Alerts & Recipe Suggester",
     text: "Expirio completely resolved duplicate orders and inventory waste in our pantry and kitchen. The recipe generator uses up expiring stock beautifully.",
     imagePath: "/images/portfolio/expirio.jpg",
+    clientLogo: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=120&h=120&q=80",
   },
   {
     id: "ai_complaint_classifier",
@@ -116,6 +128,7 @@ const rawTestimonials = [
     projectDescription: "AI Complaint Classifier & Router",
     text: "By reading ticket sentiment and routing complaints automatically, our manual triage workload was cut by 60%. Highly recommend.",
     imagePath: "/images/portfolio/complaint.jpeg",
+    clientLogo: "https://images.unsplash.com/photo-1501196354995-cbb51c65aaea?auto=format&fit=crop&w=120&h=120&q=80",
   },
   {
     id: "ai_textbook_tool",
@@ -124,6 +137,7 @@ const rawTestimonials = [
     projectDescription: "AI Textbook Platform: Summaries & Flashcards",
     text: "Uploading 400-page textbooks and instantly generating matching quizzes and active-recall flashcards has transformed student revision.",
     imagePath: "/images/portfolio/textbook.png",
+    clientLogo: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&h=120&q=80",
   },
   {
     id: "ai_sql_chatbot",
@@ -132,6 +146,7 @@ const rawTestimonials = [
     projectDescription: "AI SQL Chatbot: Natural Language Analytics",
     text: "Our business users can query complex databases in plain English without writing a single line of SQL. Secure, quick, and robust.",
     imagePath: "/images/portfolio/mysql.png",
+    clientLogo: "https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?auto=format&fit=crop&w=120&h=120&q=80",
   },
   {
     id: "aqsa_calligraphy",
@@ -140,6 +155,7 @@ const rawTestimonials = [
     projectDescription: "Luxury Calligraphy Portfolio & Commissions",
     text: "The Gold/Glassmorphism SPA represents my artwork perfectly. The secure Gmail SMTP commission flow has made custom bookings seamless.",
     imagePath: "/images/portfolio/aqsa.png",
+    clientLogo: "https://images.unsplash.com/photo-1554151228-14d9def656e4?auto=format&fit=crop&w=120&h=120&q=80",
   },
   {
     id: "neo_emotion",
@@ -148,6 +164,7 @@ const rawTestimonials = [
     projectDescription: "Neo Emotion: Real-Time Face Emotion AI",
     text: "Real-time webcam facial expression analysis with ResNet-18 has given our interactive apps a stable, high-performance empathy layer.",
     imagePath: "/images/portfolio/neomotion.png",
+    clientLogo: "https://images.unsplash.com/photo-1500048993953-d23a436266cf?auto=format&fit=crop&w=120&h=120&q=80",
   },
   {
     id: "aimc_assistant",
@@ -156,6 +173,7 @@ const rawTestimonials = [
     projectDescription: "AIMC Assistant: Urdu-English Waqf Chat",
     text: "Having a bilingual document assistant has made navigating dense legal judgments and Supreme Court files in Urdu and English incredibly easy.",
     imagePath: "/images/portfolio/aimc.png",
+    clientLogo: "https://images.unsplash.com/photo-1513956589380-bad6acb9b9d4?auto=format&fit=crop&w=120&h=120&q=80",
   },
   {
     id: "neominds_attendance",
@@ -164,6 +182,7 @@ const rawTestimonials = [
     projectDescription: "NeoMinds Attendance: Privacy-First Face AI",
     text: "An enterprise attendance kiosk using face embeddings instead of raw photos is the perfect balance of payroll accuracy and employee privacy.",
     imagePath: "/images/portfolio/attendence.png",
+    clientLogo: "https://images.unsplash.com/photo-1542909168-82c3e7fdca5c?auto=format&fit=crop&w=120&h=120&q=80",
   },
 ];
 
@@ -285,6 +304,7 @@ const BUBBLE_TESTIMONIALS = rawTestimonials.map((t, i) => ({
   name: t.name,
   role: t.projectDescription,
   result: t.businessName,
+  logo: t.clientLogo,
   position: i % 3 === 0 ? "left" : i % 3 === 1 ? "center" : "right",
   delay: (i % 4) * 0.1,
 }));
@@ -911,22 +931,20 @@ export function MymindTestimonials() {
                           <div className="size-2 rounded-full bg-white/80 shadow-xs ml-4.5" />
                         </div>
 
-                        {/* Metadata */}
+                        {/* Metadata info */}
                         <div className="flex items-center gap-3">
+                          {/* Business Logo */}
+                          <div className="size-10 rounded-full overflow-hidden border border-mm-border bg-white flex items-center justify-center shrink-0 shadow-sm">
+                            <img src={t.logo} alt={t.result} className="size-full object-cover" />
+                          </div>
                           <div className="text-left">
-                            <p className="text-xs font-semibold text-mm-dark font-sans">
+                            <p className="text-xs font-bold text-mm-dark font-sans">
                               {t.name}
                             </p>
-                            <p className="text-xs text-mm-gray font-sans mt-0.5">
-                              {t.role}
+                            <p className="text-[10px] font-semibold text-mm-orange font-sans mt-0.5">
+                              {t.result}
                             </p>
                           </div>
-                          <span
-                            className="shrink-0 text-center rounded-full px-2.5 py-0.5 text-[10px] font-bold"
-                            style={{ background: "#fff0ec", color: "#FF5924" }}
-                          >
-                            {t.result}
-                          </span>
                         </div>
                       </div>
                     ) : (
@@ -937,22 +955,20 @@ export function MymindTestimonials() {
                           <div className="size-2 rounded-full bg-white/80 shadow-xs mr-4.5" />
                         </div>
 
-                        {/* Metadata */}
+                        {/* Metadata info */}
                         <div className="flex items-center gap-3 flex-row-reverse">
+                          {/* Business Logo */}
+                          <div className="size-10 rounded-full overflow-hidden border border-mm-border bg-white flex items-center justify-center shrink-0 shadow-sm">
+                            <img src={t.logo} alt={t.result} className="size-full object-cover" />
+                          </div>
                           <div className="text-right">
-                            <p className="text-xs font-semibold text-mm-dark font-sans">
+                            <p className="text-xs font-bold text-mm-dark font-sans">
                               {t.name}
                             </p>
-                            <p className="text-xs text-mm-gray font-sans mt-0.5">
-                              {t.role}
+                            <p className="text-[10px] font-semibold text-mm-orange font-sans mt-0.5">
+                              {t.result}
                             </p>
                           </div>
-                          <span
-                            className="shrink-0 text-center rounded-full px-2.5 py-0.5 text-[10px] font-bold"
-                            style={{ background: "#fff0ec", color: "#FF5924" }}
-                          >
-                            {t.result}
-                          </span>
                         </div>
                       </div>
                     )}
@@ -1031,22 +1047,20 @@ export function MymindTestimonials() {
                           <div className="size-2 rounded-full bg-white/80 shadow-xs ml-4.5" />
                         </div>
 
-                        {/* Metadata */}
+                        {/* Metadata info */}
                         <div className="flex items-center gap-3">
+                          {/* Business Logo */}
+                          <div className="size-10 rounded-full overflow-hidden border border-mm-border bg-white flex items-center justify-center shrink-0 shadow-sm">
+                            <img src={t.logo} alt={t.result} className="size-full object-cover" />
+                          </div>
                           <div className="text-left">
-                            <p className="text-xs font-semibold text-mm-dark font-sans">
+                            <p className="text-xs font-bold text-mm-dark font-sans">
                               {t.name}
                             </p>
-                            <p className="text-xs text-mm-gray font-sans mt-0.5">
-                              {t.role}
+                            <p className="text-[10px] font-semibold text-mm-orange font-sans mt-0.5">
+                              {t.result}
                             </p>
                           </div>
-                          <span
-                            className="shrink-0 text-center rounded-full px-2.5 py-0.5 text-[10px] font-bold"
-                            style={{ background: "#fff0ec", color: "#FF5924" }}
-                          >
-                            {t.result}
-                          </span>
                         </div>
                       </div>
                     ) : (
@@ -1057,22 +1071,20 @@ export function MymindTestimonials() {
                           <div className="size-2 rounded-full bg-white/80 shadow-xs mr-4.5" />
                         </div>
 
-                        {/* Metadata */}
+                        {/* Metadata info */}
                         <div className="flex items-center gap-3 flex-row-reverse">
+                          {/* Business Logo */}
+                          <div className="size-10 rounded-full overflow-hidden border border-mm-border bg-white flex items-center justify-center shrink-0 shadow-sm">
+                            <img src={t.logo} alt={t.result} className="size-full object-cover" />
+                          </div>
                           <div className="text-right">
-                            <p className="text-xs font-semibold text-mm-dark font-sans">
+                            <p className="text-xs font-bold text-mm-dark font-sans">
                               {t.name}
                             </p>
-                            <p className="text-xs text-mm-gray font-sans mt-0.5">
-                              {t.role}
+                            <p className="text-[10px] font-semibold text-mm-orange font-sans mt-0.5">
+                              {t.result}
                             </p>
                           </div>
-                          <span
-                            className="shrink-0 text-center rounded-full px-2.5 py-0.5 text-[10px] font-bold"
-                            style={{ background: "#fff0ec", color: "#FF5924" }}
-                          >
-                            {t.result}
-                          </span>
                         </div>
                       </div>
                     )}
@@ -1241,14 +1253,14 @@ export function MymindTestimonials() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed right-0 top-0 bottom-0 h-full w-full md:w-1/2 bg-black/75 backdrop-blur-lg border-l border-white/10 z-50 shadow-2xl flex flex-col font-sans text-white overflow-hidden"
+              className="fixed right-0 top-0 bottom-0 h-full w-full md:w-1/2 bg-white/90 backdrop-blur-lg border-l border-mm-border z-50 shadow-2xl flex flex-col font-sans text-mm-dark overflow-hidden"
             >
               {/* Panel Header */}
-              <div className="p-6 border-b border-white/10 flex items-center justify-between">
-                <h3 className="text-lg font-bold text-white/90">Project Client Testimonials</h3>
+              <div className="p-6 border-b border-mm-border flex items-center justify-between">
+                <h3 className="text-lg font-bold text-mm-dark">Project Client Testimonial</h3>
                 <button
                   onClick={() => { setIsPanelOpen(false); setIsDropdownOpen(false); }}
-                  className="p-2 rounded-full hover:bg-white/10 text-white/60 hover:text-white transition-colors cursor-pointer"
+                  className="p-2 rounded-full hover:bg-black/5 text-mm-gray hover:text-mm-dark transition-colors cursor-pointer"
                   aria-label="Close panel"
                 >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1266,7 +1278,7 @@ export function MymindTestimonials() {
                   return (
                     <div className="space-y-6 animate-in fade-in-50 duration-300">
                       {/* Project Image - completely showed */}
-                      <div className="w-full aspect-[16/10] bg-[#1a1b20] rounded-2xl overflow-hidden border border-white/5 flex items-center justify-center">
+                      <div className="w-full aspect-[16/10] bg-mm-bg-gray/50 rounded-2xl overflow-hidden border border-mm-border flex items-center justify-center">
                         <img
                           src={activeProject.imagePath}
                           alt={activeProject.businessName}
@@ -1279,27 +1291,27 @@ export function MymindTestimonials() {
                         <span className="text-xs font-semibold uppercase tracking-widest text-mm-orange">
                           {activeProject.projectDescription}
                         </span>
-                        <h2 className="text-3xl font-extrabold tracking-tight text-white leading-tight">
+                        <h2 className="text-3xl font-extrabold tracking-tight text-mm-dark leading-tight">
                           {activeProject.businessName}
                         </h2>
-                        <div className="flex items-center gap-1.5 text-sm text-white/50 pt-1">
+                        <div className="flex items-center gap-1.5 text-sm text-mm-gray pt-1 font-medium">
                           <span>Client: {activeProject.name}</span>
-                          <span className="w-1 h-1 rounded-full bg-white/20" />
-                          <span className="text-emerald-400 font-medium">Verified Partner</span>
+                          <span className="w-1.5 h-1.5 rounded-full bg-mm-border" />
+                          <span className="text-emerald-600 font-bold">Verified Partner</span>
                         </div>
                       </div>
 
                       {/* Divider */}
-                      <div className="h-px bg-white/10" />
+                      <div className="h-px bg-mm-border" />
 
                       {/* Testimonial Quote */}
                       <div className="space-y-2">
-                        <span className="text-[10px] uppercase font-bold tracking-wider text-white/40 block">
+                        <span className="text-[10px] uppercase font-bold tracking-wider text-mm-gray block">
                           Client Feedback
                         </span>
-                        <div className="relative bg-linear-to-b from-white/[0.04] to-white/[0.01] rounded-2xl p-6 border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] overflow-hidden">
+                        <div className="relative bg-linear-to-b from-black/[0.02] to-black/[0.005] rounded-2xl p-6 border border-mm-border shadow-[inset_0_1px_1px_rgba(0,0,0,0.02)] overflow-hidden">
                           <p 
-                            className="text-lg text-white/95 leading-relaxed pl-3 pt-2 relative z-10 font-medium"
+                            className="text-lg text-mm-dark leading-relaxed pl-3 pt-2 relative z-10 font-semibold"
                             style={{ fontFamily: "'Louize', Georgia, serif", fontStyle: "italic" }}
                           >
                             {activeProject.text}

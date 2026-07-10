@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Lenis from "lenis";
 import { MymindNav } from "@/components/mymind/MymindNav";
 import { MymindHero } from "@/components/mymind/MymindHero";
@@ -44,6 +44,17 @@ export const Route = createFileRoute("/")({
 });
 
 function MymindPage() {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   useEffect(() => {
     const lenis = new Lenis({
       duration: 1.1,
@@ -89,12 +100,13 @@ function MymindPage() {
           color2="var(--color-mm-red)"
           color3="var(--color-mm-peach)"
           glowOpacity={0.8}
-          strokeWidth={170}
+          strokeWidth={isMobile ? 320 : 170}
           zIndex={-1}
           style={{
             left: "50%",
-            bottom: "-38%",
+            bottom: "-30%",
           }}
+          className="scale-110 md:scale-100"
         />
       </div>
       <MymindSmartBookmarking />

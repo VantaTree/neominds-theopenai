@@ -62,22 +62,22 @@ export function MymindNav() {
           style={
             scrolled
               ? {
-                  maxWidth: 900,
-                  margin: "12px auto",
-                  padding: "8px 20px",
-                  background: "rgba(255,255,255,0.96)",
-                  backdropFilter: "blur(16px)",
-                  WebkitBackdropFilter: "blur(16px)",
-                  borderRadius: 60,
-                  boxShadow: "0 2px 24px rgba(0,0,0,0.10)",
-                  // border: "1px solid rgba(0,0,0,0.06)",
-                  transition: "all 0.35s ease",
-                }
+                maxWidth: 900,
+                margin: "12px auto",
+                padding: "8px 20px",
+                background: "rgba(255,255,255,0.96)",
+                backdropFilter: "blur(16px)",
+                WebkitBackdropFilter: "blur(16px)",
+                borderRadius: 60,
+                boxShadow: "0 2px 24px rgba(0,0,0,0.10)",
+                // border: "1px solid rgba(0,0,0,0.06)",
+                transition: "all 0.35s ease",
+              }
               : {
-                  maxWidth: "100%",
-                  padding: "20px 24px",
-                  transition: "all 0.35s ease",
-                }
+                maxWidth: "100%",
+                padding: "20px 24px",
+                transition: "all 0.35s ease",
+              }
           }
         >
           {/* Logo */}
@@ -129,7 +129,7 @@ export function MymindNav() {
               Log in
             </Link>
             <Link
-              to={user ? "/dashboard" : "/assessment"}
+              to="/assessment"
               className="hidden md:flex rounded-full px-5 py-2 text-sm font-semibold text-white transition-all duration-200 hover:opacity-90"
               style={{
                 background: "#FF5924",
@@ -208,7 +208,7 @@ export function MymindNav() {
                   Log in
                 </Link>
                 <Link
-                  to={user ? "/dashboard" : "/signup"}
+                  to="/assessment"
                   onClick={() => setMenuOpen(false)}
                   className="flex items-center justify-center rounded-full py-3 px-5 text-xl font-medium text-white"
                   style={{ background: "#FF5924", minHeight: 44 }}

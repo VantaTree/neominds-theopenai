@@ -275,11 +275,12 @@ const CustomPlanCard = ({ plan, buttonRef, buttonCanvasRef }: Props) => {
         ref={buttonRef}
         href="#"
         onClick={handleContactUs}
-        className="flex items-center justify-center rounded-full py-3 text-xs font-bold uppercase tracking-widest transition-all duration-200 hover:opacity-90 relative overflow-hidden mt-auto"
+        className="flex items-center justify-center rounded-full py-3 text-xs font-bold uppercase tracking-widest transition-all duration-200 hover:opacity-95 hover:scale-[1.01] active:scale-[0.99] relative overflow-hidden mt-auto shadow-md"
         style={{
-          background: plan.highlight ? "#fff" : "#FF5924",
-          color: plan.highlight ? "#FF5924" : "#fff",
+          background: "#111418",
+          color: "#ffffff",
           minHeight: 44,
+          border: "1px solid rgba(255,255,255,0.15)",
         }}
       >
         <canvas

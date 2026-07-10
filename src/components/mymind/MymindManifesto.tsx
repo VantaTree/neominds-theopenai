@@ -16,7 +16,7 @@ export function MymindManifesto() {
       {/* ─── Part 1: Manifesto text (white bg) ─── */}
       <section
         className="w-full overflow-x-hidden pt-20 md:pt-28 lg:pt-36 pb-2 md:pb-3"
-        // style={{ background: "#fff" }}
+      // style={{ background: "#fff" }}
       >
         <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 text-justify">
           {/* Label */}
@@ -72,13 +72,13 @@ export function MymindManifesto() {
       {/* ─── Part 2: NO list on peach/orange gradient ─── */}
       <section
         className="w-full overflow-x-hidden py-20 md:py-12"
-        // style={{
-        //   background: `
-        //     radial-gradient(ellipse 70% 90% at 15% 60%, rgba(255, 200, 170, 0.9) 0%, transparent 65%),
-        //     radial-gradient(ellipse 60% 80% at 85% 40%, rgba(255, 180, 160, 0.8) 0%, transparent 60%),
-        //     linear-gradient(160deg, #fff0e8 0%, #ffe8d8 50%, #ffd8c8 100%)
-        //   `,
-        // }}
+      // style={{
+      //   background: `
+      //     radial-gradient(ellipse 70% 90% at 15% 60%, rgba(255, 200, 170, 0.9) 0%, transparent 65%),
+      //     radial-gradient(ellipse 60% 80% at 85% 40%, rgba(255, 180, 160, 0.8) 0%, transparent 60%),
+      //     linear-gradient(160deg, #fff0e8 0%, #ffe8d8 50%, #ffd8c8 100%)
+      //   `,
+      // }}
       >
         <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 text-center">
           {/* Large NO list */}
@@ -140,14 +140,14 @@ export function MymindManifesto() {
       {/* ─── Part 3: Welcome to theopenai ─── */}
       <section
         className="relative w-full overflow-x-hidden py-20 md:py-28 lg:py-36"
-        // style={{
-        //   background: `
-        //     radial-gradient(ellipse 65% 85% at 12% 55%, rgba(255, 90, 20, 0.78) 0%, transparent 58%),
-        //     radial-gradient(ellipse 65% 85% at 88% 45%, rgba(255, 130, 90, 0.65) 0%, transparent 58%),
-        //     radial-gradient(ellipse 50% 60% at 50% 50%, rgba(255, 180, 140, 0.4) 0%, transparent 70%),
-        //     linear-gradient(145deg, #ff7840 0%, #ff9060 40%, #ffb090 100%)
-        //   `,
-        // }}
+      // style={{
+      //   background: `
+      //     radial-gradient(ellipse 65% 85% at 12% 55%, rgba(255, 90, 20, 0.78) 0%, transparent 58%),
+      //     radial-gradient(ellipse 65% 85% at 88% 45%, rgba(255, 130, 90, 0.65) 0%, transparent 58%),
+      //     radial-gradient(ellipse 50% 60% at 50% 50%, rgba(255, 180, 140, 0.4) 0%, transparent 70%),
+      //     linear-gradient(145deg, #ff7840 0%, #ff9060 40%, #ffb090 100%)
+      //   `,
+      // }}
       >
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center">
           {/* <motion.div
@@ -191,7 +191,7 @@ export function MymindManifesto() {
               Welcome to <em>theOpenAI</em>
             </h2>
             <p
-              className="mb-8"
+              className="mb-1 md:mb-8"
               style={{
                 fontFamily: "'Louize', Georgia, serif",
                 fontSize: "clamp(1.2rem, 2.5vw, 1.8rem)",
@@ -239,6 +239,7 @@ export function MymindManifesto() {
           </motion.div>
         </div>
       </section>
+      <div className="pb-20 md:pb-20"></div>
     </>
   );
 }
