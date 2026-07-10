@@ -73,8 +73,16 @@ export default function AnimatedPlanCard({ plan, i, cardType, animate = "yes" }:
 
     texCtx.clearRect(0, 0, simWidth, simHeight);
 
-    // Plain solid background to match the card background perfectly
-    texCtx.fillStyle = `rgb(${bg.r}, ${bg.g}, ${bg.b})`;
+    if (cardType === "custom") {
+      const grad = texCtx.createLinearGradient(0, 0, simWidth, simHeight);
+      grad.addColorStop(0, "#FF3B00");
+      grad.addColorStop(0.35, "#FF5924");
+      grad.addColorStop(0.7, "#FF9224");
+      grad.addColorStop(1, "#FFE926");
+      texCtx.fillStyle = grad;
+    } else {
+      texCtx.fillStyle = `rgb(${bg.r}, ${bg.g}, ${bg.b})`;
+    }
     texCtx.fillRect(0, 0, simWidth, simHeight);
 
     const texImgData = texCtx.getImageData(0, 0, simWidth, simHeight);
@@ -476,11 +484,19 @@ export default function AnimatedPlanCard({ plan, i, cardType, animate = "yes" }:
       viewport={{ once: true, margin: "-40px" }}
       transition={{ duration: 0.4, delay: i * 0.08 }}
       whileHover={isAnimated ? { y: -5, scale: 1.03 } : undefined}
-      className="flex flex-col rounded-2xl overflow-hidden relative will-change-[filter]"
+      className="flex flex-col rounded-2xl overflow-hidden relative will-change-[filter] h-[550px]"
       style={{
-        background: plan.highlight ? "#FF5924" : "#fff",
-        border: plan.highlight ? "none" : "1px solid #E2E6EE",
-        boxShadow: plan.highlight ? "0 20px 60px rgba(255,89,36,0.25)" : "none",
+        background: cardType === "custom"
+          ? "linear-gradient(135deg, #FF3B00 0%, #FF5924 35%, #FF9224 70%, #FFE926 100%)"
+          : plan.highlight
+            ? "#FF5924"
+            : "#fff",
+        border: cardType === "custom" || plan.highlight ? "none" : "1px solid #E2E6EE",
+        boxShadow: cardType === "custom"
+          ? "0 20px 60px rgba(255,89,36,0.3)"
+          : plan.highlight
+            ? "0 20px 60px rgba(255,89,36,0.25)"
+            : "none",
         filter: isAnimated && isWarping ? `url(#${filterId})` : "none",
       }}
     >

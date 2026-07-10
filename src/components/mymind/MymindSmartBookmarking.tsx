@@ -4,7 +4,7 @@ import FeatureProjector from "../FeatureProjector";
 export function MymindSmartBookmarking() {
   return (
     <section
-      className="w-full overflow-x-hidden py-20 md:py-28"
+      className="w-full overflow-x-hidden"
       id="smart-bookmarking"
     >
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 text-center mb-12">
