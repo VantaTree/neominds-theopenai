@@ -25,7 +25,7 @@ function AddOnCard({ addon, accent }: AddOnCardProps) {
         transform: "translate3d(-50%, -50%, 0) scale(0.65)",
         opacity: 0,
       }}
-      className="absolute top-1/2 left-1/2 size-54 sm:size-72 md:size-90 rounded-full flex flex-col items-center justify-center p-6 text-center bg-white/25 border border-white/10 backdrop-blur-md shadow-[inset_0_20px_30px_rgba(255,255,255,0.05),0_20px_30px_rgba(0,0,0,0.12)] hover:border-mm-orange/40 hover:bg-white/35 transition-colors duration-500 group cursor-grab active:cursor-grabbing select-none will-change-transform"
+      className="absolute top-1/2 left-1/2 size-44 sm:size-58 md:size-72 rounded-full flex flex-col items-center justify-center p-5 text-center bg-white/25 border border-white/10 backdrop-blur-md shadow-[inset_0_15px_25px_rgba(255,255,255,0.05),0_15px_25px_rgba(0,0,0,0.12)] hover:border-mm-orange/40 hover:bg-white/35 transition-colors duration-500 group cursor-grab active:cursor-grabbing select-none will-change-transform"
     >
       {/* Glossy reflection layers */}
       <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.06),transparent_60%)] pointer-events-none" />
@@ -38,15 +38,15 @@ function AddOnCard({ addon, accent }: AddOnCardProps) {
 
       <div className="space-y-3 relative z-10 flex flex-col items-center">
         {/* Glowing Icon Badge */}
-        <div className="flex h-11 w-11 sm:h-14 sm:w-14 md:h-18 md:w-18 items-center justify-center rounded-full bg-mm-pink/10 text-mm-orange group-hover:bg-mm-pink/20 transition-colors duration-300 shadow-inner">
-          <IconComponent className="h-5 w-5 sm:h-6.5 sm:w-6.5 md:h-8 md:w-8 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-6" />
+        <div className="flex h-9 w-9 sm:h-11 sm:w-11 md:h-14 md:w-14 items-center justify-center rounded-full bg-mm-pink/10 text-mm-orange group-hover:bg-mm-pink/20 transition-colors duration-300 shadow-inner">
+          <IconComponent className="h-4.5 w-4.5 sm:h-5.5 sm:w-5.5 md:h-6.5 md:w-6.5 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-6" />
         </div>
 
-        <h4 className="text-sm sm:text-lg md:text-2xl font-extrabold text-mm-dark tracking-tight max-w-[85%]">
+        <h4 className="text-xs sm:text-sm md:text-lg font-extrabold text-mm-dark tracking-tight max-w-[85%]">
           {addon.name}
         </h4>
 
-        <p className="text-[10px] sm:text-xs md:text-sm text-mm-dark/50 leading-relaxed max-w-[85%]">
+        <p className="text-[9px] sm:text-[10px] md:text-xs text-mm-dark/50 leading-normal max-w-[85%] mt-1">
           {addon.description}
         </p>
       </div>
@@ -155,8 +155,8 @@ export default function AddOnsSection({}: Props) {
         const cards = container.children;
         const width =
           container.getBoundingClientRect().width || window.innerWidth;
-        const radiusX = Math.min(380, Math.max(160, width * 0.28));
-        const radiusZ = 120;
+        const radiusX = Math.min(300, Math.max(130, width * 0.24));
+        const radiusZ = 95;
 
         for (let i = 0; i < cards.length; i++) {
           const card = cards[i] as HTMLDivElement;
@@ -169,7 +169,7 @@ export default function AddOnsSection({}: Props) {
 
           // Bobbing wave effect
           const time = now * 0.0012;
-          const yBob = Math.sin(time + i * (Math.PI / 2)) * 14;
+          const yBob = Math.sin(time + i * (Math.PI / 2)) * 8;
 
           const cosTilt = Math.cos(tiltRef.current);
           const sinTilt = Math.sin(tiltRef.current);
@@ -177,7 +177,7 @@ export default function AddOnsSection({}: Props) {
           const x = xFlat * cosTilt - yBob * sinTilt;
           const y = xFlat * sinTilt + yBob * cosTilt;
 
-          const scale = 0.65 + ((z + radiusZ) / (2 * radiusZ)) * 0.35;
+          const scale = 0.55 + ((z + radiusZ) / (2 * radiusZ)) * 0.30;
           const opacity = 0.35 + ((z + radiusZ) / (2 * radiusZ)) * 0.65;
           const zIndex = Math.round(((z + radiusZ) / (2 * radiusZ)) * 100);
 
@@ -316,15 +316,12 @@ export default function AddOnsSection({}: Props) {
           #fff0ec
         `,
       }}
-      className="relative w-full py-24 overflow-hidde"
+      className="relative w-full py-16 overflow-hidden"
     >
       <div className="max-w-6xl mx-auto px-6 relative z-10">
         <div className="text-center space-y-3">
-          <h3 className="text-3xl sm:text-4xl font-extrabold text-mm-dark tracking-tight pt-2">
-            Add ons{" "}
-            {/* <span className="bg-linear-to-r from-mm-orange to-mm-pink bg-clip-text text-transparent">
-              ons
-            </span> */}
+          <h3 className="text-2xl sm:text-3xl font-extrabold text-mm-dark tracking-tight pt-2">
+            Add ons
           </h3>
         </div>
 
@@ -335,7 +332,7 @@ export default function AddOnsSection({}: Props) {
           onTouchStart={onTouchStart}
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
-          className="relative w-full h-[360px] sm:h-[400px] mt-16 overflow-visible"
+          className="relative w-full h-[260px] sm:h-[300px] mt-10 overflow-visible"
         >
           {addOns.map((addon) => (
             <AddOnCard

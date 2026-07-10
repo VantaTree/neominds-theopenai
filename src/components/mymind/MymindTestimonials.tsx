@@ -1241,14 +1241,14 @@ export function MymindTestimonials() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed right-0 top-0 bottom-0 h-full w-full md:w-1/2 bg-black/75 backdrop-blur-lg border-l border-white/10 z-50 shadow-2xl flex flex-col font-sans text-white overflow-hidden"
+              className="fixed right-0 top-0 bottom-0 h-full w-full md:w-1/2 bg-white/90 backdrop-blur-lg border-l border-mm-border z-50 shadow-2xl flex flex-col font-sans text-mm-dark overflow-hidden"
             >
               {/* Panel Header */}
-              <div className="p-6 border-b border-white/10 flex items-center justify-between">
-                <h3 className="text-lg font-bold text-white/90">Project Client Testimonials</h3>
+              <div className="p-6 border-b border-mm-border flex items-center justify-between">
+                <h3 className="text-lg font-bold text-mm-dark">Project Client Testimonial</h3>
                 <button
                   onClick={() => { setIsPanelOpen(false); setIsDropdownOpen(false); }}
-                  className="p-2 rounded-full hover:bg-white/10 text-white/60 hover:text-white transition-colors cursor-pointer"
+                  className="p-2 rounded-full hover:bg-black/5 text-mm-gray hover:text-mm-dark transition-colors cursor-pointer"
                   aria-label="Close panel"
                 >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1266,7 +1266,7 @@ export function MymindTestimonials() {
                   return (
                     <div className="space-y-6 animate-in fade-in-50 duration-300">
                       {/* Project Image - completely showed */}
-                      <div className="w-full aspect-[16/10] bg-[#1a1b20] rounded-2xl overflow-hidden border border-white/5 flex items-center justify-center">
+                      <div className="w-full aspect-[16/10] bg-mm-bg-gray/50 rounded-2xl overflow-hidden border border-mm-border flex items-center justify-center">
                         <img
                           src={activeProject.imagePath}
                           alt={activeProject.businessName}
@@ -1279,27 +1279,27 @@ export function MymindTestimonials() {
                         <span className="text-xs font-semibold uppercase tracking-widest text-mm-orange">
                           {activeProject.projectDescription}
                         </span>
-                        <h2 className="text-3xl font-extrabold tracking-tight text-white leading-tight">
+                        <h2 className="text-3xl font-extrabold tracking-tight text-mm-dark leading-tight">
                           {activeProject.businessName}
                         </h2>
-                        <div className="flex items-center gap-1.5 text-sm text-white/50 pt-1">
+                        <div className="flex items-center gap-1.5 text-sm text-mm-gray pt-1 font-medium">
                           <span>Client: {activeProject.name}</span>
-                          <span className="w-1 h-1 rounded-full bg-white/20" />
-                          <span className="text-emerald-400 font-medium">Verified Partner</span>
+                          <span className="w-1.5 h-1.5 rounded-full bg-mm-border" />
+                          <span className="text-emerald-600 font-bold">Verified Partner</span>
                         </div>
                       </div>
 
                       {/* Divider */}
-                      <div className="h-px bg-white/10" />
+                      <div className="h-px bg-mm-border" />
 
                       {/* Testimonial Quote */}
                       <div className="space-y-2">
-                        <span className="text-[10px] uppercase font-bold tracking-wider text-white/40 block">
+                        <span className="text-[10px] uppercase font-bold tracking-wider text-mm-gray block">
                           Client Feedback
                         </span>
-                        <div className="relative bg-linear-to-b from-white/[0.04] to-white/[0.01] rounded-2xl p-6 border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] overflow-hidden">
+                        <div className="relative bg-linear-to-b from-black/[0.02] to-black/[0.005] rounded-2xl p-6 border border-mm-border shadow-[inset_0_1px_1px_rgba(0,0,0,0.02)] overflow-hidden">
                           <p 
-                            className="text-lg text-white/95 leading-relaxed pl-3 pt-2 relative z-10 font-medium"
+                            className="text-lg text-mm-dark leading-relaxed pl-3 pt-2 relative z-10 font-semibold"
                             style={{ fontFamily: "'Louize', Georgia, serif", fontStyle: "italic" }}
                           >
                             {activeProject.text}
