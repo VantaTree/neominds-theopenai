@@ -1,7 +1,11 @@
 import React, { useState, useRef, useEffect } from "react";
 import { createFileRoute, useNavigate, useParams, redirect } from "@tanstack/react-router";
 import ProjectLogo, { ProjectCategory } from "../../../components/client/ProjectLogo";
-import { SendHorizontal, ArrowLeft, MoreVertical, Lock, ArrowRight } from "lucide-react";
+import { SendHorizontal, ArrowLeft, Lock, ArrowRight, Check, CheckCheck } from "lucide-react";
+import { StreamChat } from "stream-chat";
+import { useBusiness } from "@/hooks/use-business";
+import { useChat } from "./route";
+import { getStreamChannelId } from "@/lib/utils";
 
 export const Route = createFileRoute("/_client/chat/$domain")({
   beforeLoad: ({ params }) => {
@@ -25,7 +29,6 @@ interface ChatMessage {
 interface ChatChannelConfig {
   name: string;
   category: ProjectCategory;
-  initialMessages: ChatMessage[];
   queries: string[];
 }
 
@@ -39,26 +42,6 @@ const CHANNELS_CONFIG: Record<string, ChatChannelConfig> = {
       "Review targeting keywords",
       "Request page speed updates",
     ],
-    initialMessages: [
-      {
-        id: 1,
-        sender: "provider",
-        text: "Hi Raj! I'm Sarah, your dedicated Website & SEO account manager. How can I help you today?",
-        timestamp: "10:00 AM",
-      },
-      {
-        id: 2,
-        sender: "client",
-        text: "Hi Sarah, I wanted to check the status of our Website Redesign. Are we on track for the June 15 deadline?",
-        timestamp: "10:02 AM",
-      },
-      {
-        id: 3,
-        sender: "provider",
-        text: "Yes, we are! The design phase is 70% complete. We will upload the preview link by tomorrow.",
-        timestamp: "10:05 AM",
-      },
-    ],
   },
   marketing: {
     name: "Marketing",
@@ -69,32 +52,11 @@ const CHANNELS_CONFIG: Record<string, ChatChannelConfig> = {
       "Add new social platform",
       "Request analytics summary",
     ],
-    initialMessages: [
-      {
-        id: 1,
-        sender: "provider",
-        text: "Hello Raj! I've uploaded the draft ad creatives for the upcoming Google Ads search campaign.",
-        timestamp: "Yesterday, 3:12 PM",
-      },
-      {
-        id: 2,
-        sender: "client",
-        text: "Awesome, let me review it. Can we try to allocate more budget to search ads next week?",
-        timestamp: "Yesterday, 3:15 PM",
-      },
-      {
-        id: 3,
-        sender: "provider",
-        text: "Absolutely! I will update the media allocation draft and send it over for your approval shortly.",
-        timestamp: "Yesterday, 3:18 PM",
-      },
-    ],
   },
   automation: {
     name: "Automation",
     category: "automation",
     queries: [],
-    initialMessages: [],
   },
 };
 
@@ -125,9 +87,10 @@ interface ChatHeaderProps {
   category: ProjectCategory;
   onlineStatusClass: string;
   onBack: () => void;
+  isTyping?: boolean;
 }
 
-function ChatHeader({ name, category, onlineStatusClass, onBack }: ChatHeaderProps) {
+function ChatHeader({ name, category, onlineStatusClass, onBack, isTyping }: ChatHeaderProps) {
   return (
     <div className="h-16 border-b border-mm-border/80 px-4 shrink-0 bg-[#F0F2F5] flex items-center justify-between select-none w-full">
       <div className="flex items-center gap-3">
@@ -146,7 +109,11 @@ function ChatHeader({ name, category, onlineStatusClass, onBack }: ChatHeaderPro
 
         <div className="flex flex-col">
           <span className="font-black text-sm text-mm-dark leading-tight">{name}</span>
-          <span className={`text-[10px] font-bold ${onlineStatusClass}`}>Online</span>
+          {isTyping ? (
+            <span className="text-[10px] font-bold text-mm-green animate-pulse">typing...</span>
+          ) : (
+            <span className={`text-[10px] font-bold ${onlineStatusClass}`}>Online</span>
+          )}
         </div>
       </div>
     </div>
@@ -155,23 +122,39 @@ function ChatHeader({ name, category, onlineStatusClass, onBack }: ChatHeaderPro
 
 // 2. Messages List Component
 interface ChatMessagesListProps {
-  messages: ChatMessage[];
+  messages: any[];
+  currentUserId: string;
   isTyping: boolean;
   clientBubbleClass: string;
   scrollRef: React.RefObject<HTMLDivElement | null>;
+  activeChannel: any;
 }
 
-function ChatMessagesList({ messages, isTyping, clientBubbleClass, scrollRef }: ChatMessagesListProps) {
+function ChatMessagesList({ messages, currentUserId, isTyping, clientBubbleClass, scrollRef, activeChannel }: ChatMessagesListProps) {
   return (
     <div
       ref={scrollRef}
       className="flex-1 overflow-y-auto px-4.5 py-5 space-y-4 bg-white w-full"
     >
-      {messages.map((msg) => {
-        const isMe = msg.sender === "client";
+      {messages.map((msg, index) => {
+        const isMe = msg.user?.id === currentUserId;
+        const timestamp = msg.created_at
+          ? new Date(msg.created_at).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })
+          : "";
+
+        const isAdminRead = () => {
+          if (!activeChannel?.state?.read?.["admin"]) return false;
+          const lastReadTime = new Date(activeChannel.state.read["admin"].last_read);
+          const msgTime = new Date(msg.created_at);
+          return msgTime <= lastReadTime;
+        };
+
         return (
           <div
-            key={msg.id}
+            key={msg.id || index}
             className={`flex w-full ${isMe ? "justify-end" : "justify-start"}`}
           >
             <div
@@ -183,7 +166,16 @@ function ChatMessagesList({ messages, isTyping, clientBubbleClass, scrollRef }: 
             >
               <p className="whitespace-pre-line leading-relaxed">{msg.text}</p>
               <span className={`block text-[9px] text-right mt-1.5 font-bold tracking-tight ${isMe ? "text-white/80" : "text-mm-gray/80"}`}>
-                {msg.timestamp}
+                {timestamp}
+                {isMe && (
+                  <span className="inline-flex ml-1.5 align-middle select-none">
+                    {isAdminRead() ? (
+                      <CheckCheck className="h-3 w-3 text-sky-400" />
+                    ) : (
+                      <Check className="h-3 w-3 text-white/60" />
+                    )}
+                  </span>
+                )}
               </span>
             </div>
           </div>
@@ -282,44 +274,104 @@ function ChatInput({
 function RouteComponent() {
   const { domain } = useParams({ from: "/_client/chat/$domain" });
   const navigate = useNavigate();
+  const { activeBusiness } = useBusiness();
+  
+  const { chatClient, loading } = useChat();
 
   const activeChatKey = domain; // "website", "marketing", "automation"
   const config = CHANNELS_CONFIG[activeChatKey] || CHANNELS_CONFIG.website;
   const theme = THEME_CONFIG[activeChatKey as keyof typeof THEME_CONFIG] || THEME_CONFIG.website;
 
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [activeChannel, setActiveChannel] = useState<any>(null);
+  const [messages, setMessages] = useState<any[]>([]);
   const [inputText, setInputText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  
+
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Maintain separate message histories for each chat channel
-  const [channelsHistory, setChannelsHistory] = useState<Record<string, ChatMessage[]>>({
-    website: CHANNELS_CONFIG.website.initialMessages,
-    marketing: CHANNELS_CONFIG.marketing.initialMessages,
-    automation: [],
-  });
-
-  // Whenever the active chat channel changes, swap message history
+  // Watch Channel when activeBusiness, activeChatKey (domain), or chatClient changes
   useEffect(() => {
-    if (activeChatKey && channelsHistory[activeChatKey]) {
-      setMessages(channelsHistory[activeChatKey]);
-    } else {
+    if (!chatClient || !activeBusiness) {
+      setActiveChannel(null);
       setMessages([]);
+      return;
     }
-    setInputText("");
+
+    const userId = chatClient.userID;
+    if (!userId) return;
+
+    const cleanId = getStreamChannelId(userId, activeBusiness.id, activeChatKey);
+
+    const channel = chatClient.channel("messaging", cleanId, {
+      members: ["admin", userId],
+      user_id: userId,
+      business_id: activeBusiness.id,
+      domain: activeChatKey,
+      userName: chatClient.user?.name || "Client User",
+      businessName: activeBusiness.businessName,
+    } as any);
+
+    let unsubscribe: any = null;
+
+    async function watchChannel() {
+      try {
+        const state = await channel.watch();
+        setActiveChannel(channel);
+        setMessages(state.messages || []);
+
+        // Mark read immediately
+        await channel.markRead();
+
+        // Listen for new messages
+        const listener = channel.on("message.new", (event: any) => {
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === event.message.id)) return prev;
+            return [...prev, event.message];
+          });
+          // Mark read on incoming message
+          channel.markRead().catch(console.error);
+        });
+
+        // Listen for read receipts
+        const readListener = channel.on("message.read", () => {
+          setMessages((prev) => [...prev]);
+        });
+
+        // Listen for typing events
+        const typingStartListener = channel.on("typing.start", (event: any) => {
+          if (event.user?.id !== userId) {
+            setIsTyping(true);
+          }
+        });
+
+        const typingStopListener = channel.on("typing.stop", (event: any) => {
+          if (event.user?.id !== userId) {
+            setIsTyping(false);
+          }
+        });
+
+        unsubscribe = () => {
+          listener.unsubscribe();
+          readListener.unsubscribe();
+          typingStartListener.unsubscribe();
+          typingStopListener.unsubscribe();
+        };
+      } catch (err) {
+        console.error("Error watching client channel:", err);
+      }
+    }
+
+    watchChannel();
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [chatClient, activeBusiness?.id, activeChatKey]);
+
+  // Reset typing indicator when domain changes
+  useEffect(() => {
     setIsTyping(false);
   }, [activeChatKey]);
-
-  // Sync messages state updates back to channelsHistory
-  useEffect(() => {
-    if (activeChatKey) {
-      setChannelsHistory((prev) => ({
-        ...prev,
-        [activeChatKey]: messages,
-      }));
-    }
-  }, [messages, activeChatKey]);
 
   // Auto-scroll to bottom of messages container
   useEffect(() => {
@@ -328,39 +380,15 @@ function RouteComponent() {
     }
   }, [messages, isTyping]);
 
-  const handleSendMessage = (textToSend: string) => {
-    if (!textToSend.trim() || !activeChatKey) return;
+  const handleSendMessage = async (textToSend: string) => {
+    if (!textToSend.trim() || !activeChannel || !chatClient) return;
 
-    const currentTime = new Date().toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-
-    const newClientMsg: ChatMessage = {
-      id: Date.now(),
-      sender: "client",
-      text: textToSend,
-      timestamp: currentTime,
-    };
-
-    setMessages((prev) => [...prev, newClientMsg]);
-    setInputText("");
-
-    // Simulate agent typing indicator and auto-reply
-    setIsTyping(true);
-    setTimeout(() => {
-      setIsTyping(false);
-      const autoReplyMsg: ChatMessage = {
-        id: Date.now() + 1,
-        sender: "provider",
-        text: `Got it! A specialist from our ${config.name} team will review your message and reply shortly.`,
-        timestamp: new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-      };
-      setMessages((prev) => [...prev, autoReplyMsg]);
-    }, 1200);
+    try {
+      setInputText("");
+      await activeChannel.sendMessage({ text: textToSend });
+    } catch (err) {
+      console.error("Failed to send message via Stream:", err);
+    }
   };
 
   const handleBackToSidebar = () => {
@@ -369,7 +397,27 @@ function RouteComponent() {
     });
   };
 
-  if (activeChatKey === "automation") {
+  if (!activeBusiness) {
+    return (
+      <div className="flex-1 w-full h-full flex flex-col items-center justify-center p-6 bg-white">
+        <span className="text-xs text-mm-gray font-bold">Please select or create a business to start chatting.</span>
+      </div>
+    );
+  }
+
+  const isAutomationLocked = activeChatKey === "automation" &&
+    activeBusiness.plan !== "Pro";
+
+  if (loading) {
+    return (
+      <div className="flex-1 w-full h-full flex flex-col items-center justify-center p-6 bg-white">
+        <div className="w-8 h-8 border-3 border-mm-orange border-t-transparent rounded-full animate-spin" />
+        <span className="text-xs text-mm-gray font-bold mt-2">Loading Chat...</span>
+      </div>
+    );
+  }
+
+  if (isAutomationLocked) {
     return (
       <div className="flex-1 w-full h-full flex flex-col items-center justify-center p-6 bg-[#F8F9FA] overflow-y-auto">
         <div className="md:hidden w-full flex items-center justify-start py-2 shrink-0 self-start mb-4">
@@ -412,7 +460,10 @@ function RouteComponent() {
             </ul>
           </div>
 
-          <button className="w-full py-3.5 bg-mm-orange hover:bg-mm-orange/95 text-white text-xs font-black rounded-2xl shadow-md transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center gap-1.5">
+          <button
+            onClick={() => navigate({ to: "/plan" })}
+            className="w-full py-3.5 bg-mm-orange hover:bg-mm-orange/95 text-white text-xs font-black rounded-2xl shadow-md transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center gap-1.5"
+          >
             <span>Upgrade to Premium</span>
             <ArrowRight className="h-4 w-4" />
           </button>
@@ -429,20 +480,32 @@ function RouteComponent() {
         category={config.category}
         onlineStatusClass={theme.onlineStatus}
         onBack={handleBackToSidebar}
+        isTyping={isTyping}
       />
 
       {/* 2. Messages List Component (Scrollable middle container) */}
       <ChatMessagesList
         messages={messages}
+        currentUserId={chatClient?.userID || ""}
         isTyping={isTyping}
         clientBubbleClass={theme.clientBubble}
         scrollRef={scrollRef}
+        activeChannel={activeChannel}
       />
 
       {/* 3. Input Message Panel Component (Pinned/Sticky at bottom) */}
       <ChatInput
         inputText={inputText}
-        setInputText={setInputText}
+        setInputText={(val) => {
+          setInputText(val);
+          if (activeChannel) {
+            if (val.trim()) {
+              activeChannel.keystroke().catch(console.error);
+            } else {
+              activeChannel.stopTyping().catch(console.error);
+            }
+          }
+        }}
         onSend={handleSendMessage}
         queries={config.queries}
         inputFocusClass={theme.inputFocus}

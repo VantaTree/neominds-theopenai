@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { Home, Folder, Building2, MessageCircle, Crown } from "lucide-react";
 import { useBusiness } from "@/hooks/use-business";
+import { getClientStreamCredentialsFn } from "@/lib/server-functions";
 
 export default function ClientBottomLinks() {
   const location = useLocation();
@@ -9,6 +10,52 @@ export default function ClientBottomLinks() {
   const { businesses, activeBusiness, setActiveBusiness, loading } = useBusiness();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    let client: any = null;
+
+    async function checkUnread() {
+      try {
+        const creds = await getClientStreamCredentialsFn();
+        if (!active) return;
+        const { StreamChat } = await import("stream-chat");
+        client = StreamChat.getInstance(creds.apiKey);
+        const userState = await client.connectUser(
+          { id: creds.uid, name: creds.name },
+          creds.token
+        );
+        if (!active) return;
+        setUnreadChatCount(userState.me.total_unread_count || 0);
+
+        // Listen for new messages / read receipts globally to update count in real-time
+        client.on((event: any) => {
+          if (!active) return;
+          if (
+            event.type === "message.new" ||
+            event.type === "message.read" ||
+            event.type === "notification.message_new" ||
+            event.type === "notification.mark_read"
+          ) {
+            setUnreadChatCount(client.user?.total_unread_count || 0);
+          }
+        });
+      } catch (err) {
+        // Silent error
+      }
+    }
+
+    checkUnread();
+
+    return () => {
+      active = false;
+      if (client) {
+        client.disconnectUser();
+      }
+    };
+  }, []);
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -46,9 +93,16 @@ export default function ClientBottomLinks() {
 
       <Link
         to="/chat"
-        className={`flex flex-col items-center justify-center space-y-1 cursor-pointer transition-colors ${location.pathname.startsWith("/chat") ? "text-mm-orange" : "text-mm-gray hover:text-mm-dark"}`}
+        className={`flex flex-col items-center justify-center space-y-1 cursor-pointer transition-colors relative ${location.pathname.startsWith("/chat") ? "text-mm-orange" : "text-mm-gray hover:text-mm-dark"}`}
       >
-        <MessageCircle className="h-4.5 w-4.5" />
+        <div className="relative">
+          <MessageCircle className="h-4.5 w-4.5" />
+          {unreadChatCount > 0 && (
+            <span className="absolute -top-1.5 -right-1.5 h-3.5 w-3.5 flex items-center justify-center bg-mm-green text-white text-[8px] font-black rounded-full shadow-xs animate-pulse">
+              {unreadChatCount}
+            </span>
+          )}
+        </div>
         <span className="text-[10px] font-extrabold tracking-wide">chat</span>
       </Link>
 

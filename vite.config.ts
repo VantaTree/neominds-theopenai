@@ -17,6 +17,7 @@ export default defineConfig({
   },
   vite: {
     server: {
+      host: "0.0.0.0",
       allowedHosts: ["talented-albacore-utterly.ngrok-free.app"],
     },
     resolve: {

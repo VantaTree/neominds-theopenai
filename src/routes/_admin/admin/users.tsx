@@ -1746,7 +1746,7 @@ function UsersPage() {
       {/* ── ADD USER MODAL ── */}
       {isAddUserOpen && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4 transition-opacity duration-300"
+          className="fixed inset-0 z-100 flex items-center justify-center p-4 transition-opacity duration-300"
           style={{ background: "rgba(0,0,0,0.2)", backdropFilter: "blur(4px)" }}
           onClick={handleAddClose}
         >
@@ -1984,7 +1984,7 @@ function UsersPage() {
       {/* ── EDIT USER MODAL ── */}
       {editingUser && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+          className="fixed inset-0 z-100 flex items-center justify-center p-4"
           style={{ background: "rgba(0,0,0,0.2)", backdropFilter: "blur(4px)" }}
           onClick={() => setEditingUser(null)}
         >
@@ -2334,7 +2334,7 @@ function UsersPage() {
       {/* ── EDIT BUSINESS MODAL ── */}
       {editingBusiness && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+          className="fixed inset-0 z-100 flex items-center justify-center p-4"
           style={{ background: "rgba(0,0,0,0.2)", backdropFilter: "blur(4px)" }}
           onClick={() => setEditingBusiness(null)}
         >

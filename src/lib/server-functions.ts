@@ -635,3 +635,73 @@ export const seedDatabaseFn = createServerFn({ method: "POST" })
     await (await getDb()).logAuditEvent("admin", "db_seeded", { collections: ["plans", "adminSettings", "users", "blogs", "businesses"] }, "Admin");
     return { success: true };
   });
+
+export const getStreamCredentialsFn = createServerFn({ method: "GET" })
+  .handler(async () => {
+    const { verifyServerSession } = await import("@/lib/server-functions");
+    const decoded = await verifyServerSession();
+    if (decoded.admin !== true) {
+      throw new Error("Unauthorized: Admin privilege required.");
+    }
+
+    const apiKey = process.env.VITE_STREAM_API_KEY || import.meta.env.VITE_STREAM_API_KEY;
+    const apiSecret = process.env.STREAM_API_SECRET || (import.meta.env as any).STREAM_API_SECRET;
+
+    if (!apiKey || !apiSecret) {
+      throw new Error("Stream credentials are not configured in environment variables.");
+    }
+
+    const { StreamChat: NodeStreamChat } = await import("stream-chat");
+    const serverClient = NodeStreamChat.getInstance(apiKey, apiSecret);
+
+    // Upsert admin user to ensure they exist in Stream
+    await serverClient.upsertUser({
+      id: "admin",
+      role: "admin",
+      name: "Admin Manager",
+    } as any);
+
+    const token = serverClient.createToken("admin");
+
+    return { apiKey, token };
+  });
+
+export const getClientStreamCredentialsFn = createServerFn({ method: "GET" })
+  .handler(async () => {
+    const { verifyServerSession } = await import("@/lib/server-functions");
+    const decoded = await verifyServerSession();
+
+    const apiKey = process.env.VITE_STREAM_API_KEY || import.meta.env.VITE_STREAM_API_KEY;
+    const apiSecret = process.env.STREAM_API_SECRET || (import.meta.env as any).STREAM_API_SECRET;
+
+    if (!apiKey || !apiSecret) {
+      throw new Error("Stream credentials are not configured in environment variables.");
+    }
+
+    const uid = decoded.uid;
+    const email = decoded.email;
+    const name = decoded.name || email?.split("@")[0] || "Client User";
+
+    const { StreamChat: NodeStreamChat } = await import("stream-chat");
+    const serverClient = NodeStreamChat.getInstance(apiKey, apiSecret);
+    
+    // Ensure both client and admin users exist in Stream to prevent watch channel failures
+    await serverClient.upsertUsers([
+      {
+        id: uid,
+        role: "user",
+        name: name,
+        email: email,
+      },
+      {
+        id: "admin",
+        role: "admin",
+        name: "Admin Manager",
+      }
+    ] as any);
+
+    const token = serverClient.createToken(uid);
+
+    return { apiKey, token, uid, name };
+  });
+

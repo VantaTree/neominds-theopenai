@@ -4,6 +4,7 @@ import { Home, Folder, Building2, Crown, Settings, ChevronDown, LogOut, User, Me
 import { useBusiness } from "@/hooks/use-business";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
+import { getClientStreamCredentialsFn } from "@/lib/server-functions";
 
 export default function ClientNav() {
   const navigate = useNavigate();
@@ -15,6 +16,52 @@ export default function ClientNav() {
   const businessDropdownRef = useRef<HTMLDivElement>(null);
   const [mobileBusinessDropdownOpen, setMobileBusinessDropdownOpen] = useState(false);
   const mobileBusinessDropdownRef = useRef<HTMLDivElement>(null);
+  
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    let client: any = null;
+
+    async function checkUnread() {
+      try {
+        const creds = await getClientStreamCredentialsFn();
+        if (!active) return;
+        const { StreamChat } = await import("stream-chat");
+        client = StreamChat.getInstance(creds.apiKey);
+        const userState = await client.connectUser(
+          { id: creds.uid, name: creds.name },
+          creds.token
+        );
+        if (!active) return;
+        setUnreadChatCount(userState.me.total_unread_count || 0);
+
+        // Listen for new messages / read receipts globally to update count in real-time
+        client.on((event: any) => {
+          if (!active) return;
+          if (
+            event.type === "message.new" ||
+            event.type === "message.read" ||
+            event.type === "notification.message_new" ||
+            event.type === "notification.mark_read"
+          ) {
+            setUnreadChatCount(client.user?.total_unread_count || 0);
+          }
+        });
+      } catch (err) {
+        // Silent error
+      }
+    }
+
+    checkUnread();
+
+    return () => {
+      active = false;
+      if (client) {
+        client.disconnectUser();
+      }
+    };
+  }, []);
 
   const [userProfile, setUserProfile] = useState({
     name: "John Doe",
@@ -121,6 +168,11 @@ export default function ClientNav() {
           >
             <MessageCircle className="h-4 w-4" />
             <span>Chat</span>
+            {unreadChatCount > 0 && (
+              <span className="ml-1 h-4.5 min-w-4.5 px-1.5 flex items-center justify-center bg-mm-green text-white text-[9px] font-black rounded-full shadow-xs animate-pulse">
+                {unreadChatCount}
+              </span>
+            )}
           </Link>
           
           {loading ? (

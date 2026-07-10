@@ -54,10 +54,8 @@ function SignupPage() {
       const token = await user.getIdToken();
 
       // Set session cookie for SSR
-      const isLocalhost =
-        window.location.hostname === "localhost" ||
-        window.location.hostname === "127.0.0.1";
-      document.cookie = `__session=${token}; path=/; max-age=3600;${isLocalhost ? "" : " Secure;"} SameSite=Lax`;
+      const isSecure = window.location.protocol === "https:";
+      document.cookie = `__session=${token}; path=/; max-age=3600;${isSecure ? " Secure;" : ""} SameSite=Lax`;
 
       // Create new user row/document referencing the auth user uid via server function
       await ensureUserDocumentFn({
@@ -99,10 +97,8 @@ function SignupPage() {
       const token = await user.getIdToken();
 
       // Set session cookie for SSR
-      const isLocalhost =
-        window.location.hostname === "localhost" ||
-        window.location.hostname === "127.0.0.1";
-      document.cookie = `__session=${token}; path=/; max-age=3600;${isLocalhost ? "" : " Secure;"} SameSite=Lax`;
+      const isSecure = window.location.protocol === "https:";
+      document.cookie = `__session=${token}; path=/; max-age=3600;${isSecure ? " Secure;" : ""} SameSite=Lax`;
 
       // Ensure user document exists in database via server function
       await ensureUserDocumentFn({
