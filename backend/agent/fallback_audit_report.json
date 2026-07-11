@@ -1,107 +1,123 @@
 {
   "executive_summary": {
-    "overall_score": 5,
-    "business_stage": "Developing",
-    "summary": "This report is a general fallback assessment generated because a detailed business analysis could not be completed. The recommendations below are based on common digital best practices followed by successful businesses.",
-    "top_strength": "The business has an opportunity to strengthen its digital presence and customer engagement.",
-    "biggest_challenge": "Limited information prevented a complete business evaluation.",
+    "overall_score": 55,
+    "summary": "This report provides a general assessment of a business's digital presence based on common industry best practices. It identifies typical strengths, challenges, and opportunities that influence online visibility, customer engagement, and long-term business growth.",
+    "top_strength": "The business has an existing foundation that can be improved through structured digital optimization.",
+    "biggest_challenge": "Limited digital optimization across website, SEO, branding, marketing, and customer engagement.",
     "growth_potential": "High"
   },
+
   "business_profile": {
     "business_name": "Business",
     "industry": "General",
-    "location": "Unknown",
-    "business_model": "Not Available",
-    "target_audience": [],
-    "revenue_sources": []
+    "location": "Not Specified",
+    "business_model": "Products and/or Services",
+    "target_audience": [
+      "Potential customers based on the business niche"
+    ],
+    "revenue_sources": [
+      "Product Sales"
+    ]
   },
+
   "business_scorecard": {
-    "overall": 5,
-    "website": 5,
-    "seo": 6,
-    "branding": 6,
-    "marketing": 5,
-    "social_media": 5,
-    "growth_readiness": 5
+    "overall": 55,
+    "website": 55,
+    "branding": 60,
+    "marketing": 55,
+    "social_media": 55,
+    "growth_readiness": 60
   },
+
   "current_status": {
     "website": {
-      "status": "Website information could not be fully analyzed. Basic optimization is recommended."
+      "status": "Existing website or digital presence with opportunities for performance, usability, and conversion improvements."
     },
     "marketing": {
-      "status": "Marketing strategy could not be evaluated. Consistent digital marketing is recommended."
+      "status": "Marketing activities exist but require better consistency and strategic execution."
     },
     "social_media": {
-      "status": "Social media presence could not be verified. Regular content publishing is recommended."
+      "status": "Social media presence can benefit from consistent posting, stronger branding, and improved engagement."
     },
     "seo": {
-      "status": "SEO performance could not be assessed. Basic SEO optimization is recommended."
+      "status": "Basic SEO improvements are recommended to increase online visibility and search rankings."
     },
     "digital_maturity": {
       "level": "Developing"
     }
   },
+
   "key_findings": {
     "strengths": [
-      "Opportunity to improve online visibility.",
-      "Potential to increase customer engagement.",
-      "Digital growth opportunities exist."
+      "Existing digital presence",
+      "Growth opportunities across multiple digital channels",
+      "Scalable business potential"
     ],
     "weaknesses": [
-      "Business data could not be fully analyzed.",
-      "Current digital performance is unknown.",
-      "Website and SEO require further evaluation."
+      "Limited SEO optimization",
+      "Inconsistent digital marketing",
+      "Website optimization opportunities",
+      "Brand consistency can be improved"
     ],
     "opportunities": [
-      "Improve website performance.",
-      "Strengthen SEO strategy.",
-      "Increase social media consistency.",
-      "Implement AI-powered customer support.",
-      "Optimize Google Business Profile."
+      "Website optimization",
+      "Google Business Profile optimization",
+      "Content marketing",
+      "AI-powered customer support",
+      "Lead generation automation"
     ],
     "threats": [
-      "Increasing online competition.",
-      "Reduced customer engagement.",
-      "Missed digital growth opportunities."
+      "Increasing digital competition",
+      "Reduced online visibility",
+      "Missed customer acquisition opportunities",
+      "Changing customer expectations"
     ]
   },
+
   "risk_assessment": {
     "overall_risk": "Medium",
-    "risk_score": 5,
+    "risk_score": 60,
     "top_risks": [
-      "Limited online visibility.",
-      "Weak digital marketing consistency.",
-      "Potential customer acquisition challenges."
+      "Low search visibility",
+      "Inconsistent marketing",
+      "Weak customer engagement",
+      "Growing digital competition"
     ]
   },
+
   "competitor_analysis": {
-    "competitive_score": 6,
-    "major_competitors": [],
-    "key_advantage": "Opportunity to differentiate through improved digital presence and customer experience.",
-    "largest_gap": "Unable to compare competitors due to insufficient business information."
+    "competitive_score": 55,
+    "major_competitors": [
+      "Local Competitors",
+      "Regional Competitors",
+      "Online Industry Competitors"
+    ],
+    "key_advantage": "Opportunity to differentiate through better customer experience, branding, SEO, and automation.",
+    "largest_gap": "Digital marketing consistency and online visibility."
   },
+
   "priority_actions": [
     {
       "priority": 1,
-      "title": "Improve Website Performance",
+      "title": "Optimize Website Performance and User Experience",
       "impact": "High",
       "difficulty": "Medium"
     },
     {
       "priority": 2,
-      "title": "Strengthen SEO",
+      "title": "Improve SEO and Search Visibility",
       "impact": "High",
       "difficulty": "Medium"
     },
     {
       "priority": 3,
-      "title": "Maintain Consistent Social Media",
+      "title": "Maintain Consistent Social Media Content",
       "impact": "Medium",
       "difficulty": "Easy"
     },
     {
       "priority": 4,
-      "title": "Implement AI Chatbot & Automation",
+      "title": "Implement AI Customer Support and Automation",
       "impact": "High",
       "difficulty": "Medium"
     },
@@ -112,43 +128,54 @@
       "difficulty": "Easy"
     }
   ],
+
   "recommended_services": [
     "Website Optimization",
     "SEO Optimization",
     "Branding Improvements",
     "Social Media Management",
     "Google Business Profile Optimization",
-    "AI Chatbot Integration",
-    "Content Marketing"
+    "Content Marketing",
+    "Email Marketing",
+    "AI Chatbot & Automation"
   ],
+
   "roadmap": {
     "30_days": [
-      "Review website performance.",
-      "Implement basic SEO improvements.",
-      "Create a social media content plan."
+      "Optimize website performance",
+      "Implement basic SEO improvements",
+      "Set up or optimize Google Business Profile",
+      "Create a social media content plan"
     ],
     "60_days": [
-      "Improve branding consistency.",
-      "Publish regular content.",
-      "Increase customer engagement."
+      "Publish consistent content",
+      "Strengthen branding",
+      "Improve search rankings",
+      "Increase customer engagement"
     ],
     "90_days": [
-      "Implement AI automation.",
-      "Monitor performance metrics.",
-      "Scale digital marketing initiatives."
+      "Implement AI automation",
+      "Monitor analytics and KPIs",
+      "Optimize lead generation",
+      "Scale digital marketing efforts"
     ]
   },
+
   "recommended_plan": {
-    "plan_name": "Basic Plan",
+    "plan_name": "BASIC PLAN",
     "monthly_price": 30,
-    "confidence": 80,
-    "reason": "A Basic Plan provides the essential digital services most businesses require when detailed analysis is unavailable.",
+    "confidence": 75,
+    "reason": "The Basic Plan provides the essential digital services most businesses need to establish a professional online presence and improve customer engagement while remaining cost-effective.",
     "expected_results": [
-      "Improved online presence.",
-      "Better customer engagement.",
-      "Enhanced search visibility.",
-      "Stronger digital foundation."
+      "Improved online visibility",
+      "Better customer engagement",
+      "Higher search rankings",
+      "Stronger brand credibility",
+      "Increased customer inquiries"
     ]
   },
-  "addons": []
-}
+
+  "add_ons": {
+    "service": ""
+  }
+}

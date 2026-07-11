@@ -8,14 +8,14 @@ type Props = {
   plan: Plan;
   i: number;
   cardType: string;
-  animate?: "yes" | "no";
+  animate?: boolean;
 };
 
 const simWidth = 96;
 const simHeight = 144;
 const size = simWidth * simHeight;
 
-export default function AnimatedPlanCard({ plan, i, cardType, animate = "yes" }: Props) {
+export default function AnimatedPlanCard({ plan, i, cardType = "default", animate = true }: Props) {
   const [isWarping, setIsWarping] = useState(false);
 
   const cardRef = useRef<HTMLDivElement | null>(null);
@@ -469,7 +469,7 @@ export default function AnimatedPlanCard({ plan, i, cardType, animate = "yes" }:
     lastMousePos.current = { x: 0, y: 0, time: 0 };
   };
 
-  const isAnimated = animate === "yes";
+  const isAnimated = animate === true;
 
   return (
     <motion.div

@@ -704,6 +704,9 @@ marketing_agent = Agent(
         "reason": "",
         "expected_results": [],
     },
+    "add_ons": {
+        "service": "" 
+    } 
     }
 
     ==================================================

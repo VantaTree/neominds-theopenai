@@ -1,7 +1,6 @@
-import React from "react";
-import { Monitor, Megaphone, Zap } from "lucide-react";
+import { Monitor, Megaphone, Zap, FileText } from "lucide-react";
 
-export type ProjectCategory = "seo" | "marketing" | "automation";
+export type ProjectCategory = "seo" | "marketing" | "automation" | "report";
 
 interface ProjectLogoProps {
   category: ProjectCategory;
@@ -10,6 +9,11 @@ interface ProjectLogoProps {
 }
 
 const CATEGORY_CONFIG = {
+  report: {
+    icon: FileText,
+    iconColor: "text-mm-orange",
+    iconBg: "bg-mm-orange/10 border border-mm-orange/20",
+  },
   seo: {
     icon: Monitor,
     iconColor: "text-blue-600",

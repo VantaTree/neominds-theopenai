@@ -50,7 +50,7 @@ export function MymindDownloads() {
             <AnimatedPlanCard key={plan.name} plan={plan} i={i} cardType="default" />
           ))}
           {PLANS.slice(3, 4).map((plan, i) => (
-            <AnimatedPlanCard key={plan.name} plan={plan} i={i} cardType="custom" animate="no" />
+            <AnimatedPlanCard key={plan.name} plan={plan} i={i} cardType="custom" animate={false} />
           ))}
         </div>
 

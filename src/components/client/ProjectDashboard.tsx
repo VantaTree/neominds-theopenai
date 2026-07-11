@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { ListTodo, CheckCircle2, Lock, Check } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import ProjectLogo from "./ProjectLogo";
+import Report from "../Report";
 
 interface TimelineTask {
   id: string;
@@ -16,7 +17,7 @@ interface TimelineTask {
 interface ProjectData {
   id: string;
   name: string;
-  category: "seo" | "marketing" | "automation";
+  category: "seo" | "marketing" | "automation" | "report";
   progress: number;
   tasks: TimelineTask[];
   locked?: boolean;
@@ -24,8 +25,15 @@ interface ProjectData {
 
 const DUMMY_PROJECTS: ProjectData[] = [
   {
+    id: "report",
+    name: "Report",
+    category: "report",
+    progress: 100,
+    tasks: [],
+  },
+  {
     id: "seo",
-    name: "Website and SEO",
+    name: "Website",
     category: "seo",
     progress: 87,
     tasks: [
@@ -178,6 +186,13 @@ interface ProjectDashboardProps {
 }
 
 const CATEGORY_THEMES = {
+  report: {
+    primary: "#FF5924",
+    badgeClass: "bg-mm-orange/10 text-mm-orange border border-mm-orange/20",
+    iconBoxClass: "bg-mm-orange/10 border border-mm-orange/20 text-mm-orange",
+    textAccentClass: "text-mm-orange",
+    gradient: "linear-gradient(90deg, #FF5924 0%, #FF8A65 100%)",
+  },
   seo: {
     primary: "#2563EB",
     badgeClass: "bg-blue-50 text-blue-600 border border-blue-100",
@@ -270,6 +285,10 @@ export function ProjectDashboard({
         {projects.map((project) => {
           const isActive = project.id === activeProject.id;
           const config = {
+            report: {
+              activeBorder: "border-mm-orange",
+              activeText: "text-mm-orange",
+            },
             seo: {
               activeBorder: "border-blue-600",
               activeText: "text-blue-600",
@@ -307,21 +326,27 @@ export function ProjectDashboard({
       </div>
 
       {/* Title and Badge Header */}
-      <div className="flex items-center gap-3.5">
-        <ProjectLogo category={activeProject.category} size="md" />
-        <div className="flex items-center gap-3">
-          <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-[#111418] font-sans">
-            {activeProject.name}
-          </h2>
-          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${theme.badgeClass}`}>
-            {activeProject.locked ? "locked" : "in progress"}
-          </span>
+      {activeProject.category !== "report" && (
+        <div className="flex items-center gap-3.5">
+          <ProjectLogo category={activeProject.category} size="md" />
+          <div className="flex items-center gap-3">
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-[#111418] font-sans">
+              {activeProject.name}
+            </h2>
+            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${theme.badgeClass}`}>
+              {activeProject.locked ? "locked" : "in progress"}
+            </span>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Main Content Area */}
       <div className="relative w-full">
-        {/* KPI Metrics Row */}
+        {activeProject.category === "report" ? (
+          <Report apiUrl={apiUrl} />
+        ) : (
+          <>
+            {/* KPI Metrics Row */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
           {/* Total Tasks Card */}
           <div className="bg-white border border-[#E2E6EE] rounded-3xl p-6 flex items-center justify-between shadow-xs">
@@ -545,7 +570,9 @@ export function ProjectDashboard({
             </button>
           </div>
         )}
-      </div>
+      </>
+    )}
+  </div>
     </div>
   );
 }

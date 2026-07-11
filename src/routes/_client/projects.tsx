@@ -17,7 +17,7 @@ export const Route = createFileRoute("/_client/projects")({
 function RouteComponent() {
   const { activeCard } = Route.useSearch();
   const navigate = useNavigate();
-  const [activeProjectId, setActiveProjectId] = useState<string>("seo");
+  const [activeProjectId, setActiveProjectId] = useState<string>("report");
   const [showUpgrade, setShowUpgrade] = useState(false);
 
   // If redirected with activeCard from dashboard, set state and check if it's automation (locked)
