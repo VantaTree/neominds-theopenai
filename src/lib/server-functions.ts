@@ -289,6 +289,70 @@ export const savePaymentsFn = createServerFn({ method: "POST" })
     return (await getDb()).savePayments(data);
   });
 
+export const refundPaymentFn = createServerFn({ method: "POST" })
+  .validator((d: unknown) => z.string().parse(d))
+  .handler(async ({ data: paymentId }) => {
+    const decoded = await verifyServerSession();
+    if (decoded.admin !== true) {
+      throw new Error("Unauthorized: Only admins can refund payments.");
+    }
+    const db = await getDb();
+    const payments = await db.getPayments();
+    const payment = payments.find((p) => p.id === paymentId);
+    if (!payment) {
+      throw new Error("Payment not found.");
+    }
+    payment.status = "Refunded";
+    await db.savePayments([payment]);
+
+    await db.logAuditEvent(
+      decoded.uid,
+      "payment_refunded",
+      { paymentId, amount: payment.amount, currency: payment.currency },
+      decoded.name || decoded.email || "Admin"
+    );
+    return { success: true, payment };
+  });
+
+export const sendPaymentReminderFn = createServerFn({ method: "POST" })
+  .validator((d: { paymentId: string; clientEmail: string }) => d)
+  .handler(async ({ data }) => {
+    const decoded = await verifyServerSession();
+    if (decoded.admin !== true) {
+      throw new Error("Unauthorized: Only admins can send payment reminders.");
+    }
+    const db = await getDb();
+
+    // Simulate email dispatch
+    console.log(`[Email Dispatch Simulation] Sending payment reminder for payment ID ${data.paymentId} to ${data.clientEmail}`);
+
+    await db.logAuditEvent(
+      decoded.uid,
+      "payment_reminder_sent",
+      { paymentId: data.paymentId, recipientEmail: data.clientEmail },
+      decoded.name || decoded.email || "Admin"
+    );
+    return { success: true };
+  });
+
+export const logCsvExportFn = createServerFn({ method: "POST" })
+  .validator((d: { recordCount: number }) => d)
+  .handler(async ({ data }) => {
+    const decoded = await verifyServerSession();
+    if (decoded.admin !== true) {
+      throw new Error("Unauthorized: Only admins can log administrative actions.");
+    }
+    const db = await getDb();
+
+    await db.logAuditEvent(
+      decoded.uid,
+      "payments_csv_exported",
+      { recordCount: data.recordCount },
+      decoded.name || decoded.email || "Admin"
+    );
+    return { success: true };
+  });
+
 // ==================== SETTINGS ====================
 
 export const getNotificationSettingsFn = createServerFn({ method: "GET" })

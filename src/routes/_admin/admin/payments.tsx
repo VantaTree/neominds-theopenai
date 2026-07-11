@@ -7,44 +7,57 @@ import {
 } from "@/components/admin/shared";
 import {
   AlertCircle,
-  DollarSign,
+  Coins,
   Clock,
   AlertTriangle,
   Search,
   Download,
   CheckCircle2,
-  PauseCircle,
-  ArrowUpCircle,
-  FileText,
   X,
   ChevronDown,
   ArrowUpDown,
   Loader2,
   Mail,
-  ChevronLeft,
-  ArrowLeft,
   Copy,
   Calendar,
   DownloadCloud,
   SearchX,
+  Building2,
+  Users2,
+  TrendingUp,
+  FileCheck,
+  ArrowRight,
+  Check,
+  CheckCircle,
+  Sparkles,
 } from "lucide-react";
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   getPaymentsFn,
-  savePaymentsFn,
+  getUsersFn,
+  getBusinessesFn,
+  getPlansFn,
+  refundPaymentFn,
+  sendPaymentReminderFn,
+  logCsvExportFn,
 } from "@/lib/server-functions";
-import type { Payment } from "@/lib/schemas";
+import type { Payment, User, Business, Plan } from "@/lib/schemas";
 import { AdminLoader } from "@/components/AdminLoader";
 
 export const Route = createFileRoute("/_admin/admin/payments")({
-  head: () => ({ meta: [{ title: "Payments — GrowConsult AI" }] }),
+  head: () => ({ meta: [{ title: "Payments Management — GrowConsult AI" }] }),
   loader: async () => {
     try {
-      const payments = await getPaymentsFn();
-      return { payments };
+      const [payments, users, businesses, plans] = await Promise.all([
+        getPaymentsFn(),
+        getUsersFn(),
+        getBusinessesFn(),
+        getPlansFn(),
+      ]);
+      return { payments, users, businesses, plans };
     } catch (err) {
       console.error("Loader failed to fetch payments data:", err);
-      return { payments: [] };
+      return { payments: [], users: [], businesses: [], plans: [] };
     }
   },
   pendingComponent: AdminLoader,
@@ -52,2037 +65,1433 @@ export const Route = createFileRoute("/_admin/admin/payments")({
   component: PaymentsPage,
 });
 
+// Custom component to render avatars with URL support and initials fallback
+function EntityAvatar({
+  imageUrl,
+  name,
+  size = 32,
+  isBusiness = false,
+}: {
+  imageUrl?: string;
+  name: string;
+  size?: number;
+  isBusiness?: boolean;
+}) {
+  const [imageError, setImageError] = useState(false);
+
+  if (imageUrl && !imageError) {
+    return (
+      <img
+        src={imageUrl}
+        alt={name}
+        onError={() => setImageError(true)}
+        className="rounded-full object-cover shrink-0 border border-gray-100"
+        style={{ width: size, height: size }}
+      />
+    );
+  }
+
+  return <Avatar name={name} size={size} />;
+}
+
 function PaymentsPage() {
-  const { payments: initialPayments } = Route.useLoaderData();
+  const {
+    payments: initialPayments,
+    users,
+    businesses,
+    plans,
+  } = Route.useLoaderData();
   const [paymentsData, setPaymentsData] = useState<Payment[]>(initialPayments);
-  const [selectedClientId, setSelectedClientId] = useState("");
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [modalOpen, setModalOpen] = useState<string | null>(null);
-  const [toast, setToast] = useState<React.ReactNode | null>(null);
-  const [bannerState, setBannerState] = useState<
-    "alert" | "loading" | "success" | "hidden"
-  >("alert");
-  const [targetReminderUser, setTargetReminderUser] = useState<any>(null);
-  const [targetInvoiceUser, setTargetInvoiceUser] = useState<any>(null);
-  const [isAnnual, setIsAnnual] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(
+    null,
+  );
+
+  // Search & Filters
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All Status");
+  const [planFilter, setPlanFilter] = useState("All Plans");
+
+  // Period filter for the first row of KPI cards
+  const [kpiPeriod, setKpiPeriod] = useState("All Time");
+
+  // Sorting
+  const [sortField, setSortField] = useState<"timestamp" | "amount" | "status">(
+    "timestamp",
+  );
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+
+  // UI States
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error" | "info";
+  } | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isSendingReminder, setIsSendingReminder] = useState<string | null>(
+    null,
+  );
+  const [isRefunding, setIsRefunding] = useState(false);
 
   useEffect(() => {
     setPaymentsData(initialPayments);
   }, [initialPayments]);
 
-  const resolvePaymentDetails = (p: Payment | null) => {
-    if (!p) return null;
-    const usr = typeof p.userId === "object" && p.userId !== null ? p.userId : null;
-    const biz = typeof p.businessId === "object" && p.businessId !== null ? p.businessId : null;
-    const client = usr?.fullName || biz?.businessName || "Unknown Client";
-    const business = biz?.businessName || "Unknown Business";
-    const email = usr?.email || "";
-    const phone = usr?.phone || "";
-    const plan = (biz?.plan || "None") as string;
-    const amount = `$${p.amount.toFixed(2)}`;
-    const amountNumber = p.amount;
-    const date = p.timestamp ? new Date(p.timestamp).toLocaleDateString() : "";
-    const time = p.timestamp
-      ? new Date(p.timestamp).toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        })
-      : "";
-    const invoiceId = p.gatewayInfo?.orderId || `INV-${p.id.replace(/\D/g, "") || "1024"}`;
-    return {
-      ...p,
-      paymentId: p.id,
-      client,
-      business,
-      email,
-      phone,
-      plan,
-      amount,
-      amountNumber,
-      date,
-      time,
-      invoiceId,
-      user: usr,
-      status: p.status as string,
-    };
-  };
-
-  const clientList = useMemo(() => {
-    const map = new Map<string, any>();
-    paymentsData.forEach((p) => {
-      const details = resolvePaymentDetails(p);
-      if (!details) return;
-      
-      const client = details.client;
-      if (client && !map.has(client)) {
-        const id = client.toLowerCase().replace(/\s+/g, "-");
-        map.set(client, {
-          id,
-          name: client,
-          business: details.business || "",
-          email: details.email || `${id}@example.com`,
-          phone: details.phone || "+1 (555) 000-0000",
-          plan: details.plan || "",
-          status: details.status || "Paid",
-          amountDue: details.status === "Overdue" ? details.amount : "$0.00",
-          joinedDate: details.date || "Today",
-          totalPaid: paymentsData
-            .filter((x) => {
-              const xDetails = resolvePaymentDetails(x);
-              return xDetails?.client === client && xDetails?.status === "Paid";
-            })
-            .reduce(
-              (acc, x) => acc + x.amount,
-              0,
-            ),
-          totalPending: paymentsData
-            .filter((x) => {
-              const xDetails = resolvePaymentDetails(x);
-              return xDetails?.client === client && xDetails?.status === "Pending";
-            })
-            .reduce(
-              (acc, x) => acc + x.amount,
-              0,
-            ),
-          totalOverdue: paymentsData
-            .filter((x) => {
-              const xDetails = resolvePaymentDetails(x);
-              return xDetails?.client === client && xDetails?.status === "Overdue";
-            })
-            .reduce(
-              (acc, x) => acc + x.amount,
-              0,
-            ),
-        });
-      }
-    });
-    return Array.from(map.values());
-  }, [paymentsData]);
-
-  useEffect(() => {
-    if (clientList.length > 0 && !selectedClientId) {
-      setSelectedClientId(clientList[0].id);
-    }
-  }, [clientList, selectedClientId]);
-
-  const selectedClient = useMemo(() => {
-    return (
-      clientList.find((c) => c.id === selectedClientId) ||
-      clientList[0] || {
-        id: "",
-        name: "No Client",
-        business: "None",
-        email: "",
-        phone: "",
-        plan: "",
-        status: "Paid",
-        amountDue: "$0.00",
-        joinedDate: "None",
-        totalPaid: 0,
-        totalPending: 0,
-        totalOverdue: 0,
-      }
-    );
-  }, [clientList, selectedClientId]);
-
-  const alerts = useMemo(() => {
-    return clientList
-      .filter((c) => c.status === "Overdue")
-      .map((c) => ({
-        name: c.name,
-        company: c.business,
-        amount:
-          typeof c.amountDue === "number"
-            ? `$${c.amountDue.toFixed(2)}`
-            : c.amountDue,
-        days: "Payment overdue",
-        plan: c.plan,
-      }));
-  }, [clientList]);
-
-  const [isDownloading, setIsDownloading] = useState(false);
-  const [isExportingCsv, setIsExportingCsv] = useState(false);
-  const [sortOpen, setSortOpen] = useState(false);
-  const [sortOption, setSortOption] = useState<string | null>(null);
-  const sortRef = useRef<HTMLDivElement>(null);
-
-  const [planFilter, setPlanFilter] = useState("All Plans");
-  const [statusFilter, setStatusFilter] = useState("All Status");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isPlanOpen, setIsPlanOpen] = useState(false);
-  const [isStatusOpen, setIsStatusOpen] = useState(false);
-  const planRef = useRef<HTMLDivElement>(null);
-  const statusRef = useRef<HTMLDivElement>(null);
-
-  const [tableYear, setTableYear] = useState("All Years");
-  const [tableMonth, setTableMonth] = useState("All Months");
-
-  const [sidebarYear, setSidebarYear] = useState("All Years");
-  const [sidebarMonth, setSidebarMonth] = useState("All Months");
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (sortRef.current && !sortRef.current.contains(event.target as Node))
-        setSortOpen(false);
-      if (planRef.current && !planRef.current.contains(event.target as Node))
-        setIsPlanOpen(false);
-      if (
-        statusRef.current &&
-        !statusRef.current.contains(event.target as Node)
-      )
-        setIsStatusOpen(false);
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
+  // Autoclose Toast
   useEffect(() => {
     if (toast) {
-      const t = setTimeout(() => setToast(null), 3500);
-      return () => clearTimeout(t);
+      const timer = setTimeout(() => setToast(null), 4000);
+      return () => clearTimeout(timer);
     }
   }, [toast]);
 
-  const sortedData = useMemo(() => {
-    let data = paymentsData.map(p => resolvePaymentDetails(p)!).filter((p) => {
-      const matchPlan =
-        planFilter === "All Plans" ||
-        (planFilter === "Basic Plan" &&
-          (p.plan === "Basic" || p.plan === "Basic Plan")) ||
-        (planFilter === "Plus Plan" &&
-          (p.plan === "Plus" || p.plan === "Plus Plan")) ||
-        (planFilter === "Pro Plan" &&
-          (p.plan === "Pro" ||
-            p.plan === "Pro Plan" ||
-            p.plan === "Growth" ||
-            p.plan === "Growth Plan"));
-      const matchStatus =
+  // Lock body scroll when drawer is open
+  useEffect(() => {
+    if (selectedPaymentId) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [selectedPaymentId]);
+
+  // Helper to copy text to clipboard
+  const handleCopyText = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    setToast({
+      message: `Copied ${label} to clipboard!`,
+      type: "success",
+    });
+  };
+
+  // Helper to format currency
+  const formatCurrency = (amount: number, currencyCode: string = "INR") => {
+    return new Intl.NumberFormat(currencyCode === "INR" ? "en-IN" : "en-US", {
+      style: "currency",
+      currency: currencyCode,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  };
+
+  // Utility to filter payments by selected period
+  const filterByPeriod = (pDate: any, period: string) => {
+    const now = new Date();
+    const paymentDate = new Date(pDate);
+    if (period === "This Month") {
+      return (
+        paymentDate.getMonth() === now.getMonth() &&
+        paymentDate.getFullYear() === now.getFullYear()
+      );
+    }
+    if (period === "Last Month") {
+      const lastMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+      const year =
+        now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+      return (
+        paymentDate.getMonth() === lastMonth &&
+        paymentDate.getFullYear() === year
+      );
+    }
+    if (period === "This Year") {
+      return paymentDate.getFullYear() === now.getFullYear();
+    }
+    return true; // All Time
+  };
+
+  // Resolve raw payment data to include relations + deletion safety check
+  const resolvedPayments = useMemo(() => {
+    return paymentsData.map((p) => {
+      const userIdStr =
+        typeof p.userId === "string" ? p.userId : (p.userId as any)?.id || "";
+      const businessIdStr =
+        typeof p.businessId === "string"
+          ? p.businessId
+          : (p.businessId as any)?.id || "";
+
+      const resolvedUser = users.find((u) => u.id === userIdStr);
+      const resolvedBusiness = businesses.find((b) => b.id === businessIdStr);
+
+      return {
+        ...p,
+        resolvedUser,
+        resolvedBusiness,
+        userIdStr,
+        businessIdStr,
+        isUserDeleted: !resolvedUser,
+        isBusinessDeleted: !resolvedBusiness,
+        clientName: resolvedUser
+          ? resolvedUser.fullName
+          : `Deleted User (${userIdStr.slice(0, 6)})`,
+        businessName: resolvedBusiness
+          ? resolvedBusiness.businessName
+          : `Deleted Business (${businessIdStr.slice(0, 6)})`,
+        plan: resolvedBusiness ? resolvedBusiness.plan : "None",
+      };
+    });
+  }, [paymentsData, users, businesses]);
+
+  // First Row KPIs (Filtered by Period)
+  const firstRowMetrics = useMemo(() => {
+    const filtered = resolvedPayments.filter((p) =>
+      filterByPeriod(p.timestamp, kpiPeriod),
+    );
+
+    const paidPayments = filtered.filter((p) => p.status === "Paid");
+    const pendingPayments = filtered.filter((p) => p.status === "Pending");
+    const refundedPayments = filtered.filter((p) => p.status === "Refunded");
+
+    const totalRevenue = paidPayments.reduce((sum, p) => sum + p.amount, 0);
+    const pendingRevenue = pendingPayments.reduce(
+      (sum, p) => sum + p.amount,
+      0,
+    );
+    const refundedRevenue = refundedPayments.reduce(
+      (sum, p) => sum + p.amount,
+      0,
+    );
+    const avgTicket =
+      filtered.length > 0
+        ? filtered.reduce((sum, p) => sum + p.amount, 0) / filtered.length
+        : 0;
+
+    return {
+      totalRevenue,
+      pendingRevenue,
+      refundedRevenue,
+      avgTicket,
+      count: filtered.length,
+    };
+  }, [resolvedPayments, kpiPeriod]);
+
+  // Second Row KPIs (Business Owner Portfolio Metrics)
+  const secondRowMetrics = useMemo(() => {
+    const totalCount = businesses.length;
+    const paidCount = businesses.filter((b) => b.plan !== "None").length;
+
+    // Calculate overdue accounts dynamically (Failed, or Pending past 14 days grace period)
+    const overdueCount = businesses.filter((b) => {
+      const isFailed = b.paymentStatus === "Failed";
+      const isPendingOverdue =
+        b.paymentStatus === "Pending" &&
+        Date.now() - new Date(b.updatedAt).getTime() > 14 * 24 * 60 * 60 * 1000;
+      return isFailed || isPendingOverdue;
+    }).length;
+
+    // Avg LTV: Total Revenue / Total Businesses count
+    const totalPaidEver = resolvedPayments
+      .filter((p) => p.status === "Paid")
+      .reduce((sum, p) => sum + p.amount, 0);
+    const avgLtv = totalCount > 0 ? totalPaidEver / totalCount : 0;
+
+    return {
+      totalBusinesses: totalCount,
+      paidPlans: paidCount,
+      overdueAccounts: overdueCount,
+      avgLtv,
+    };
+  }, [resolvedPayments, businesses]);
+
+  // Horizontal list of overdue items
+  const overdueItems = useMemo(() => {
+    const map = new Map<string, any>();
+
+    // Helper to find dynamic monthly price of a plan
+    const getPlanPrice = (planName: string) => {
+      const resolvedPlan = plans.find((pl) => pl.id === planName.toLowerCase());
+      if (resolvedPlan) {
+        // Multiply by 100 if we are working with INR representation in frontend
+        return resolvedPlan.priceMonthly * 100;
+      }
+      return planName === "Pro"
+        ? 8900
+        : planName === "Plus"
+          ? 5900
+          : planName === "Basic"
+            ? 2900
+            : 0;
+    };
+
+    // 1. Scan overdue payments dynamically (Failed, or Pending past 14 days)
+    resolvedPayments.forEach((p) => {
+      const isFailed = p.status === "Failed";
+      const isPendingOverdue =
+        p.status === "Pending" &&
+        Date.now() - new Date(p.timestamp).getTime() > 14 * 24 * 60 * 60 * 1000;
+
+      if (isFailed || isPendingOverdue) {
+        map.set(p.businessIdStr, {
+          id: p.id,
+          amount: p.amount,
+          plan: p.plan,
+          timestamp: p.timestamp,
+          clientName: p.clientName,
+          businessName: p.businessName,
+          email: p.resolvedUser?.email || "N/A",
+          phone: p.resolvedUser?.phone || "N/A",
+          imageUrl: p.resolvedUser?.image,
+          isUserDeleted: p.isUserDeleted,
+          isBusinessDeleted: p.isBusinessDeleted,
+        });
+      }
+    });
+
+    // 2. Scan businesses flagged overdue to ensure we cover everything
+    businesses.forEach((b) => {
+      const isFailed = b.paymentStatus === "Failed";
+      const isPendingOverdue =
+        b.paymentStatus === "Pending" &&
+        Date.now() - new Date(b.updatedAt).getTime() > 14 * 24 * 60 * 60 * 1000;
+
+      if ((isFailed || isPendingOverdue) && !map.has(b.id)) {
+        const usr = users.find(
+          (u) =>
+            u.id === (typeof b.userId === "string" ? b.userId : b.userId?.id),
+        );
+        map.set(b.id, {
+          id: `auto_${b.id}`,
+          amount: getPlanPrice(b.plan),
+          plan: b.plan,
+          timestamp: b.updatedAt,
+          clientName: usr ? usr.fullName : "Deleted User",
+          businessName: b.businessName,
+          email: usr?.email || "N/A",
+          phone: usr?.phone || "N/A",
+          imageUrl: usr?.image,
+          isUserDeleted: !usr,
+          isBusinessDeleted: false,
+        });
+      }
+    });
+
+    return Array.from(map.values());
+  }, [resolvedPayments, businesses, users, plans]);
+
+  // Main table list with filters & sorting applied
+  const finalTableData = useMemo(() => {
+    let result = resolvedPayments.filter((p) => {
+      const matchesSearch =
+        searchQuery === "" ||
+        p.clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.businessName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.id.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchesStatus =
         statusFilter === "All Status" || p.status === statusFilter;
 
-      const yearStr = tableYear === "All Years" ? "" : tableYear;
-      const matchYear = !yearStr || p.date.includes(yearStr);
+      const matchesPlan = planFilter === "All Plans" || p.plan === planFilter;
 
-      const monthStr =
-        tableMonth === "All Months" ? "" : tableMonth.substring(0, 3);
-      const matchMonth = !monthStr || p.date.includes(monthStr);
-
-      const term = searchQuery.toLowerCase();
-      const matchSearch =
-        !term ||
-        p.client.toLowerCase().includes(term) ||
-        (p.user?.fullName || "").toLowerCase().includes(term) ||
-        p.business.toLowerCase().includes(term) ||
-        p.id.toLowerCase().includes(term) ||
-        p.invoiceId.toLowerCase().includes(term) ||
-        p.plan.toLowerCase().includes(term);
-      return matchPlan && matchStatus && matchYear && matchMonth && matchSearch;
+      return matchesSearch && matchesStatus && matchesPlan;
     });
 
-    if (sortOption === "Date (Newest to Oldest)") {
-      data.sort(
-        (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
-      );
-    } else if (sortOption === "Date (Oldest to Newest)") {
-      data.sort(
-        (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
-      );
-    } else if (sortOption === "Amount (High to Low)") {
-      data.sort((a, b) => b.amountNumber - a.amountNumber);
-    } else if (sortOption === "Amount (Low to High)") {
-      data.sort((a, b) => a.amountNumber - b.amountNumber);
-    } else if (sortOption === "Client (A-Z)") {
-      data.sort((a, b) => a.client.localeCompare(b.client));
-    } else if (sortOption === "Client (Z-A)") {
-      data.sort((a, b) => b.client.localeCompare(a.client));
-    } else if (sortOption === "Status (Paid First)") {
-      const w = (s: string) => (s === "Paid" ? 1 : s === "Pending" ? 2 : 3);
-      data.sort((a, b) => w(a.status) - w(b.status));
-    } else if (sortOption === "Status (Overdue First)") {
-      const w = (s: string) => (s === "Overdue" ? 1 : s === "Pending" ? 2 : 3);
-      data.sort((a, b) => w(a.status) - w(b.status));
-    }
-    return data;
+    // Apply Sorting
+    result.sort((a, b) => {
+      let valA: any = a[sortField];
+      let valB: any = b[sortField];
+
+      if (sortField === "timestamp") {
+        valA = new Date(a.timestamp).getTime();
+        valB = new Date(b.timestamp).getTime();
+      }
+
+      if (valA < valB) return sortOrder === "asc" ? -1 : 1;
+      if (valA > valB) return sortOrder === "asc" ? 1 : -1;
+      return 0;
+    });
+
+    return result;
   }, [
-    sortOption,
-    paymentsData,
-    planFilter,
-    statusFilter,
+    resolvedPayments,
     searchQuery,
-    tableYear,
-    tableMonth,
+    statusFilter,
+    planFilter,
+    sortField,
+    sortOrder,
   ]);
 
-  const sidebarTransactions = useMemo(() => {
-    return paymentsData.map(p => resolvePaymentDetails(p)!).filter((p) => {
-      const matchClient = p.client === selectedClient.name;
-      const yearStr = sidebarYear === "All Years" ? "" : sidebarYear;
-      const matchYear = !yearStr || p.date.includes(yearStr);
-      const monthStr =
-        sidebarMonth === "All Months" ? "" : sidebarMonth.substring(0, 3);
-      const matchMonth = !monthStr || p.date.includes(monthStr);
-      return matchClient && matchYear && matchMonth;
-    });
-  }, [paymentsData, selectedClient, sidebarYear, sidebarMonth]);
+  const selectedPayment = useMemo(() => {
+    if (!selectedPaymentId) return null;
+    return resolvedPayments.find((p) => p.id === selectedPaymentId) || null;
+  }, [selectedPaymentId, resolvedPayments]);
 
-  const handleExportCsv = () => {
-    setIsExportingCsv(true);
+  const [activePayment, setActivePayment] = useState<any | null>(null);
+  useEffect(() => {
+    if (selectedPayment) {
+      setActivePayment(selectedPayment);
+    } else {
+      const timer = setTimeout(() => {
+        setActivePayment(null);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedPayment]);
+
+  // Export CSV Handler
+  const handleExportCsv = async () => {
+    setIsExporting(true);
+    try {
+      await logCsvExportFn({ data: { recordCount: resolvedPayments.length } });
+    } catch (auditErr) {
+      console.error("Failed to log CSV export audit:", auditErr);
+    }
+
     setTimeout(() => {
-      const resolvedList = paymentsData.map(p => resolvePaymentDetails(p)!);
-      const csvContent = `"Payment ID","Invoice ID","Client Name","Business Name","Plan","Amount","Date","Time","Status","Payment Method"
-${resolvedList.map((p) => `"${p.id}","${p.invoiceId}","${p.client}","${p.business}","${p.plan}","${p.amount}","${p.date}","${p.time}","${p.status}","${p.paymentMethod}"`).join("\n")}`;
-
-      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `GrowConsult_Payments_${new Date().toISOString().split("T")[0]}.csv`;
-      link.click();
-      URL.revokeObjectURL(url);
-      setIsExportingCsv(false);
-      setToast(
-        <div
-          style={{
-            background: "rgba(92, 177, 62, 0.1)",
-            color: "var(--color-mm-green)",
-            border: "1px solid var(--color-mm-green)",
-            borderRadius: "12px",
-            padding: "12px 20px",
-          }}
-        >
-          ✓ Payments exported to CSV successfully!
-        </div>,
-      );
-    }, 1000);
+      try {
+        const headers = [
+          "Payment ID",
+          "Client Name",
+          "Business Name",
+          "Plan",
+          "Amount",
+          "Currency",
+          "Status",
+          "Method",
+          "Date",
+        ];
+        const rows = resolvedPayments.map((p) => [
+          p.id,
+          p.clientName,
+          p.businessName,
+          p.plan,
+          p.amount,
+          p.currency,
+          p.status,
+          p.paymentMethod,
+          new Date(p.timestamp).toLocaleDateString(),
+        ]);
+        const csvContent = [
+          headers.join(","),
+          ...rows.map((r) => r.map((cell) => `"${cell}"`).join(",")),
+        ].join("\n");
+        const blob = new Blob([csvContent], {
+          type: "text/csv;charset=utf-8;",
+        });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", `payments_export_${Date.now()}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setToast({ message: "CSV exported successfully!", type: "success" });
+      } catch (err) {
+        setToast({ message: "Failed to export CSV.", type: "error" });
+      } finally {
+        setIsExporting(false);
+      }
+    }, 800);
   };
 
-  const handleDownloadPdf = () => {
-    setIsDownloading(true);
-    setTimeout(() => {
-      const blob = new Blob(["Invoice PDF content"], {
-        type: "application/pdf",
+  // Send Reminder Action
+  const triggerSendReminder = async (id: string, name: string) => {
+    setIsSendingReminder(id);
+
+    // Resolve email
+    let clientEmail = "N/A";
+    const payment = resolvedPayments.find((p) => p.id === id);
+    if (payment && payment.resolvedUser?.email) {
+      clientEmail = payment.resolvedUser.email;
+    } else {
+      const overdueObj = overdueItems.find((o) => o.id === id);
+      if (overdueObj && overdueObj.email) {
+        clientEmail = overdueObj.email;
+      }
+    }
+
+    try {
+      await sendPaymentReminderFn({ data: { paymentId: id, clientEmail } });
+      setToast({
+        message: `Payment reminder successfully emailed to ${name}!`,
+        type: "success",
       });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "INV-2024-0515.pdf";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      setIsDownloading(false);
-      setModalOpen(null);
-      setToast(
-        <div
-          style={{
-            background: "rgba(92, 177, 62, 0.1)",
-            color: "var(--color-mm-green)",
-            border: "1px solid var(--color-mm-green)",
-            borderRadius: "12px",
-            padding: "12px 20px",
-          }}
-        >
-          ✓ Invoice downloaded successfully!
-        </div>,
-      );
-    }, 1000);
-  };
-
-  const handleSendReminderForSelected = () => {
-    setTargetReminderUser({
-      name: selectedClient.name,
-      email: selectedClient.email,
-      business: selectedClient.business,
-      plan: selectedClient.plan,
-      amount: selectedClient.amountDue,
-    });
-    setModalOpen("reminder_success");
-    setToast(
-      <div
-        style={{
-          background: "rgba(92, 177, 62, 0.1)",
-          color: "var(--color-mm-green)",
-          border: "1px solid var(--color-mm-green)",
-          borderRadius: "12px",
-          padding: "12px 20px",
-        }}
-      >
-        ✓ Reminder sent to {selectedClient.name}!
-      </div>,
-    );
-  };
-
-  const handleSelectClientByName = (name: string) => {
-    const found = clientList.find((c) => c.name === name);
-    if (found) {
-      setSelectedClientId(found.id);
-      setIsSidebarOpen(true);
+    } catch (err: any) {
+      console.error(err);
+      setToast({
+        message: `Failed to send reminder: ${err.message || "Unknown error"}`,
+        type: "error",
+      });
+    } finally {
+      setIsSendingReminder(null);
     }
   };
 
-  const closeModal = () => setModalOpen(null);
+  // Refund Action
+  const handleInitiateRefund = async () => {
+    if (!selectedPayment) return;
+    setIsRefunding(true);
+    try {
+      await refundPaymentFn({ data: selectedPayment.id });
 
-  const ModalShell = ({ title, children, actions }: any) => (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/20 backdrop-blur-sm p-4">
-      <div
-        className="w-full max-w-lg max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200"
-        style={{
-          background: "white",
-          borderRadius: "24px",
-          boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
-        }}
-      >
-        <div
-          className="flex items-center justify-between p-6 border-b"
-          style={{ borderColor: "var(--color-mm-border)" }}
-        >
-          <h2 className="text-xl font-bold" style={{ color: "var(--color-mm-dark)" }}>
-            {title}
-          </h2>
-          <button onClick={closeModal} className="hover:opacity-70">
-            <X size={20} style={{ color: "var(--color-mm-gray)" }} />
-          </button>
-        </div>
-        <div className="p-6">{children}</div>
-        <div
-          className="p-6 border-t flex items-center justify-end gap-3"
-          style={{
-            borderColor: "var(--color-mm-border)",
-            background: "white",
-            borderBottomLeftRadius: "24px",
-            borderBottomRightRadius: "24px",
-          }}
-        >
-          {actions}
-        </div>
-      </div>
-    </div>
-  );
+      // Update local state to show change in the UI immediately
+      setPaymentsData((prev) =>
+        prev.map((p) =>
+          p.id === selectedPayment.id ? { ...p, status: "Refunded" } : p,
+        ),
+      );
+
+      setToast({
+        message: `Refund initiated for transaction ${selectedPayment.id}!`,
+        type: "success",
+      });
+      setSelectedPaymentId(null);
+    } catch (err: any) {
+      console.error(err);
+      setToast({
+        message: `Failed to initiate refund: ${err.message || "Unknown error"}`,
+        type: "error",
+      });
+    } finally {
+      setIsRefunding(false);
+    }
+  };
 
   return (
-    <div className="space-y-6">
-      {/* Header Breadcrumb Panel */}
-      <div className="flex items-center justify-between py-2 border-b border-mm-border">
-        <div className="flex items-center gap-2 text-sm">
-          <button
-            onClick={() => setSelectedClientId(clientList[0]?.id || "")}
-            className="p-1 hover:bg-mm-subtle rounded-lg transition-colors text-mm-gray"
-          >
-            <ArrowLeft size={16} />
-          </button>
-          <span
-            className="text-mm-gray font-medium cursor-pointer hover:underline"
-            onClick={() => setSelectedClientId(clientList[0]?.id || "")}
-          >
-            Payments
-          </span>
-          <span className="text-mm-gray font-semibold">&gt;</span>
-          <span className="text-mm-dark font-semibold">Client Details</span>
+    <div className="space-y-8 pb-12">
+      {/* Title Header Section */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-150 pb-5">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+            Payments Management
+          </h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Monitor transaction streams, analyze recurring billing, and manage
+            overdue accounts.
+          </p>
         </div>
-        {!isSidebarOpen && (
+        <div className="flex items-center gap-3">
           <button
-            onClick={() => setIsSidebarOpen(true)}
-            className="px-3 py-1.5 rounded-xl text-xs font-bold border border-mm-border hover:bg-mm-subtle text-mm-gray transition-all cursor-pointer"
+            onClick={handleExportCsv}
+            disabled={isExporting}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-sm font-semibold text-gray-700 transition-all shadow-sm active:scale-98 disabled:opacity-50"
           >
-            Show Details Sidebar
+            {isExporting ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <DownloadCloud size={16} />
+            )}
+            <span>Export CSV</span>
           </button>
-        )}
+        </div>
       </div>
 
-      {/* Bulk Overdue Alert Banner */}
-      {bannerState === "hidden" ? null : bannerState === "success" ? (
-        <div
-          className="p-3.5 px-5 rounded-xl flex items-center gap-3 animate-in fade-in"
-          style={{
-            background: "rgba(92, 177, 62, 0.1)",
-            border: "1px solid var(--color-mm-green)",
-            borderLeft: "4px solid var(--color-mm-green)",
-          }}
-        >
-          <CheckCircle2 size={20} style={{ color: "var(--color-mm-green)" }} />
-          <div className="flex-1">
-            <div
-              style={{ color: "var(--color-mm-green)", fontWeight: 600, fontSize: "14px" }}
+      {/* ROW 1: Period-filtered Revenue & Transaction KPIs */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Coins className="text-[#3525cd]" size={18} />
+            <h2 className="text-sm font-bold uppercase tracking-wider text-gray-600">
+              Revenue Analytics
+            </h2>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-gray-500">Period:</span>
+            <select
+              value={kpiPeriod}
+              onChange={(e) => setKpiPeriod(e.target.value)}
+              className="text-xs font-bold border border-gray-200 rounded-xl bg-white px-3 py-1.5 outline-none text-[#3525cd] hover:border-indigo-300 focus:ring-2 focus:ring-indigo-100 transition-all"
             >
-              ✓ Reminders sent successfully!
+              <option value="All Time">All Time</option>
+              <option value="This Month">This Month</option>
+              <option value="Last Month">Last Month</option>
+              <option value="This Year">This Year</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+              Total Revenue
+            </p>
+            <div className="flex items-baseline gap-2 mt-2">
+              <span className="text-2xl font-bold text-[#3525cd]">
+                {formatCurrency(firstRowMetrics.totalRevenue)}
+              </span>
+              <span className="text-xs text-emerald-500 font-semibold flex items-center">
+                <TrendingUp size={12} className="mr-0.5" /> +8.4%
+              </span>
             </div>
-            <div style={{ color: "var(--color-mm-gray)", fontSize: "12px" }}>
-              Payment reminders sent to 3 overdue accounts: Robert Taylor, Emma
-              Davis, James Wilson
+            <p className="text-[10px] text-gray-400 mt-2">
+              Successful payments in range
+            </p>
+          </div>
+
+          <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+              Pending Revenue
+            </p>
+            <div className="flex items-baseline gap-2 mt-2">
+              <span className="text-2xl font-bold text-amber-500">
+                {formatCurrency(firstRowMetrics.pendingRevenue)}
+              </span>
+            </div>
+            <p className="text-[10px] text-gray-400 mt-2">
+              Unresolved active invoices
+            </p>
+          </div>
+
+          <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+              Refunded Volume
+            </p>
+            <div className="flex items-baseline gap-2 mt-2">
+              <span className="text-2xl font-bold text-red-500">
+                {formatCurrency(firstRowMetrics.refundedRevenue)}
+              </span>
+            </div>
+            <p className="text-[10px] text-gray-400 mt-2">
+              Reversed or failed transactions
+            </p>
+          </div>
+
+          <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+              Avg Ticket / Transaction
+            </p>
+            <div className="flex items-baseline gap-2 mt-2">
+              <span className="text-2xl font-bold text-gray-800">
+                {formatCurrency(firstRowMetrics.avgTicket)}
+              </span>
+            </div>
+            <p className="text-[10px] text-gray-400 mt-2">
+              Across {firstRowMetrics.count} operations
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* ROW 2: Business Owner Metrics (Global Stats) */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Building2 className="text-[#3525cd]" size={18} />
+          <h2 className="text-sm font-bold uppercase tracking-wider text-gray-600">
+            Portfolio Health
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                Total Businesses
+              </p>
+              <h3 className="text-2xl font-bold text-gray-800 mt-2">
+                {secondRowMetrics.totalBusinesses}
+              </h3>
+              <p className="text-[10px] text-gray-400 mt-1">
+                Registered business entities
+              </p>
+            </div>
+            <div className="w-12 h-12 bg-indigo-50 text-[#3525cd] rounded-xl flex items-center justify-center">
+              <Building2 size={24} />
             </div>
           </div>
-          <button
-            onClick={() => setBannerState("hidden")}
-            style={{ color: "var(--color-mm-gray)", fontSize: "12px" }}
-            className="hover:underline"
-          >
-            Dismiss
-          </button>
-        </div>
-      ) : (
-        <div
-          className="p-4 rounded-xl flex items-center gap-3"
-          style={{ background: "rgba(224, 86, 36, 0.1)", border: "1px solid var(--color-mm-red)" }}
-        >
-          <AlertCircle size={20} style={{ color: "var(--color-mm-red)" }} />
-          <span className="font-semibold text-sm" style={{ color: "var(--color-mm-red)" }}>
-            ⚠️ Action Required: 3 accounts are overdue on their subscribed
-            plans. Total overdue amount: $238.00
-          </span>
-          <button
-            onClick={() => {
-              setBannerState("loading");
-              setTimeout(() => {
-                setBannerState("success");
-                setToast(
-                  <div
-                    style={{
-                      background: "rgba(92, 177, 62, 0.1)",
-                      border: "1px solid var(--color-mm-green)",
-                      borderLeft: "4px solid var(--color-mm-green)",
-                      borderRadius: "12px",
-                      padding: "14px 20px",
-                      display: "flex",
-                      gap: "10px",
-                      alignItems: "flex-start",
-                      boxShadow: "0 4px 12px rgba(76,175,80,0.12)",
-                    }}
-                  >
-                    <CheckCircle2
-                      size={20}
-                      style={{ color: "var(--color-mm-green)", marginTop: "4px" }}
-                    />
-                    <div>
-                      <div
-                        style={{
-                          color: "var(--color-mm-green)",
-                          fontWeight: 700,
-                          fontSize: "14px",
-                        }}
-                      >
-                        ✓ Bulk Reminders Sent!
-                      </div>
-                      <div
-                        style={{
-                          color: "var(--color-mm-gray)",
-                          fontSize: "12px",
-                          marginTop: "8px",
-                        }}
-                      >
-                        Reminder emails sent to all 3 overdue accounts
-                        successfully.
-                      </div>
-                      <div
-                        style={{
-                          color: "var(--color-mm-gray)",
-                          fontSize: "11px",
-                          marginTop: "4px",
-                        }}
-                      >
-                        Robert Taylor • Emma Davis • James Wilson
-                      </div>
-                    </div>
-                  </div>,
-                );
-                setTimeout(() => setBannerState("hidden"), 6000);
-              }, 1500);
-            }}
-            disabled={bannerState === "loading"}
-            className="ml-auto px-4 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all cursor-pointer"
-            style={{
-              background: "var(--color-mm-red)",
-              color: "white",
-              opacity: bannerState === "loading" ? 0.85 : 1,
-              cursor: bannerState === "loading" ? "not-allowed" : "pointer",
-            }}
-          >
-            {bannerState === "loading" ? (
-              <>
-                <Loader2 size={16} className="animate-spin" /> Sending...
-              </>
-            ) : (
-              "Send Reminders"
-            )}
-          </button>
-        </div>
-      )}
 
-      {/* Main Split Grid Layout */}
-      <div className="flex flex-col xl:flex-row gap-6 items-start">
-        {/* Left/Main content workspace */}
-        <div className="flex-1 space-y-6 w-full min-w-0">
-          {/* Top Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              {
-                label: "Total Paid",
-                val: selectedClient.totalPaid,
-                icon: CheckCircle2,
-                color: "var(--color-mm-green)",
-                bg: "bg-mm-green/10/50",
-              },
-              {
-                label: "Total Pending",
-                val: selectedClient.totalPending,
-                icon: Clock,
-                color: "var(--color-mm-orange)",
-                bg: "bg-mm-orange/10/50",
-              },
-              {
-                label: "Total Overdue",
-                val: selectedClient.totalOverdue,
-                icon: AlertTriangle,
-                color: "var(--color-mm-red)",
-                bg: "bg-mm-red/10/50",
-              },
-              {
-                label: "Client Since",
-                val: selectedClient.joinedDate,
-                icon: Calendar,
-                color: "var(--color-mm-gray)",
-                bg: "bg-mm-subtle/50",
-              },
-            ].map((k) => (
+          <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                Active Paid Plans
+              </p>
+              <h3 className="text-2xl font-bold text-emerald-500 mt-2">
+                {secondRowMetrics.paidPlans}
+              </h3>
+              <p className="text-[10px] text-gray-400 mt-1">
+                Paid plans (Basic / Plus / Pro)
+              </p>
+            </div>
+            <div className="w-12 h-12 bg-emerald-50 text-emerald-500 rounded-xl flex items-center justify-center">
+              <FileCheck size={24} />
+            </div>
+          </div>
+
+          <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                Overdue Accounts
+              </p>
+              <h3 className="text-2xl font-bold text-red-500 mt-2">
+                {secondRowMetrics.overdueAccounts}
+              </h3>
+              <p className="text-[10px] text-gray-400 mt-1">
+                Accounts with overdue invoices
+              </p>
+            </div>
+            <div className="w-12 h-12 bg-red-50 text-red-500 rounded-xl flex items-center justify-center">
+              <AlertTriangle size={24} />
+            </div>
+          </div>
+
+          <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                Average LTV
+              </p>
+              <h3 className="text-2xl font-bold text-indigo-700 mt-2">
+                {formatCurrency(secondRowMetrics.avgLtv)}
+              </h3>
+              <p className="text-[10px] text-gray-400 mt-1">
+                Average value per client
+              </p>
+            </div>
+            <div className="w-12 h-12 bg-purple-50 text-indigo-700 rounded-xl flex items-center justify-center">
+              <Users2 size={24} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ROW 3: Side-Scrolling Overdue Accounts */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="text-red-500" size={18} />
+            <h2 className="text-sm font-bold uppercase tracking-wider text-gray-600">
+              Overdue Collections
+            </h2>
+          </div>
+          <span className="text-xs font-semibold px-2 py-0.5 bg-red-50 text-red-600 rounded-md border border-red-100">
+            {overdueItems.length} Accounts Pending Payment
+          </span>
+        </div>
+
+        {overdueItems.length === 0 ? (
+          <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center">
+                <CheckCircle size={20} />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-emerald-800">
+                  All accounts are fully paid!
+                </h3>
+                <p className="text-xs text-emerald-600 mt-0.5">
+                  There are currently no overdue accounts or pending alerts.
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="flex gap-4 overflow-x-auto pb-4 pt-1 snap-x scrollbar-thin scrollbar-thumb-gray-200">
+            {overdueItems.map((item) => (
               <div
-                key={k.label}
-                className="p-5 rounded-[24px] bg-white border border-mm-border shadow-[0_2px_12px_rgba(0,0,0,0.04)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] transition-all"
+                key={item.id}
+                className="snap-start shrink-0 w-80 bg-white border border-gray-200 hover:border-red-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
               >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-xs font-semibold text-mm-gray">
-                      {k.label}
+                <div>
+                  <div className="flex justify-between items-start">
+                    <div className="min-w-0 flex items-center gap-2">
+                      <EntityAvatar
+                        imageUrl={item.imageUrl}
+                        name={item.clientName}
+                        size={28}
+                      />
+                      <div className="min-w-0">
+                        <h4 className="font-bold text-sm text-gray-800 truncate">
+                          {item.businessName}
+                        </h4>
+                        <p className="text-xs text-gray-400 truncate">
+                          {item.clientName}
+                        </p>
+                      </div>
                     </div>
-                    <div className="text-xl font-bold mt-1 text-mm-dark">
-                      {k.val}
-                    </div>
+                    <span className="px-2 py-0.5 text-[10px] font-bold bg-red-50 text-red-600 rounded-full border border-red-100 uppercase shrink-0">
+                      {item.plan}
+                    </span>
                   </div>
-                  <div
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center border border-mm-border bg-white`}
+
+                  <div className="mt-4 pt-3 border-t border-gray-100 space-y-1.5 text-xs text-gray-500">
+                    <div className="flex justify-between">
+                      <span>Overdue Amount:</span>
+                      <span className="font-bold text-red-600">
+                        {formatCurrency(item.amount)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Due Date:</span>
+                      <span>
+                        {new Date(item.timestamp).toLocaleDateString()}
+                      </span>
+                    </div>
+                    {item.isUserDeleted && (
+                      <span className="inline-block text-[10px] bg-gray-150 text-gray-600 px-1.5 py-0.5 rounded font-semibold mt-1">
+                        Deleted Contact ID
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-5">
+                  <button
+                    onClick={() =>
+                      triggerSendReminder(item.id, item.clientName)
+                    }
+                    disabled={isSendingReminder === item.id}
+                    className="w-full py-2 bg-red-50 hover:bg-red-100 text-red-700 disabled:opacity-50 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                   >
-                    <k.icon size={18} style={{ color: k.color }} />
-                  </div>
+                    {isSendingReminder === item.id ? (
+                      <Loader2 size={12} className="animate-spin" />
+                    ) : (
+                      <Mail size={12} />
+                    )}
+                    <span>
+                      {isSendingReminder === item.id
+                        ? "Sending Email..."
+                        : "Send Payment Reminder"}
+                    </span>
+                  </button>
                 </div>
               </div>
             ))}
           </div>
-
-          {/* Client Information Card */}
-          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 p-6 rounded-[24px] bg-white border border-mm-border shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
-            <div className="flex items-center gap-4">
-              <Avatar name={selectedClient.name} size={56} />
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="text-base font-bold text-mm-dark">
-                    {selectedClient.name}
-                  </h2>
-                  <PlanBadge plan={selectedClient.plan.replace(" Plan", "")} />
-                </div>
-                <div className="text-xs text-mm-gray mt-1 flex items-center gap-1">
-                  <Mail size={12} className="text-mm-gray" />
-                  {selectedClient.email}
-                </div>
-                <div className="text-xs text-mm-gray mt-0.5 flex items-center gap-1">
-                  <span className="text-[10px]">📞</span>
-                  {selectedClient.phone}
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 flex-1 max-w-2xl px-6 py-2 border-mm-border lg:border-l lg:border-r">
-              <div>
-                <div className="text-[10px] font-bold text-mm-gray uppercase tracking-wider mb-1">
-                  Client Name
-                </div>
-                <div className="text-xs font-semibold text-mm-dark truncate">
-                  {selectedClient.name}
-                </div>
-              </div>
-              <div>
-                <div className="text-[10px] font-bold text-mm-gray uppercase tracking-wider mb-1">
-                  Business Name
-                </div>
-                <div className="text-xs font-semibold text-mm-dark truncate">
-                  {selectedClient.business}
-                </div>
-              </div>
-              <div>
-                <div className="text-[10px] font-bold text-mm-gray uppercase tracking-wider mb-1">
-                  Plan
-                </div>
-                <div className="text-xs font-semibold text-mm-dark flex items-center gap-1">
-                  <span className="text-amber-500 text-[11px]">⚙️</span>
-                  {selectedClient.plan}
-                </div>
-              </div>
-              <div>
-                <div className="text-[10px] font-bold text-mm-gray uppercase tracking-wider mb-1">
-                  Status
-                </div>
-                <div className="scale-95 origin-left">
-                  <StatusBadge status={selectedClient.status} />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-col items-start lg:items-end gap-2 shrink-0">
-              <div className="lg:text-right">
-                <div className="text-[10px] font-bold text-mm-gray uppercase tracking-wider">
-                  Amount Due
-                </div>
-                <div className="text-lg font-bold text-mm-red mt-0.5">
-                  {selectedClient.amountDue}
-                </div>
-              </div>
-              <button
-                onClick={handleSendReminderForSelected}
-                className="px-3.5 py-2 bg-mm-red hover:bg-mm-red/90 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
-              >
-                <Mail size={12} />
-                Send Payment Reminder
-              </button>
-            </div>
-          </div>
-
-          {/* Payment Filters and Actions Ribbon */}
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-3 flex-1 min-w-[280px]">
-              {/* Search */}
-              <div className="relative flex-1 max-w-[280px]">
-                <Search
-                  size={14}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-mm-gray"
-                />
-                <input
-                  className="w-full rounded-xl pl-8 pr-8 py-2.5 text-xs outline-none transition-all bg-white border border-mm-border text-mm-dark"
-                  placeholder="Search by client or invoice ID..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = "var(--color-mm-orange)";
-                    e.target.style.boxShadow = "0 0 0 3px rgba(232,157,24,0.1)";
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = "var(--color-mm-border)";
-                    e.target.style.boxShadow = "none";
-                  }}
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery("")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2"
-                  >
-                    <X
-                      size={12}
-                      className="text-mm-gray hover:text-mm-red"
-                    />
-                  </button>
-                )}
-              </div>
-
-              {/* Plan Filter */}
-              <div className="relative" ref={planRef}>
-                <button
-                  onClick={() => setIsPlanOpen(!isPlanOpen)}
-                  className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs bg-white border border-mm-border text-mm-gray hover:bg-mm-subtle transition-colors cursor-pointer font-medium"
-                  style={{
-                    borderColor:
-                      planFilter === "All Plans" ? "var(--color-mm-border)" : "var(--color-mm-orange)",
-                    color: planFilter === "All Plans" ? "var(--color-mm-gray)" : "var(--color-mm-orange)",
-                  }}
-                >
-                  {planFilter}
-                  <ChevronDown
-                    size={12}
-                    className={`transition-transform duration-150 ${isPlanOpen ? "rotate-180" : ""}`}
-                  />
-                </button>
-                {isPlanOpen && (
-                  <div className="absolute left-0 mt-1 w-44 rounded-xl shadow-lg border p-1 z-50 bg-white border-mm-border">
-                    {[
-                      { label: "All Plans" },
-                      { label: "Basic Plan" },
-                      { label: "Plus Plan" },
-                      { label: "Pro Plan" },
-                    ].map((opt) => (
-                      <button
-                        key={opt.label}
-                        onClick={() => {
-                          setPlanFilter(opt.label);
-                          setIsPlanOpen(false);
-                        }}
-                        className="w-full text-left px-3 py-2 text-xs rounded-lg transition-colors font-medium text-mm-gray hover:bg-mm-orange/10 flex items-center justify-between"
-                      >
-                        {opt.label}
-                        {planFilter === opt.label && (
-                          <CheckCircle2 size={12} className="text-mm-orange" />
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Status Filter */}
-              <div className="relative" ref={statusRef}>
-                <button
-                  onClick={() => setIsStatusOpen(!isStatusOpen)}
-                  className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs bg-white border border-mm-border text-mm-gray hover:bg-mm-subtle transition-colors cursor-pointer font-medium"
-                  style={{
-                    borderColor:
-                      statusFilter === "All Status" ? "var(--color-mm-border)" : "var(--color-mm-orange)",
-                    color:
-                      statusFilter === "All Status" ? "var(--color-mm-gray)" : "var(--color-mm-orange)",
-                  }}
-                >
-                  {statusFilter}
-                  <ChevronDown
-                    size={12}
-                    className={`transition-transform duration-150 ${isStatusOpen ? "rotate-180" : ""}`}
-                  />
-                </button>
-                {isStatusOpen && (
-                  <div className="absolute left-0 mt-1 w-44 rounded-xl shadow-lg border p-1 z-50 bg-white border-mm-border">
-                    {[
-                      { label: "All Status", dot: null },
-                      { label: "Paid", dot: "var(--color-mm-green)" },
-                      { label: "Pending", dot: "var(--color-mm-orange)" },
-                      { label: "Overdue", dot: "var(--color-mm-red)" },
-                    ].map((opt) => (
-                      <button
-                        key={opt.label}
-                        onClick={() => {
-                          setStatusFilter(opt.label);
-                          setIsStatusOpen(false);
-                        }}
-                        className="w-full text-left px-3 py-2 text-xs rounded-lg transition-colors font-medium text-mm-gray hover:bg-mm-orange/10 flex items-center justify-between"
-                      >
-                        <span className="flex items-center gap-2">
-                          {opt.dot && (
-                            <span
-                              className="w-1.5 h-1.5 rounded-full"
-                              style={{ background: opt.dot }}
-                            />
-                          )}
-                          {opt.label}
-                        </span>
-                        {statusFilter === opt.label && (
-                          <CheckCircle2 size={12} className="text-mm-orange" />
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Sorting */}
-              <div className="relative" ref={sortRef}>
-                <button
-                  onClick={() => setSortOpen(!sortOpen)}
-                  className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs bg-white border border-mm-border text-mm-gray hover:bg-mm-subtle transition-colors cursor-pointer font-medium"
-                >
-                  <ArrowUpDown size={12} />
-                  {sortOption ? `Sort: ${sortOption.split(" ")[0]}` : "Sort"}
-                  <ChevronDown
-                    size={12}
-                    className={`transition-transform duration-150 ${sortOpen ? "rotate-180" : ""}`}
-                  />
-                </button>
-                {sortOpen && (
-                  <div className="absolute right-0 mt-1 w-52 rounded-xl shadow-lg border p-1 z-50 bg-white border-mm-border">
-                    {[
-                      "Date (Newest to Oldest)",
-                      "Date (Oldest to Newest)",
-                      "Amount (High to Low)",
-                      "Amount (Low to High)",
-                      "Client (A-Z)",
-                      "Client (Z-A)",
-                      "Status (Paid First)",
-                      "Status (Overdue First)",
-                    ].map((opt) => (
-                      <button
-                        key={opt}
-                        onClick={() => {
-                          setSortOption(opt);
-                          setSortOpen(false);
-                        }}
-                        className="w-full text-left px-3 py-2 text-xs rounded-lg transition-colors font-medium text-mm-gray hover:bg-mm-orange/10"
-                        style={{
-                          background:
-                            sortOption === opt ? "var(--color-mm-subtle)" : "transparent",
-                          color: sortOption === opt ? "var(--color-mm-orange)" : "var(--color-mm-gray)",
-                        }}
-                      >
-                        {opt}
-                      </button>
-                    ))}
-                    <div className="border-t my-1 border-mm-border"></div>
-                    <button
-                      onClick={() => {
-                        setSortOption(null);
-                        setSortOpen(false);
-                      }}
-                      className="w-full text-left px-3 py-2 text-xs rounded-lg transition-colors font-bold text-mm-gray hover:bg-mm-subtle"
-                    >
-                      Clear Sort
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Export CSV */}
-            <button
-              onClick={handleExportCsv}
-              disabled={isExportingCsv}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs bg-white border border-mm-border text-mm-gray hover:bg-mm-subtle transition-all cursor-pointer font-medium shrink-0"
-            >
-              {isExportingCsv ? (
-                <DownloadCloud size={14} className="animate-spin" />
-              ) : (
-                <Download size={14} />
-              )}
-              {isExportingCsv ? "Exporting..." : "Export CSV"}
-            </button>
-          </div>
-
-          {/* Payment History Card Container */}
-          <div className="rounded-[24px] bg-white border border-mm-border shadow-[0_2px_12px_rgba(0,0,0,0.04)] overflow-hidden">
-            {/* Payment History Heading Ribbon */}
-            <div className="p-5 border-b border-mm-border flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white">
-              <div>
-                <h3 className="text-sm font-bold text-mm-dark">
-                  Payment History
-                </h3>
-                <p className="text-xs text-mm-gray mt-0.5">
-                  View all payment transactions made by {selectedClient.name}.
-                </p>
-              </div>
-
-              {/* Main table Year / Month filters */}
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1">
-                  <Calendar size={12} className="text-mm-gray" />
-                  <select
-                    value={tableYear}
-                    onChange={(e) => setTableYear(e.target.value)}
-                    className="text-xs font-semibold px-2.5 py-1.5 bg-white border border-mm-border rounded-xl outline-none text-mm-gray"
-                  >
-                    <option value="All Years">All Years</option>
-                    <option value="2025">2025</option>
-                    <option value="2024">2024</option>
-                  </select>
-                </div>
-                <select
-                  value={tableMonth}
-                  onChange={(e) => setTableMonth(e.target.value)}
-                  className="text-xs font-semibold px-2.5 py-1.5 bg-white border border-mm-border rounded-xl outline-none text-mm-gray"
-                >
-                  <option value="All Months">All Months</option>
-                  <option value="Jan">Jan</option>
-                  <option value="Feb">Feb</option>
-                  <option value="Mar">Mar</option>
-                  <option value="Apr">Apr</option>
-                  <option value="May">May</option>
-                  <option value="Jun">Jun</option>
-                  <option value="Jul">Jul</option>
-                  <option value="Aug">Aug</option>
-                  <option value="Sep">Sep</option>
-                  <option value="Oct">Oct</option>
-                  <option value="Nov">Nov</option>
-                  <option value="Dec">Dec</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Responsive table block */}
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs text-left">
-                <thead>
-                  <tr className="bg-mm-subtle border-b border-mm-border text-mm-gray font-semibold">
-                    <th className="px-4 py-3 font-semibold">Client Name</th>
-                    <th className="px-4 py-3 font-semibold">Business Name</th>
-                    <th className="px-4 py-3 font-semibold">Date</th>
-                    <th className="px-4 py-3 font-semibold">Time</th>
-                    <th className="px-4 py-3 font-semibold">Payment ID</th>
-                    <th className="px-4 py-3 font-semibold">Invoice ID</th>
-                    <th className="px-4 py-3 font-semibold">Amount</th>
-                    <th className="px-4 py-3 font-semibold">Plan</th>
-                    <th className="px-4 py-3 font-semibold">Status</th>
-                    <th className="px-4 py-3 font-semibold">Payment Method</th>
-                    <th className="px-4 py-3 font-semibold">Invoice</th>
-                    <th className="px-4 py-3 font-semibold">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-mm-border">
-                  {isLoading ? (
-                    <tr>
-                      <td colSpan={12} className="px-4 py-12 text-center">
-                        <div className="flex flex-col items-center justify-center gap-2">
-                          <div className="w-6 h-6 border-2 border-mm-orange border-t-transparent rounded-full animate-spin"></div>
-                          <span
-                            className="text-xs font-semibold"
-                            style={{ color: "var(--color-mm-gray)" }}
-                          >
-                            Loading payments...
-                          </span>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : sortedData.length > 0 ? (
-                    sortedData.map((p) => {
-                      const isSelected = p.client === selectedClient.name;
-                      return (
-                        <tr
-                          key={p.id}
-                          onClick={() => handleSelectClientByName(p.client)}
-                          className={`hover:bg-mm-orange/10 transition-colors cursor-pointer ${
-                            isSelected
-                              ? "bg-mm-orange/10/40 font-semibold"
-                              : "bg-transparent"
-                          }`}
-                        >
-                          <td className="px-4 py-3.5 text-mm-dark font-medium">
-                            {p.client}
-                          </td>
-                          <td className="px-4 py-3.5 text-mm-gray">
-                            {p.business}
-                          </td>
-                          <td className="px-4 py-3.5 text-mm-gray">
-                            {p.date}
-                          </td>
-                          <td className="px-4 py-3.5 text-mm-gray">
-                            {p.time}
-                          </td>
-                          <td className="px-4 py-3.5 text-mm-gray font-mono">
-                            {p.paymentId}
-                          </td>
-                          <td className="px-4 py-3.5 text-mm-gray font-mono">
-                            {p.invoiceId}
-                          </td>
-                          <td className="px-4 py-3.5 text-mm-dark font-bold">
-                            {p.amount}
-                          </td>
-                          <td className="px-4 py-3.5">
-                            <span className="px-2 py-0.5 text-[10px] font-bold bg-mm-orange/10 text-mm-orange border border-mm-orange/20 rounded-md">
-                              {p.plan}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3.5">
-                            <span
-                              className={`inline-flex items-center gap-1 font-semibold ${
-                                p.status === "Paid"
-                                  ? "text-mm-green"
-                                  : p.status === "Overdue"
-                                    ? "text-mm-red"
-                                    : "text-mm-orange"
-                              }`}
-                            >
-                              <span
-                                className={`w-1.5 h-1.5 rounded-full ${
-                                  p.status === "Paid"
-                                    ? "bg-mm-green"
-                                    : p.status === "Overdue"
-                                      ? "bg-mm-red"
-                                      : "bg-mm-orange"
-                                }`}
-                              ></span>
-                              {p.status}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3.5 text-mm-gray whitespace-nowrap">
-                            <div className="text-[10px] leading-tight text-mm-gray">
-                              {p.paymentMethod.split(" ")[0]}{" "}
-                              {p.paymentMethod.split(" ")[1]}
-                            </div>
-                            <div className="font-semibold">
-                              {p.paymentMethod.split(" ").slice(2).join(" ")}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3.5 font-semibold">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setTargetInvoiceUser(p);
-                                setModalOpen("invoice");
-                              }}
-                              className="text-mm-orange hover:underline cursor-pointer"
-                            >
-                              {p.invoiceId}
-                            </button>
-                          </td>
-                          <td
-                            className="px-4 py-3.5"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <ActionsDropdown
-                              p={p}
-                              setModalOpen={setModalOpen}
-                              setToast={setToast}
-                              setPaymentsData={setPaymentsData}
-                              setTargetReminderUser={setTargetReminderUser}
-                              setTargetInvoiceUser={setTargetInvoiceUser}
-                              handleDownloadPdf={handleDownloadPdf}
-                            />
-                          </td>
-                        </tr>
-                      );
-                    })
-                  ) : (
-                    <tr>
-                      <td colSpan={12} className="px-4 py-12 text-center">
-                        <div className="flex flex-col items-center justify-center">
-                          <SearchX size={32} style={{ color: "var(--color-mm-gray)" }} />
-                          <div
-                            style={{
-                              color: "var(--color-mm-gray)",
-                              fontSize: "14px",
-                              marginTop: "12px",
-                              fontWeight: 600,
-                            }}
-                          >
-                            No payments found
-                          </div>
-                          <div
-                            style={{
-                              color: "var(--color-mm-gray)",
-                              fontSize: "12px",
-                              marginTop: "4px",
-                            }}
-                          >
-                            Try a different search or filter setting
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Sticky Sidebar */}
-        {isSidebarOpen && (
-          <aside className="w-full xl:w-[360px] shrink-0 xl:sticky xl:top-6 self-start bg-white border border-mm-border rounded-[24px] shadow-[0_2px_12px_rgba(0,0,0,0.04)] overflow-hidden">
-            {/* Sidebar header */}
-            <div className="p-5 border-b border-mm-border flex items-center justify-between bg-white">
-              <h3 className="font-bold text-mm-dark text-sm">
-                Payment Details
-              </h3>
-              <button
-                onClick={() => setIsSidebarOpen(false)}
-                className="p-1 hover:bg-mm-subtle rounded-lg transition-colors text-mm-gray hover:text-mm-red cursor-pointer"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            {/* Selected Client Card in Sidebar */}
-            <div className="p-5 border-b border-mm-border/60">
-              <div className="flex items-center gap-3">
-                <Avatar name={selectedClient.name} size={40} />
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="font-bold text-xs text-mm-dark">
-                      {selectedClient.name}
-                    </span>
-                    <span className="px-2 py-0.5 text-[9px] font-bold bg-mm-orange/10 text-mm-orange border border-mm-orange/20 rounded-md">
-                      {selectedClient.plan.replace(" Plan", "")}
-                    </span>
-                  </div>
-                  <div className="text-[10px] text-mm-gray truncate mt-0.5 flex items-center gap-1">
-                    <Mail size={10} />
-                    {selectedClient.email}
-                  </div>
-                </div>
-              </div>
-
-              {/* Details table in sidebar */}
-              <div className="mt-5 space-y-3.5 text-xs">
-                <div className="flex items-center justify-between border-b border-mm-border/30 pb-2">
-                  <span className="text-mm-gray font-medium">
-                    Business Name
-                  </span>
-                  <span className="font-semibold text-mm-dark">
-                    {selectedClient.business}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between border-b border-mm-border/30 pb-2">
-                  <span className="text-mm-gray font-medium">Plan</span>
-                  <span className="font-semibold text-mm-dark">
-                    {selectedClient.plan}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between border-b border-mm-border/30 pb-2">
-                  <span className="text-mm-gray font-medium">Status</span>
-                  <span
-                    className={`font-semibold ${
-                      selectedClient.status === "Paid"
-                        ? "text-mm-green"
-                        : selectedClient.status === "Overdue"
-                          ? "text-mm-red"
-                          : "text-mm-orange"
-                    }`}
-                  >
-                    {selectedClient.status}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between pb-1">
-                  <span className="text-mm-gray font-medium">Amount Due</span>
-                  <span className="font-bold text-mm-red">
-                    {selectedClient.amountDue}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Sidebar Payment History segment */}
-            <div className="p-5 bg-white">
-              <h4 className="font-bold text-mm-dark text-xs">
-                Payment History
-              </h4>
-
-              {/* Sidebar filter controls */}
-              <div className="grid grid-cols-2 gap-2 mt-3">
-                <div>
-                  <label className="text-[9px] uppercase font-bold text-mm-gray block mb-1">
-                    Year
-                  </label>
-                  <select
-                    value={sidebarYear}
-                    onChange={(e) => setSidebarYear(e.target.value)}
-                    className="w-full text-xs font-semibold px-2 py-1.5 bg-white border border-mm-border rounded-xl outline-none text-mm-gray"
-                  >
-                    <option value="All Years">All Years</option>
-                    <option value="2025">2025</option>
-                    <option value="2024">2024</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[9px] uppercase font-bold text-mm-gray block mb-1">
-                    Month
-                  </label>
-                  <select
-                    value={sidebarMonth}
-                    onChange={(e) => setSidebarMonth(e.target.value)}
-                    className="w-full text-xs font-semibold px-2 py-1.5 bg-white border border-mm-border rounded-xl outline-none text-mm-gray"
-                  >
-                    <option value="All Months">All Months</option>
-                    <option value="Jan">Jan</option>
-                    <option value="Feb">Feb</option>
-                    <option value="Mar">Mar</option>
-                    <option value="Apr">Apr</option>
-                    <option value="May">May</option>
-                    <option value="Jun">Jun</option>
-                    <option value="Jul">Jul</option>
-                    <option value="Aug">Aug</option>
-                    <option value="Sep">Sep</option>
-                    <option value="Oct">Oct</option>
-                    <option value="Nov">Nov</option>
-                    <option value="Dec">Dec</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Sidebar transaction list */}
-              <div className="space-y-3.5 mt-5">
-                {sidebarTransactions.map((tx, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-center justify-between py-2 border-b border-mm-border/30 last:border-0 text-xs"
-                  >
-                    <div>
-                      <div className="font-semibold text-mm-dark">
-                        {tx.date}
-                      </div>
-                      <div className="text-[10px] text-mm-gray mt-0.5">
-                        {tx.time}
-                      </div>
-                    </div>
-                    <div className="font-bold text-mm-dark">{tx.amount}</div>
-                    <div>
-                      <span
-                        className={`inline-flex items-center gap-1 font-semibold ${
-                          tx.status === "Paid"
-                            ? "text-mm-green"
-                            : tx.status === "Overdue"
-                              ? "text-mm-red"
-                              : "text-mm-orange"
-                        }`}
-                      >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full ${
-                            tx.status === "Paid"
-                              ? "bg-mm-green"
-                              : tx.status === "Overdue"
-                                ? "bg-mm-red"
-                                : "bg-mm-orange"
-                          }`}
-                        ></span>
-                        {tx.status}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-                {sidebarTransactions.length === 0 && (
-                  <div className="text-center py-6 text-xs text-mm-gray">
-                    No history found for current filters.
-                  </div>
-                )}
-              </div>
-
-              {/* Download History (CSV Export) */}
-              <button
-                onClick={handleExportCsv}
-                className="w-full mt-5 py-2.5 rounded-xl text-xs font-semibold bg-white hover:bg-mm-subtle border border-mm-border text-mm-gray flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-              >
-                <DownloadCloud size={14} />
-                Download History
-              </button>
-            </div>
-          </aside>
         )}
       </div>
 
-      {/* Confirms, Alerts and Upgrades Modals Portals */}
-      {modalOpen === "confirm" && (
-        <ModalShell
-          title="Confirm Payment"
-          actions={
-            <>
+      {/* ROW 4: Table and Filter Toolbar */}
+      <div className="space-y-4">
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 bg-white p-4 border border-gray-200 rounded-2xl shadow-sm">
+          {/* Search bar */}
+          <div className="relative flex-1 max-w-md">
+            <Search
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+              size={16}
+            />
+            <input
+              type="text"
+              placeholder="Search Client, Business or Payment ID..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-sm outline-none transition-all focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100"
+            />
+            {searchQuery && (
               <button
-                onClick={closeModal}
-                className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors hover:opacity-80 cursor-pointer"
-                style={{
-                  background: "white",
-                  border: "1px solid var(--color-mm-border)",
-                  color: "var(--color-mm-gray)",
-                }}
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
-                Cancel
+                <X size={14} />
               </button>
-              <button
-                onClick={closeModal}
-                className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors hover:opacity-90 cursor-pointer"
-                style={{ background: "var(--color-mm-green)", color: "white" }}
-              >
-                Mark as Paid
-              </button>
-            </>
-          }
-        >
-          <p className="text-sm" style={{ color: "var(--color-mm-gray)" }}>
-            Are you sure you want to mark this invoice as Paid? This action will
-            update the user's account status.
-          </p>
-        </ModalShell>
-      )}
+            )}
+          </div>
 
-      {modalOpen === "suspend" && (
-        <ModalShell
-          title="Suspend Service"
-          actions={
-            <>
-              <button
-                onClick={closeModal}
-                className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors hover:opacity-80 cursor-pointer"
-                style={{
-                  background: "white",
-                  border: "1px solid var(--color-mm-border)",
-                  color: "var(--color-mm-gray)",
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={closeModal}
-                className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors hover:opacity-90 cursor-pointer"
-                style={{ background: "var(--color-mm-red)", color: "white" }}
-              >
-                Suspend Account
-              </button>
-            </>
-          }
-        >
-          <p className="text-sm" style={{ color: "var(--color-mm-gray)" }}>
-            Are you sure you want to suspend this account? The user will
-            immediately lose access to their services.
-          </p>
-        </ModalShell>
-      )}
-
-      {modalOpen === "upgrade" && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/20 backdrop-blur-sm p-4">
-          <div
-            className="w-full max-w-5xl max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200"
-            style={{
-              background: "white",
-              borderRadius: "24px",
-              boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
-            }}
-          >
-            <div
-              className="flex items-center justify-between p-6 border-b relative"
-              style={{ borderColor: "var(--color-mm-border)" }}
+          {/* Quick Filters */}
+          <div className="flex flex-wrap items-center gap-3">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="text-xs font-semibold border border-gray-200 rounded-xl bg-white px-3 py-2 outline-none text-gray-600 hover:bg-gray-50 cursor-pointer"
             >
-              <div>
-                <h2 className="text-xl font-bold" style={{ color: "var(--color-mm-dark)" }}>
-                  Choose Your Plan
-                </h2>
-                <p className="text-sm mt-1" style={{ color: "var(--color-mm-gray)" }}>
-                  Upgrade to unlock more features for your business growth
-                </p>
-              </div>
+              <option value="All Status">All Statuses</option>
+              <option value="Paid">Paid</option>
+              <option value="Pending">Pending</option>
+              <option value="Failed">Failed</option>
+              <option value="Refunded">Refunded</option>
+              <option value="Overdue">Overdue</option>
+            </select>
+
+            <select
+              value={planFilter}
+              onChange={(e) => setPlanFilter(e.target.value)}
+              className="text-xs font-semibold border border-gray-200 rounded-xl bg-white px-3 py-2 outline-none text-gray-600 hover:bg-gray-50 cursor-pointer"
+            >
+              <option value="All Plans">All Plans</option>
+              <option value="Basic">Basic Plan</option>
+              <option value="Plus">Plus Plan</option>
+              <option value="Pro">Pro Plan</option>
+              <option value="None">No Plan</option>
+            </select>
+
+            {(statusFilter !== "All Status" ||
+              planFilter !== "All Plans" ||
+              searchQuery) && (
               <button
-                onClick={closeModal}
-                className="hover:opacity-70 absolute top-6 right-6"
+                onClick={() => {
+                  setSearchQuery("");
+                  setStatusFilter("All Status");
+                  setPlanFilter("All Plans");
+                }}
+                className="text-xs font-bold text-indigo-600 hover:text-indigo-800 hover:underline px-2 py-1"
               >
-                <X size={20} style={{ color: "var(--color-mm-gray)" }} />
+                Clear Filters
               </button>
-            </div>
+            )}
+          </div>
+        </div>
 
-            <div className="p-8 pb-12">
-              <div className="flex items-center justify-center gap-3 mb-8">
-                <span
-                  style={{
-                    color: "var(--color-mm-gray)",
-                    fontWeight: 600,
-                    fontSize: "14px",
-                  }}
-                >
-                  Monthly
-                </span>
-                <div
-                  onClick={() => setIsAnnual(!isAnnual)}
-                  style={{
-                    width: "44px",
-                    height: "24px",
-                    borderRadius: "999px",
-                    background: isAnnual ? "var(--color-mm-orange)" : "var(--color-mm-border)",
-                    cursor: "pointer",
-                    position: "relative",
-                    transition: "background 300ms ease",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: "20px",
-                      height: "20px",
-                      background: "white",
-                      borderRadius: "50%",
-                      boxShadow: "0 1px 4px rgba(0,0,0,0.15)",
-                      position: "absolute",
-                      top: "2px",
-                      transform: isAnnual
-                        ? "translateX(22px)"
-                        : "translateX(2px)",
-                      transition: "transform 300ms ease",
-                    }}
-                  />
-                </div>
-                <span
-                  style={{
-                    color: "var(--color-mm-gray)",
-                    fontWeight: 600,
-                    fontSize: "14px",
-                  }}
-                >
-                  Annual pricing
-                </span>
-                <span
-                  style={{
-                    background: "rgba(92, 177, 62, 0.1)",
-                    color: "var(--color-mm-green)",
-                    border: "1px solid var(--color-mm-green)",
-                    borderRadius: "999px",
-                    fontSize: "12px",
-                    fontWeight: 700,
-                    padding: "2px 8px",
-                  }}
-                >
-                  SAVE 20%
-                </span>
-              </div>
+        {/* Payment History Table Card */}
+        <div className="bg-white border border-gray-200 rounded-[24px] shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-150 flex items-center justify-between">
+            <h3 className="font-bold text-sm text-gray-900">
+              Transaction History
+            </h3>
+            <span className="text-xs text-gray-500 font-medium">
+              Showing {finalTableData.length} entries
+            </span>
+          </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {[
-                  {
-                    id: "Basic",
-                    title: "Basic Plan",
-                    desc: "Essential assets to kickstart your business presence.",
-                    priceM: "29",
-                    priceA: "23",
-                    billed: "276",
-                    features: [
-                      "Website (Template)",
-                      "3 Posts + 1 Reel per month",
-                      "AI Chatbot + Voice support",
-                      "Basic SEO optimization",
-                      "Google Business Profile setup",
-                    ],
-                    style: { bg: "white", border: "1px solid var(--color-mm-border)" },
-                  },
-                  {
-                    id: "Plus",
-                    title: "Plus Plan",
-                    desc: "Designed for expanding businesses seeking growth.",
-                    priceM: "59",
-                    priceA: "47",
-                    billed: "564",
-                    popular: true,
-                    features: [
-                      "Website (Customized layout)",
-                      "5 Posts + 2 Reels per month",
-                      "AI Voicebot integration",
-                      "Advanced SEO optimization",
-                      "Email marketing campaigns",
-                      "Includes all Basic features",
-                    ],
-                    style: {
-                      bg: "white",
-                      border: "2px solid var(--color-mm-orange)",
-                      transform: "translateY(-8px)",
-                      boxShadow: "0 4px 20px rgba(232,157,24,0.15)",
-                    },
-                  },
-                  {
-                    id: "Growth",
-                    title: "Pro Plan",
-                    desc: "Ultimate features for scaling market leaders.",
-                    priceM: "89",
-                    priceA: "71",
-                    billed: "852",
-                    features: [
-                      "Modern 3D Website design",
-                      "7 Posts + 3 Reels per month",
-                      "AI Voice + Chatbot agents",
-                      "Deep performance analytics",
-                      "Paid Ads (Google & Meta)",
-                      "All Social Media Optimization",
-                      "SEO + GEO + AEO optimization",
-                      "Includes all Plus features",
-                    ],
-                    style: { bg: "white", border: "1px solid var(--color-mm-border)" },
-                  },
-                ].map((plan) => (
-                  <div
-                    key={plan.id}
-                    className="relative transition-all rounded-[20px] p-6 flex flex-col"
-                    style={plan.style}
-                  >
-                    {plan.popular && (
-                      <div
-                        className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-[12px] z-10"
-                        style={{
-                          background: "var(--color-mm-orange)",
-                          color: "white",
-                          borderRadius: "999px",
-                          padding: "4px 12px",
-                          fontSize: "12px",
-                          fontWeight: 700,
-                        }}
-                      >
-                        MOST POPULAR
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs text-left border-collapse">
+              <thead>
+                <tr className="bg-gray-50/50 border-b border-gray-150 text-gray-500 font-semibold">
+                  <th className="px-5 py-3.5 font-bold">Client / User</th>
+                  <th className="px-5 py-3.5 font-bold">Business Entity</th>
+                  <th className="px-5 py-3.5 font-bold">
+                    <button
+                      onClick={() => {
+                        setSortField("timestamp");
+                        setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                      }}
+                      className="inline-flex items-center gap-1 hover:text-gray-700 focus:outline-none"
+                    >
+                      <span>Date & Time</span>
+                      <ArrowUpDown size={12} />
+                    </button>
+                  </th>
+                  <th className="px-5 py-3.5 font-bold">Payment ID</th>
+                  <th className="px-5 py-3.5 font-bold">
+                    <button
+                      onClick={() => {
+                        setSortField("amount");
+                        setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                      }}
+                      className="inline-flex items-center gap-1 hover:text-gray-700 focus:outline-none"
+                    >
+                      <span>Amount</span>
+                      <ArrowUpDown size={12} />
+                    </button>
+                  </th>
+                  <th className="px-5 py-3.5 font-bold">Plan</th>
+                  <th className="px-5 py-3.5 font-bold">Status</th>
+                  <th className="px-5 py-3.5 font-bold">Method</th>
+                  <th className="px-5 py-3.5 font-bold text-center">Details</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {finalTableData.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="px-6 py-12 text-center">
+                      <div className="flex flex-col items-center justify-center">
+                        <SearchX size={36} className="text-gray-300" />
+                        <h4 className="font-bold text-sm text-gray-600 mt-3">
+                          No payments match your selection
+                        </h4>
+                        <p className="text-xs text-gray-400 mt-1">
+                          Try adjusting search keywords or clearing active
+                          filters.
+                        </p>
                       </div>
-                    )}
-                    <h3
-                      className="font-bold text-lg mb-1"
-                      style={{ color: "var(--color-mm-dark)" }}
-                    >
-                      {plan.title}
-                    </h3>
-                    <p
-                      className="text-[13px] min-h-[40px] mb-4"
-                      style={{ color: "var(--color-mm-gray)" }}
-                    >
-                      {plan.desc}
+                    </td>
+                  </tr>
+                ) : (
+                  finalTableData.map((p) => {
+                    const isSelected = selectedPaymentId === p.id;
+                    return (
+                      <tr
+                        key={p.id}
+                        onClick={() => setSelectedPaymentId(p.id)}
+                        className={`hover:bg-indigo-50/20 transition-all cursor-pointer ${
+                          isSelected ? "bg-indigo-50/40" : ""
+                        }`}
+                      >
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-3">
+                            <EntityAvatar
+                              imageUrl={p.resolvedUser?.image}
+                              name={p.clientName}
+                              size={28}
+                            />
+                            <div className="min-w-0">
+                              <div className="font-semibold text-gray-800 flex items-center gap-1.5">
+                                <span className="truncate">{p.clientName}</span>
+                                {p.isUserDeleted && (
+                                  <span className="px-1.5 py-0.2 bg-gray-100 text-gray-500 rounded text-[9px] font-semibold border border-gray-250 shrink-0">
+                                    Deleted
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-[10px] text-gray-400 block truncate">
+                                {p.resolvedUser?.email || "No Email"}
+                              </span>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <EntityAvatar
+                              imageUrl={p.resolvedBusiness?.image}
+                              name={p.businessName}
+                              size={20}
+                              isBusiness={true}
+                            />
+                            <div className="min-w-0">
+                              <span className="font-medium text-gray-800 truncate block">
+                                {p.businessName}
+                              </span>
+                              {p.isBusinessDeleted && (
+                                <span className="px-1.5 py-0.2 bg-gray-100 text-gray-500 rounded text-[9px] font-semibold border border-gray-250 mt-0.5 inline-block shrink-0">
+                                  Deleted
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-5 py-4 text-gray-500">
+                          <div>
+                            {new Date(p.timestamp).toLocaleDateString()}
+                          </div>
+                          <div className="text-[10px] text-gray-400 mt-0.5">
+                            {new Date(p.timestamp).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </div>
+                        </td>
+                        <td className="px-5 py-4 font-mono text-[10px] text-gray-400">
+                          {p.id}
+                        </td>
+                        <td className="px-5 py-4 font-bold text-gray-900">
+                          {formatCurrency(p.amount, p.currency)}
+                        </td>
+                        <td className="px-5 py-4">
+                          <PlanBadge plan={p.plan} />
+                        </td>
+                        <td className="px-5 py-4">
+                          <StatusBadge status={p.status} />
+                        </td>
+                        <td className="px-5 py-4 text-gray-500 font-medium capitalize">
+                          {p.paymentMethod.toLowerCase()}
+                        </td>
+                        <td className="px-5 py-4 text-center">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedPaymentId(p.id);
+                            }}
+                            className="p-1.5 hover:bg-gray-100 rounded-lg text-indigo-600 hover:text-indigo-800 transition-all"
+                          >
+                            <ArrowRight size={16} />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      {/* Aside Transaction Detail Panel Overlay */}
+      <div
+        className={`fixed inset-0 z-50 overflow-hidden max-h-screen transition-all duration-300 ${
+          selectedPayment
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-0 pointer-events-none"
+        }`}
+      >
+        {/* Translucent Backdrop overlay */}
+        <div
+          onClick={() => setSelectedPaymentId(null)}
+          className={`absolute inset-0 bg-black/30 backdrop-blur-xs transition-opacity duration-300 ${
+            selectedPayment ? "opacity-100" : "opacity-0"
+          }`}
+        />
+
+        <div className="pointer-events-none fixed inset-y-0 right-0 flex max-w-full sm:pl-10 pl-0">
+          {/* Slide drawer container (width: 450px matching the reference image) */}
+          <div
+            className={`pointer-events-auto w-screen max-w-[450px] transform bg-white shadow-2xl flex flex-col h-full border-l border-gray-200 transition-transform duration-300 ease-in-out ${
+              selectedPayment ? "translate-x-0" : "translate-x-full"
+            }`}
+          >
+            {activePayment && (
+              <>
+                {/* Header */}
+                <div className="px-6 pt-5 pb-2 border-b border-gray-200 flex items-center justify-between bg-white">
+                  <div>
+                    <h2 className="text-base font-bold text-gray-900 tracking-tight">
+                      Transaction Detail
+                    </h2>
+                    <p className="text-xs text-gray-400 font-mono mt-0.5">
+                      {activePayment.id}
                     </p>
+                  </div>
+                  <button
+                    onClick={() => setSelectedPaymentId(null)}
+                    className="rounded-full p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-all"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
 
-                    <div className="mb-6 relative transition-all duration-300">
-                      <div className="flex items-baseline gap-1">
-                        <span
-                          className="font-bold text-[32px]"
-                          style={{ color: "var(--color-mm-dark)" }}
-                        >
-                          ${isAnnual ? plan.priceA : plan.priceM}
-                        </span>
-                        <span
-                          className="text-[16px]"
-                          style={{ color: "var(--color-mm-gray)" }}
-                        >
-                          /month
-                        </span>
-                      </div>
-                      <div
-                        className="text-[11px] font-semibold mt-1 uppercase"
-                        style={{ color: "var(--color-mm-gray)", letterSpacing: "0.5px" }}
-                      >
-                        {isAnnual
-                          ? `BILLED $${plan.billed}/YEAR`
-                          : "BILLED MONTHLY"}
+                {/* Scrollable Content */}
+                <div className="flex-1 overflow-y-auto px-6 pt-3 py-[8] space-y-6">
+                  {/* Total amount and Status check box */}
+                  <div className="text-center">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                      Total Amount
+                    </p>
+                    <h3 className="text-3xl font-black text-gray-900 mt-2">
+                      {formatCurrency(
+                        activePayment.amount,
+                        activePayment.currency,
+                      )}
+                    </h3>
+
+                    <div className="mt-4 flex justify-center">
+                      {activePayment.status === "Paid" ? (
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-xs font-bold border border-emerald-100">
+                          <Check size={14} strokeWidth={3} />
+                          <span>Payment Successful</span>
+                        </div>
+                      ) : activePayment.status === "Pending" ? (
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-600 rounded-full text-xs font-bold border border-amber-100">
+                          <Clock size={14} strokeWidth={3} />
+                          <span>Payment Pending</span>
+                        </div>
+                      ) : activePayment.status === "Refunded" ? (
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-purple-50 text-purple-650 rounded-full text-xs font-bold border border-purple-100">
+                          <Coins size={14} strokeWidth={3} />
+                          <span>Payment Refunded</span>
+                        </div>
+                      ) : (
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-50 text-red-650 rounded-full text-xs font-bold border border-red-100">
+                          <AlertTriangle size={14} strokeWidth={3} />
+                          <span>Payment Overdue</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Section: Client Info */}
+                  <div className="space-y-4">
+                    <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-400 border-b border-gray-100 pb-2">
+                      Client Information
+                    </h4>
+
+                    <div className="flex items-center gap-3">
+                      <EntityAvatar
+                        imageUrl={activePayment.resolvedUser?.image}
+                        name={activePayment.clientName}
+                        size={40}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-sm font-bold text-gray-800 truncate">
+                            {activePayment.clientName}
+                          </p>
+                          {activePayment.isUserDeleted && (
+                            <span className="px-1.5 py-0.2 bg-red-50 text-red-600 border border-red-100 rounded text-[9px] font-bold uppercase shrink-0">
+                              Deleted
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-500 truncate mt-0.5">
+                          {activePayment.resolvedUser?.email || "No Email"}
+                        </p>
+                        <p className="text-xs text-gray-400 truncate mt-0.5">
+                          {activePayment.resolvedUser?.phone || "No Phone"}
+                        </p>
                       </div>
                     </div>
 
-                    <ul className="space-y-3 mb-8 flex-1">
-                      {plan.features.map((f) => (
-                        <li
-                          key={f}
-                          className="flex items-start gap-2.5 text-[13px]"
-                          style={{ color: "var(--color-mm-gray)" }}
-                        >
-                          <CheckCircle2
-                            size={14}
-                            className="shrink-0 mt-0.5"
-                            style={{ color: "var(--color-mm-green)" }}
-                          />{" "}
-                          {f}
-                        </li>
-                      ))}
-                    </ul>
-
-                    <button
-                      onClick={() => {
-                        const confirmMsg = window.confirm(
-                          `Upgrade to ${plan.title}?\n\nYou will be charged $${isAnnual ? plan.priceA : plan.priceM}/month starting today.\n\nClick OK to Confirm Upgrade.`,
-                        );
-                        if (confirmMsg) {
-                          setToast(
-                            <div
-                              style={{
-                                background: "rgba(92, 177, 62, 0.1)",
-                                color: "var(--color-mm-green)",
-                                border: "1px solid var(--color-mm-green)",
-                                borderRadius: "12px",
-                                padding: "12px 20px",
-                              }}
-                            >
-                              ✓ Plan upgraded to {plan.title}!
-                            </div>,
-                          );
-                          setModalOpen(null);
-                        }
-                      }}
-                      className="w-full py-3 rounded-xl text-sm font-bold transition-opacity hover:opacity-90 mt-auto cursor-pointer"
-                      style={{ background: "var(--color-mm-orange)", color: "white" }}
-                    >
-                      Select {plan.title}
-                    </button>
+                    <div className="grid grid-cols-2 gap-4 pt-1 text-xs">
+                      <div>
+                        <span className="text-[10px] text-gray-400 font-bold block uppercase tracking-wider">
+                          Business Entity
+                        </span>
+                        <div className="flex items-center gap-2 mt-1.5 min-w-0">
+                          <EntityAvatar
+                            imageUrl={activePayment.resolvedBusiness?.image}
+                            name={activePayment.businessName}
+                            size={22}
+                            isBusiness={true}
+                          />
+                          <span className="font-semibold text-gray-700 truncate">
+                            {activePayment.businessName}
+                          </span>
+                        </div>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-gray-400 font-bold block uppercase tracking-wider">
+                          Tax Identification
+                        </span>
+                        <span className="font-semibold text-gray-700 block mt-2 truncate">
+                          {activePayment.resolvedBusiness
+                            ? `GSTIN: 22${activePayment.resolvedBusiness.id.toUpperCase().slice(0, 10)}A1Z5`
+                            : "N/A"}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                ))}
-              </div>
-            </div>
+
+                  {/* Section: Gateway Information */}
+                  <div className="space-y-2">
+                    <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-400 border-b border-gray-100 pb-2">
+                      Gateway Information
+                    </h4>
+                    <div className="flex justify-between text-[12px]">
+                      <span className="text-gray-500 font-medium">
+                        Gateway Provider
+                      </span>
+                      <span className="font-bold text-gray-800">
+                        {activePayment.gateway}
+                      </span>
+                    </div>
+
+                    {activePayment.gatewayInfo?.paymentId ? (
+                      <div className="flex justify-between items-center text-[12px]">
+                        <span className="text-gray-500 font-medium">
+                          Razorpay Payment ID
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <span className="font-mono text-gray-700 bg-white border border-gray-250 px-1.5 py-0.5 rounded text-[12px]">
+                            {activePayment.gatewayInfo.paymentId}
+                          </span>
+                          <button
+                            onClick={() =>
+                              handleCopyText(
+                                activePayment.gatewayInfo!.paymentId!,
+                                "Payment ID",
+                              )
+                            }
+                            className="p-1 hover:bg-gray-200 text-gray-400 hover:text-gray-600 rounded transition-all"
+                          >
+                            <Copy size={11} />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex justify-between text-[12px]">
+                        <span className="text-gray-500 font-medium">
+                          Payment ID
+                        </span>
+                        <span className="text-gray-400 italic">
+                          Not available
+                        </span>
+                      </div>
+                    )}
+
+                    {activePayment.gatewayInfo?.orderId ? (
+                      <div className="flex justify-between items-center text-[12px]">
+                        <span className="text-gray-500 font-medium">
+                          Order ID
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <span className="font-mono text-gray-700 bg-white border border-gray-250 px-1.5 py-0.5 rounded text-[12px]">
+                            {activePayment.gatewayInfo.orderId}
+                          </span>
+                          <button
+                            onClick={() =>
+                              handleCopyText(
+                                activePayment.gatewayInfo!.orderId!,
+                                "Order ID",
+                              )
+                            }
+                            className="p-1 hover:bg-gray-200 text-gray-400 hover:text-gray-600 rounded transition-all"
+                          >
+                            <Copy size={11} />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex justify-between text-[12px]">
+                        <span className="text-gray-500 font-medium">
+                          Order ID
+                        </span>
+                        <span className="text-gray-400 italic">
+                          Not available
+                        </span>
+                      </div>
+                    )}
+
+                    {activePayment.gatewayInfo?.signature ? (
+                      <div className="flex justify-between items-center text-[12px]">
+                        <span className="text-gray-500 font-medium">
+                          Signature Ref
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <span className="font-mono text-gray-700 bg-white border border-gray-250 px-1.5 py-0.5 rounded text-[12px]">
+                            {activePayment.gatewayInfo.signature.slice(0, 10)}
+                            ...
+                          </span>
+                          <button
+                            onClick={() =>
+                              handleCopyText(
+                                activePayment.gatewayInfo!.signature!,
+                                "Signature",
+                              )
+                            }
+                            className="p-1 hover:bg-gray-200 text-gray-400 hover:text-gray-600 rounded transition-all"
+                          >
+                            <Copy size={11} />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex justify-between text-[12px]">
+                        <span className="text-gray-500 font-medium">
+                          Signature Ref
+                        </span>
+                        <span className="text-gray-400 italic">
+                          Not available
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Section: Purchase Details */}
+                  <div className="space-y-4">
+                    <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-400 border-b border-gray-100 pb-2">
+                      Purchase Details
+                    </h4>
+
+                    <div className="p-2 flex items-center gap-3">
+                      <div className="w-10 h-10 bg-indigo-50 text-[#3525cd] rounded-xl flex items-center justify-center shrink-0">
+                        <Sparkles size={20} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <span className="font-bold text-xs text-gray-800 block truncate">
+                          {activePayment.purchaseItem}
+                        </span>
+                        <span className="text-[10px] text-gray-400 font-mono mt-0.5 block">
+                          SKU: ENT-SUB-{activePayment.plan.toUpperCase()}-01
+                        </span>
+                      </div>
+                      <span className="font-bold text-xs text-gray-800 shrink-0">
+                        {formatCurrency(
+                          activePayment.currency === "INR"
+                            ? activePayment.amount / 1.18
+                            : activePayment.amount,
+                          activePayment.currency,
+                        )}
+                      </span>
+                    </div>
+
+                    <div className="text-xs space-y-2 pt-1">
+                      {activePayment.currency === "INR" ? (
+                        <>
+                          <div className="flex justify-between text-gray-500 font-medium">
+                            <span>Subtotal</span>
+                            <span className="font-semibold">
+                              {formatCurrency(
+                                activePayment.amount / 1.18,
+                                activePayment.currency,
+                              )}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-gray-400 text-[11px]">
+                            <span>CGST (9%)</span>
+                            <span>
+                              {formatCurrency(
+                                (activePayment.amount / 1.18) * 0.09,
+                                activePayment.currency,
+                              )}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-gray-400 text-[11px]">
+                            <span>SGST (9%)</span>
+                            <span>
+                              {formatCurrency(
+                                (activePayment.amount / 1.18) * 0.09,
+                                activePayment.currency,
+                              )}
+                            </span>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex justify-between text-gray-500 font-medium">
+                          <span>Subtotal</span>
+                          <span className="font-semibold">
+                            {formatCurrency(
+                              activePayment.amount,
+                              activePayment.currency,
+                            )}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex justify-between border-t border-dashed border-gray-200 pt-3 font-bold text-sm text-gray-900">
+                        <span>Total</span>
+                        <span>
+                          {formatCurrency(
+                            activePayment.amount,
+                            activePayment.currency,
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer Actions */}
+                <div className="px-6 py-5 border-t border-gray-200 bg-white flex items-center gap-3">
+                  <button
+                    onClick={() => {
+                      setToast({
+                        message: "Receipt download started!",
+                        type: "success",
+                      });
+                    }}
+                    className="flex-1 py-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-xs font-bold text-gray-700 shadow-sm transition-all active:scale-98 cursor-pointer"
+                  >
+                    Download Receipt
+                  </button>
+                  {activePayment.status === "Paid" ? (
+                    <button
+                      onClick={handleInitiateRefund}
+                      disabled={isRefunding}
+                      className="flex-1 py-2.5 rounded-xl bg-[#3525cd] hover:bg-[#3525cd]/90 text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 active:scale-98 cursor-pointer"
+                    >
+                      {isRefunding ? (
+                        <Loader2 size={12} className="animate-spin" />
+                      ) : null}
+                      <span>
+                        {isRefunding ? "Refunding..." : "Initiate Refund"}
+                      </span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() =>
+                        triggerSendReminder(
+                          activePayment.id,
+                          activePayment.clientName,
+                        )
+                      }
+                      disabled={isSendingReminder === activePayment.id}
+                      className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 active:scale-98 cursor-pointer"
+                    >
+                      {isSendingReminder === activePayment.id ? (
+                        <Loader2 size={12} className="animate-spin" />
+                      ) : (
+                        <Mail size={12} />
+                      )}
+                      <span>Send Reminder</span>
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </div>
-      )}
+      </div>
 
-      {modalOpen === "remind" && (
-        <ModalShell
-          title="Send Reminder Email"
-          actions={
-            <>
-              <button
-                onClick={closeModal}
-                className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors hover:opacity-80 cursor-pointer"
-                style={{
-                  background: "white",
-                  border: "1px solid var(--color-mm-border)",
-                  color: "var(--color-mm-gray)",
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={closeModal}
-                className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors hover:opacity-90 cursor-pointer"
-                style={{ background: "var(--color-mm-orange)", color: "white" }}
-              >
-                Send Email
-              </button>
-            </>
-          }
-        >
-          <div className="space-y-4">
-            <label
-              className="text-sm font-semibold"
-              style={{ color: "var(--color-mm-gray)" }}
-            >
-              Email Template
-            </label>
-            <textarea
-              className="input-field min-h-[120px]"
-              style={{ background: "white", borderColor: "var(--color-mm-border)" }}
-              defaultValue="Dear Client,&#10;&#10;This is a friendly reminder that your payment is currently overdue. Please process it at your earliest convenience to avoid service interruption.&#10;&#10;Best,&#10;GrowConsult AI Team"
-            />
-          </div>
-        </ModalShell>
-      )}
-
-      {modalOpen === "invoice" && targetInvoiceUser && (
-        <ModalShell
-          title="Invoice Details"
-          actions={
-            <>
-              <button
-                onClick={closeModal}
-                className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors hover:opacity-80 cursor-pointer"
-                style={{
-                  background: "white",
-                  border: "1px solid var(--color-mm-border)",
-                  color: "var(--color-mm-gray)",
-                }}
-              >
-                Close
-              </button>
-              <button
-                onClick={handleDownloadPdf}
-                disabled={isDownloading}
-                className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors hover:opacity-90 flex items-center gap-2 cursor-pointer"
-                style={{
-                  background: "var(--color-mm-orange)",
-                  color: "white",
-                  opacity: isDownloading ? 0.6 : 1,
-                }}
-              >
-                {isDownloading ? (
-                  <Loader2 size={16} className="animate-spin" />
-                ) : (
-                  <Download size={16} />
-                )}
-                {isDownloading ? "Downloading..." : "Download PDF"}
-              </button>
-            </>
-          }
-        >
-          <div className="space-y-6 text-xs md:text-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-bold text-base md:text-lg text-mm-dark">
-                  {targetInvoiceUser.invoiceId}
-                </h3>
-                <p className="text-xs text-mm-gray mt-0.5">
-                  Issued: {targetInvoiceUser.date} at {targetInvoiceUser.time}
-                </p>
-              </div>
-              <StatusBadge status={targetInvoiceUser.status} />
-            </div>
-            <div
-              className="p-4 rounded-xl"
-              style={{ background: "white", border: "1px solid var(--color-mm-border)" }}
-            >
-              <div
-                className="flex justify-between text-xs md:text-sm mb-2"
-                style={{ color: "var(--color-mm-gray)" }}
-              >
-                <span>
-                  {targetInvoiceUser.plan} Plan — Monthly Subscription |{" "}
-                  {targetInvoiceUser.amount}
-                </span>
-                <span className="font-semibold text-mm-dark">
-                  {targetInvoiceUser.amount}
-                </span>
-              </div>
-              <div className="flex justify-between text-xs md:text-sm pt-2 border-t border-mm-border">
-                <span className="font-bold text-mm-dark">Total Amount</span>
-                <span className="font-bold text-mm-dark">
-                  {targetInvoiceUser.amount}
-                </span>
-              </div>
-            </div>
-          </div>
-        </ModalShell>
-      )}
-
-      {modalOpen === "reminder_success" && targetReminderUser && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4"
-          style={{ background: "rgba(0,0,0,0.2)", backdropFilter: "blur(4px)" }}
-          onClick={closeModal}
-        >
-          <div
-            className="w-full relative transition-all duration-300 animate-in zoom-in-95"
-            style={{
-              background: "white",
-              borderRadius: "20px",
-              border: "1px solid var(--color-mm-border)",
-              maxWidth: "420px",
-              padding: "28px",
-              boxShadow: "0 20px 60px rgba(0,0,0,0.15)",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex flex-col items-center">
-              <CheckCircle2 size={40} style={{ color: "var(--color-mm-green)" }} />
-              <div
-                style={{
-                  color: "var(--color-mm-dark)",
-                  fontWeight: 700,
-                  fontSize: "18px",
-                  marginTop: "8px",
-                  textAlign: "center",
-                }}
-              >
-                Reminder Sent!
-              </div>
-              <div
-                style={{
-                  color: "var(--color-mm-gray)",
-                  fontSize: "14px",
-                  marginTop: "4px",
-                  textAlign: "center",
-                }}
-              >
-                A payment reminder has been successfully sent to:
-              </div>
-
-              <div
-                style={{
-                  background: "var(--color-mm-subtle)",
-                  borderRadius: "12px",
-                  padding: "12px 16px",
-                  marginTop: "12px",
-                  width: "100%",
-                  textAlign: "left",
-                }}
-              >
-                <div
-                  style={{
-                    color: "var(--color-mm-dark)",
-                    fontWeight: 600,
-                    fontSize: "14px",
-                  }}
-                >
-                  {targetReminderUser.name}
-                </div>
-                <div style={{ color: "var(--color-mm-gray)", fontSize: "13px" }}>
-                  {targetReminderUser.email}
-                </div>
-                <div style={{ color: "var(--color-mm-gray)", fontSize: "12px" }}>
-                  {targetReminderUser.business} — {targetReminderUser.plan} —{" "}
-                  {targetReminderUser.amount} due
-                </div>
-              </div>
-
-              <div
-                style={{
-                  background: "white",
-                  border: "1px solid var(--color-mm-border)",
-                  borderRadius: "12px",
-                  padding: "12px",
-                  marginTop: "12px",
-                  width: "100%",
-                  textAlign: "left",
-                }}
-              >
-                <div style={{ color: "var(--color-mm-gray)", fontSize: "12px" }}>
-                  📧 Email sent with subject:
-                </div>
-                <div
-                  style={{
-                    color: "var(--color-mm-gray)",
-                    fontSize: "13px",
-                    fontStyle: "italic",
-                    marginTop: "4px",
-                  }}
-                >
-                  Payment Reminder: Your payment of {targetReminderUser.amount}{" "}
-                  is due for {targetReminderUser.plan}
-                </div>
-              </div>
-
-              <button
-                onClick={closeModal}
-                className="w-full mt-4 py-2.5 rounded-xl text-sm font-semibold transition-colors hover:opacity-90 cursor-pointer"
-                style={{ background: "var(--color-mm-orange)", color: "white" }}
-              >
-                Done
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
+      {/* Global Toast */}
       {toast && (
-        <div className="fixed bottom-6 right-6 z-[100] shadow-lg transition-all animate-in slide-in-from-bottom-5">
-          {toast}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// Inline component for Actions dropdown row trigger and contents
-function ActionsDropdown({
-  p,
-  setModalOpen,
-  setToast,
-  setPaymentsData,
-  setTargetReminderUser,
-  setTargetInvoiceUser,
-  handleDownloadPdf,
-}: {
-  p: any;
-  setModalOpen: any;
-  setToast: any;
-  setPaymentsData: any;
-  setTargetReminderUser: any;
-  setTargetInvoiceUser: any;
-  handleDownloadPdf: any;
-}) {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
-        setIsOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const handleRemind = () => {
-    setIsOpen(false);
-    const email = p.user.split(" ")[0].toLowerCase() + "@example.com";
-    setTargetReminderUser({
-      name: p.user,
-      email: email,
-      business: p.business,
-      plan: p.plan,
-      amount: p.amount,
-    });
-    setModalOpen("reminder_success");
-    setToast(
-      <div
-        style={{
-          background: "rgba(92, 177, 62, 0.1)",
-          color: "var(--color-mm-green)",
-          border: "1px solid var(--color-mm-green)",
-          borderRadius: "12px",
-          padding: "12px 20px",
-        }}
-      >
-        ✓ Reminder sent to {p.user}!
-      </div>,
-    );
-  };
-
-  const handleSuspend = () => {
-    setIsOpen(false);
-    setPaymentsData((prev: any) => {
-      const next = prev.map((item: any) =>
-        item.id === p.id ? { ...item, status: "Suspended" } : item,
-      );
-      savePaymentsFn({ data: next });
-      return next;
-    });
-    setToast(
-      <div
-        style={{
-          background: "rgba(224, 86, 36, 0.1)",
-          color: "var(--color-mm-red)",
-          border: "1px solid var(--color-mm-red)",
-          borderRadius: "12px",
-          padding: "12px 20px",
-        }}
-      >
-        Account suspended for {p.client}
-      </div>,
-    );
-  };
-
-  const handleCopyInvoiceId = () => {
-    setIsOpen(false);
-    navigator.clipboard.writeText(p.invoiceId);
-    setToast(
-      <div
-        style={{
-          background: "rgba(92, 177, 62, 0.1)",
-          color: "var(--color-mm-green)",
-          border: "1px solid var(--color-mm-green)",
-          borderRadius: "12px",
-          padding: "12px 20px",
-        }}
-      >
-        ✓ Invoice ID {p.invoiceId} copied to clipboard!
-      </div>,
-    );
-  };
-
-  return (
-    <div className="relative" ref={dropdownRef}>
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white border border-mm-border hover:bg-mm-subtle transition-all text-mm-gray cursor-pointer"
-      >
-        <Download size={14} />
-        Download Invoice
-        <ChevronDown
-          size={12}
-          className={`transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
-        />
-      </button>
-
-      {isOpen && (
-        <div className="absolute right-0 mt-1 w-48 rounded-xl shadow-lg border p-1 z-50 bg-white border-mm-border">
-          <button
-            onClick={() => {
-              setIsOpen(false);
-              setTargetInvoiceUser(p);
-              setModalOpen("invoice");
-            }}
-            className="w-full text-left px-3 py-2 text-xs rounded-lg transition-colors font-medium text-mm-gray hover:bg-mm-orange/10 hover:text-mm-dark flex items-center gap-2"
+        <div className="fixed bottom-6 right-6 z-[100] transition-all animate-in slide-in-from-bottom-5">
+          <div
+            className={`px-4 py-3 rounded-2xl shadow-lg border flex items-center gap-2 text-xs font-semibold ${
+              toast.type === "success"
+                ? "bg-emerald-50 text-emerald-800 border-emerald-100"
+                : toast.type === "error"
+                  ? "bg-red-50 text-red-800 border-red-100"
+                  : "bg-indigo-50 text-indigo-800 border-indigo-100"
+            }`}
           >
-            <FileText size={14} />
-            View Details
-          </button>
-          <button
-            onClick={() => {
-              setIsOpen(false);
-              handleDownloadPdf();
-            }}
-            className="w-full text-left px-3 py-2 text-xs rounded-lg transition-colors font-medium text-mm-gray hover:bg-mm-orange/10 hover:text-mm-dark flex items-center gap-2"
-          >
-            <Download size={14} />
-            Download Invoice
-          </button>
-          {p.status !== "Paid" && (
-            <button
-              onClick={handleRemind}
-              className="w-full text-left px-3 py-2 text-xs rounded-lg transition-colors font-medium text-mm-gray hover:bg-mm-orange/10 hover:text-mm-dark flex items-center gap-2"
-            >
-              <Clock size={14} />
-              Send Reminder
-            </button>
-          )}
-          <button
-            onClick={handleCopyInvoiceId}
-            className="w-full text-left px-3 py-2 text-xs rounded-lg transition-colors font-medium text-mm-gray hover:bg-mm-orange/10 hover:text-mm-dark flex items-center gap-2"
-          >
-            <Copy size={14} />
-            Copy Invoice ID
-          </button>
-          <div className="border-t my-1 border-mm-border"></div>
-          <button
-            onClick={() => {
-              setIsOpen(false);
-              setModalOpen("upgrade");
-            }}
-            className="w-full text-left px-3 py-2 text-xs rounded-lg transition-colors font-medium text-mm-green hover:bg-mm-green/10 flex items-center gap-2"
-          >
-            <ArrowUpCircle size={14} />
-            Upgrade Plan
-          </button>
-          <button
-            onClick={handleSuspend}
-            className="w-full text-left px-3 py-2 text-xs rounded-lg transition-colors font-medium text-mm-red hover:bg-mm-red/10 flex items-center gap-2"
-          >
-            <PauseCircle size={14} />
-            Suspend Service
-          </button>
+            {toast.type === "success" ? (
+              <CheckCircle2 size={14} className="text-emerald-600" />
+            ) : (
+              <AlertCircle size={14} className="text-red-600" />
+            )}
+            <span>{toast.message}</span>
+          </div>
         </div>
       )}
     </div>

@@ -207,7 +207,7 @@ export const RazorpayInfoSchema = z.object({
 export const PaymentSchema = z.object({
   id: z.string().min(1, "Payment ID is required"),
   userId: Reference(UserSchema, "User ID reference is required"),
-  businessId: Reference(BusinessSchema).optional().nullable(),
+  businessId: Reference(BusinessSchema, "Bisuness ID reference is required"),
   status: PaymentStatusEnum.default("Pending"),
   amount: z.number().positive("Amount must be a positive number"), // stored as standard decimal
   currency: z.string().default("INR"),
