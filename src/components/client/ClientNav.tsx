@@ -330,6 +330,8 @@ export default function ClientNav() {
                 onClick={async () => {
                   try {
                     await signOut(auth);
+                    // Clear the session cookie
+                    document.cookie = `__session=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
                     navigate({ to: "/login" });
                   } catch (e) {
                     console.error("Logout failed:", e);

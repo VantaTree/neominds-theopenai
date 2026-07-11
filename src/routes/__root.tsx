@@ -77,6 +77,10 @@ function RootComponent() {
       return;
     }
     const unsubscribe = onAuthStateChanged(firebaseAuth, (user) => {
+      if (!user) {
+        // Clear __session cookie if user is logged out (e.g. session cleared or explicit signOut)
+        document.cookie = `__session=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+      }
       router.update({
         context: {
           ...router.options.context,

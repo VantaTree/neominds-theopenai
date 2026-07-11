@@ -8,9 +8,10 @@ import {
   signInWithEmailAndPassword,
   signInWithPopup,
   GoogleAuthProvider,
+  User,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { ensureUserDocumentFn } from "@/lib/server-functions";
+import { ensureUserDocumentFn, createSessionCookieFn } from "@/lib/server-functions";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const loginSearchSchema = z.object({
@@ -38,6 +39,28 @@ function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // Auto-recovery if already logged in client-side
+  useEffect(() => {
+    if (!auth) return;
+    const unsubscribe = auth.onAuthStateChanged(async (user: User | null) => {
+      if (user) {
+        setIsLoading(true);
+        try {
+          const token = await user.getIdToken();
+          const { sessionCookie } = await createSessionCookieFn({ data: { idToken: token } });
+          const isSecure = window.location.protocol === "https:";
+          document.cookie = `__session=${sessionCookie}; path=/; max-age=604800;${isSecure ? " Secure;" : ""} SameSite=Lax`;
+          navigate({ to: search.redirect || "/dashboard" });
+        } catch (err) {
+          console.error("Auto-login session sync failed:", err);
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    });
+    return unsubscribe;
+  }, [navigate, search.redirect]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
@@ -60,9 +83,12 @@ function LoginPage() {
       const user = userCredential.user;
       const token = await user.getIdToken();
 
-      // Set session cookie for SSR
+      // Request session cookie from server
+      const { sessionCookie } = await createSessionCookieFn({ data: { idToken: token } });
+
+      // Set session cookie for SSR (7 days)
       const isSecure = window.location.protocol === "https:";
-      document.cookie = `__session=${token}; path=/; max-age=3600;${isSecure ? " Secure;" : ""} SameSite=Lax`;
+      document.cookie = `__session=${sessionCookie}; path=/; max-age=604800;${isSecure ? " Secure;" : ""} SameSite=Lax`;
 
       // Ensure user document exists in database via server function
       await ensureUserDocumentFn({
@@ -100,9 +126,12 @@ function LoginPage() {
       const user = userCredential.user;
       const token = await user.getIdToken();
 
-      // Set session cookie for SSR
+      // Request session cookie from server
+      const { sessionCookie } = await createSessionCookieFn({ data: { idToken: token } });
+
+      // Set session cookie for SSR (7 days)
       const isSecure = window.location.protocol === "https:";
-      document.cookie = `__session=${token}; path=/; max-age=3600;${isSecure ? " Secure;" : ""} SameSite=Lax`;
+      document.cookie = `__session=${sessionCookie}; path=/; max-age=604800;${isSecure ? " Secure;" : ""} SameSite=Lax`;
 
       // Ensure user document exists in database via server function
       await ensureUserDocumentFn({

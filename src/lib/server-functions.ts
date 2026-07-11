@@ -49,12 +49,34 @@ export async function verifyServerSession() {
 
   const auth = await getAdminAuth();
   try {
-    const decoded = await auth.verifyIdToken(token);
-    return decoded;
+    // Try to verify as a Firebase session cookie first
+    try {
+      const decoded = await auth.verifySessionCookie(token, true);
+      return decoded;
+    } catch (sessionError) {
+      // Fallback to verifying as a Firebase ID token (for backward compatibility)
+      const decoded = await auth.verifyIdToken(token);
+      return decoded;
+    }
   } catch (error) {
     throw new Error("Unauthorized: Invalid session token.");
   }
 }
+
+export const createSessionCookieFn = createServerFn({ method: "POST" })
+  .validator((d: { idToken: string }) => d)
+  .handler(async ({ data }) => {
+    try {
+      const adminAuth = await getAdminAuth();
+      const expiresIn = 7 * 24 * 60 * 60 * 1000; // 7 days
+      const sessionCookie = await adminAuth.createSessionCookie(data.idToken, { expiresIn });
+      return { sessionCookie };
+    } catch (e: any) {
+      console.error("Error creating session cookie:", e);
+      // Fallback/mock mode support
+      return { sessionCookie: data.idToken };
+    }
+  });
 
 // ==================== ROLE & AUTH MANAGEMENT SERVER FUNCTIONS ====================
 
