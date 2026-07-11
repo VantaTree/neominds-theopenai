@@ -1,189 +1,44 @@
 import { useState, useEffect, useRef } from "react";
-import { ListTodo, CheckCircle2, Lock, Check } from "lucide-react";
+import {
+  ListTodo,
+  CheckCircle2,
+  Lock,
+  Check,
+  Filter,
+  Calendar,
+  ChevronRight,
+  ArrowLeft,
+  MessageSquare,
+  Globe,
+  Megaphone,
+  Zap,
+  Sparkles,
+  AlertCircle,
+  Eye,
+  X,
+} from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
+import { Link } from "@tanstack/react-router";
 import ProjectLogo from "./ProjectLogo";
 import Report from "../Report";
-
-interface TimelineTask {
-  id: string;
-  title: string;
-  description: string;
-  status: "completed" | "in-progress" | "upcoming";
-  progress?: number;
-  startDate: string;
-  endDate: string;
-}
-
-interface ProjectData {
-  id: string;
-  name: string;
-  category: "seo" | "marketing" | "automation" | "report";
-  progress: number;
-  tasks: TimelineTask[];
-  locked?: boolean;
-}
-
-const DUMMY_PROJECTS: ProjectData[] = [
-  {
-    id: "report",
-    name: "Report",
-    category: "report",
-    progress: 100,
-    tasks: [],
-  },
-  {
-    id: "seo",
-    name: "Website",
-    category: "seo",
-    progress: 87,
-    tasks: [
-      {
-        id: "seo-1",
-        title: "Run Initial Keyword Research & Audit",
-        description: "Identify high-value search terms and technical issues.",
-        status: "completed",
-        startDate: "Jun 20",
-        endDate: "Jun 23",
-      },
-      {
-        id: "seo-2",
-        title: "Optimize Meta Tags & Header Hierarchy",
-        description: "Align headers and meta titles with keyword strategy.",
-        status: "completed",
-        startDate: "Jun 24",
-        endDate: "Jun 27",
-      },
-      {
-        id: "seo-3",
-        title: "Submit XML Sitemap to Search Console",
-        description: "Ensure search engine crawlers can discover new pages.",
-        status: "completed",
-        startDate: "Jun 28",
-        endDate: "Jun 30",
-      },
-      {
-        id: "seo-4",
-        title: "Set Up Image Alt Attributes & Internal Links",
-        description: "Optimize media and map contextual links.",
-        status: "completed",
-        startDate: "Jul 01",
-        endDate: "Jul 04",
-      },
-      {
-        id: "seo-5",
-        title: "On-Page SEO Optimization",
-        description: "Optimizing meta tags, copy readability, and keyword density.",
-        status: "in-progress",
-        progress: 49,
-        startDate: "Jul 05",
-        endDate: "Jul 12",
-      },
-      {
-        id: "seo-6",
-        title: "Technical SEO",
-        description: "Site speed and mobile usability performance audit.",
-        status: "upcoming",
-        progress: 30,
-        startDate: "Jul 13",
-        endDate: "Jul 18",
-      },
-      {
-        id: "seo-7",
-        title: "HTML Structure",
-        description: "Validate sitemap.xml and markup validation.",
-        status: "upcoming",
-        progress: 90,
-        startDate: "Jul 19",
-        endDate: "Jul 25",
-      },
-    ],
-  },
-  {
-    id: "marketing",
-    name: "Marketing",
-    category: "marketing",
-    progress: 60,
-    tasks: [
-      {
-        id: "mkt-1",
-        title: "Define Target Customer Demographics",
-        description: "Outline personas, purchasing habits, and behaviors.",
-        status: "completed",
-        startDate: "Jun 22",
-        endDate: "Jun 25",
-      },
-      {
-        id: "mkt-2",
-        title: "Design Social Media Ad Creatives",
-        description: "Produce visual assets for target platform placement.",
-        status: "completed",
-        startDate: "Jun 26",
-        endDate: "Jun 29",
-      },
-      {
-        id: "mkt-3",
-        title: "Social Media Campaign",
-        description: "Running paid promotion and organic reach campaigns.",
-        status: "in-progress",
-        progress: 40,
-        startDate: "Jun 30",
-        endDate: "Jul 10",
-      },
-      {
-        id: "mkt-4",
-        title: "Content Calendar",
-        description: "Plan scheduled post drafts and channel distribution strategies.",
-        status: "upcoming",
-        progress: 70,
-        startDate: "Jul 11",
-        endDate: "Jul 15",
-      },
-      {
-        id: "mkt-5",
-        title: "Newsletter Template Blast",
-        description: "Establish weekly engagement layout structures.",
-        status: "upcoming",
-        progress: 20,
-        startDate: "Jul 16",
-        endDate: "Jul 20",
-      },
-    ],
-  },
-  {
-    id: "automation",
-    name: "Automation",
-    category: "automation",
-    progress: 0,
-    locked: true,
-    tasks: [
-      {
-        id: "auto-1",
-        title: "Custom Webhook Trigger",
-        description: "Send outbound lead hooks to external APIs on conversion.",
-        status: "in-progress",
-        progress: 0,
-        startDate: "Jul 10",
-        endDate: "Jul 20",
-      },
-      {
-        id: "auto-2",
-        title: "CRM Synchronize",
-        description: "Synchronize new lead data channels across standard CRMs.",
-        status: "upcoming",
-        progress: 0,
-        startDate: "Jul 21",
-        endDate: "Jul 30",
-      },
-    ],
-  },
-];
+import PlanGate, { hasPlanAccess } from "./PlanGate";
+import { useBusiness } from "@/hooks/use-business";
+import { type Project } from "@/lib/schemas";
 
 interface ProjectDashboardProps {
-  apiUrl?: string;
+  projects: Project[];
   activeProjectId?: string;
   onActiveProjectChange?: (id: string) => void;
   onUpgradeTrigger?: () => void;
+  apiUrl?: string;
 }
+
+const TABS = [
+  { id: "report", name: "Report", category: "report" },
+  { id: "Website", name: "Website", category: "seo" },
+  { id: "Marketing", name: "Marketing", category: "marketing" },
+  { id: "Automation", name: "Automation", category: "automation" },
+] as const;
 
 const CATEGORY_THEMES = {
   report: {
@@ -214,147 +69,339 @@ const CATEGORY_THEMES = {
     textAccentClass: "text-purple-600",
     gradient: "linear-gradient(90deg, #7C3AED 0%, #A78BFA 100%)",
   },
+} as const;
+
+const parseDate = (d: any): Date | null => {
+  if (!d) return null;
+  if (d instanceof Date) return d;
+  if (typeof d === "string") return new Date(d);
+  if (typeof d.toDate === "function") return d.toDate();
+  if (typeof d.seconds === "number") return new Date(d.seconds * 1000);
+  return null;
 };
 
 export function ProjectDashboard({
-  apiUrl,
-  activeProjectId = "seo",
+  projects = [],
+  activeProjectId = "report",
   onActiveProjectChange,
   onUpgradeTrigger,
+  apiUrl,
 }: ProjectDashboardProps) {
-  const [projects, setProjects] = useState<ProjectData[]>(DUMMY_PROJECTS);
-  const [scrollPercent, setScrollPercent] = useState(0);
-  const timelineRef = useRef<HTMLDivElement>(null);
+  const { activeBusiness } = useBusiness();
+  const activeTab = activeProjectId;
 
-  // Fetch from apiUrl if provided (otherwise fall back to DUMMY_PROJECTS)
+  // Selected project state for sliding details drawer
+  const [activeDrawerProject, setActiveDrawerProject] = useState<Project | null>(null);
+
+  // Filters state
+  const [statusFilter, setStatusFilter] = useState<string>("All");
+  const [priorityFilter, setPriorityFilter] = useState<string>("All");
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [dateFilter, setDateFilter] = useState<string>("All Time");
+
+  const domainProjects = projects.filter((p) => p.domain === activeTab);
+
+  // Extract unique services from projects in current tab for filter pills
+  const allServices = Array.from(
+    new Set(domainProjects.flatMap((p) => p.services || []))
+  );
+
+  // Reset local filters and drawer when tab changes
   useEffect(() => {
-    if (!apiUrl) return;
+    setStatusFilter("All");
+    setPriorityFilter("All");
+    setSelectedServices([]);
+    setDateFilter("All Time");
+    setActiveDrawerProject(null);
+  }, [activeTab]);
 
-    fetch(apiUrl)
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data)) {
-          setProjects(data);
-        }
-      })
-      .catch((err) => {
-        console.warn("Failed to fetch projects from apiUrl, falling back to dummy data:", err);
-      });
-  }, [apiUrl]);
+  // Date range checking helpers
+  const matchesDateFilter = (project: Project) => {
+    if (dateFilter === "All Time") return true;
+    const deadline = parseDate(project.deadline);
+    if (!deadline) return false;
 
-  const activeProject = projects.find((p) => p.id === activeProjectId) || projects[0];
-  const theme = CATEGORY_THEMES[activeProject.category] || CATEGORY_THEMES.seo;
+    const now = new Date();
+    const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfThisMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const endOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 2, 0, 23, 59, 59);
 
-  // Setup Recharts Donut data
-  const chartData = [
-    { name: "Completed", value: activeProject.progress },
-    { name: "Remaining", value: 100 - activeProject.progress },
+    if (dateFilter === "Overdue") {
+      return deadline < now && project.status !== "Completed";
+    }
+    if (dateFilter === "This Month") {
+      return deadline >= startOfThisMonth && deadline <= endOfThisMonth;
+    }
+    if (dateFilter === "Next Month") {
+      return deadline >= startOfNextMonth && deadline <= endOfNextMonth;
+    }
+    return true;
+  };
+
+  // Filter projects list
+  const filteredProjects = domainProjects.filter((project) => {
+    if (statusFilter !== "All" && project.status !== statusFilter) return false;
+    if (priorityFilter !== "All" && project.priority !== priorityFilter) return false;
+    if (selectedServices.length > 0) {
+      const matchesAll = selectedServices.every((service) =>
+        project.services.includes(service)
+      );
+      if (!matchesAll) return false;
+    }
+    if (!matchesDateFilter(project)) return false;
+    return true;
+  });
+
+  // Sort projects chronologically for timeline view
+  const sortedProjects = [...filteredProjects].sort((a, b) => {
+    const dateA = parseDate(a.startDate || a.createdAt)?.getTime() || 0;
+    const dateB = parseDate(b.startDate || b.createdAt)?.getTime() || 0;
+    return dateA - dateB;
+  });
+
+  const themeKey =
+    ({
+      report: "report",
+      Website: "seo",
+      Marketing: "marketing",
+      Automation: "automation",
+    }[activeTab] || "seo") as keyof typeof CATEGORY_THEMES;
+  const theme = CATEGORY_THEMES[themeKey];
+
+  // Map category to logo category
+  const getLogoCategory = (tab: string) => {
+    if (tab === "Website") return "seo";
+    if (tab === "Marketing") return "marketing";
+    if (tab === "Automation") return "automation";
+    return "report";
+  };
+
+  // Calculate overall metrics
+  const totalTasksCount = filteredProjects.length;
+  const averageProgress = filteredProjects.length > 0
+    ? Math.round(filteredProjects.reduce((sum, p) => sum + p.progress, 0) / filteredProjects.length)
+    : 0;
+
+  const kpiChartData = [
+    { name: "Completed", value: averageProgress },
+    { name: "Remaining", value: 100 - averageProgress },
   ];
 
-  // Track scroll-linked timeline filling progress
-  useEffect(() => {
-    const handleScroll = () => {
-      if (!timelineRef.current) return;
-      const rect = timelineRef.current.getBoundingClientRect();
-      const viewportHeight = window.innerHeight;
+  // Resolve overall status badge for category
+  const getOverallStatus = () => {
+    if (filteredProjects.length === 0) return "NO PROJECTS";
+    if (filteredProjects.some((p) => p.status === "In Progress")) return "IN PROGRESS";
+    if (filteredProjects.every((p) => p.status === "Completed")) return "COMPLETED";
+    return filteredProjects[0].status.toUpperCase();
+  };
 
-      // Use center of screen as scroll trigger point
-      const triggerPoint = viewportHeight / 2;
-      const timelineTop = rect.top;
-      const timelineHeight = rect.height;
+  const renderTabSwitcher = () => (
+    <div className="flex border-b border-[#E2E6EE] gap-6 pb-px overflow-x-auto no-scrollbar">
+      {TABS.map((tab) => {
+        const isActive = activeTab === tab.id;
+        const isTabLocked =
+          tab.id === "Automation" &&
+          !hasPlanAccess(activeBusiness?.plan || "None", "Pro");
+        return (
+          <button
+            key={tab.id}
+            onClick={() => onActiveProjectChange?.(tab.id)}
+            className={`pb-3 text-sm font-semibold transition-all border-b-2 hover:text-mm-dark cursor-pointer flex items-center gap-2 shrink-0 -mb-px ${
+              isActive
+                ? `${tab.category === "report" ? "border-mm-orange text-mm-orange" : tab.category === "seo" ? "border-blue-600 text-blue-600" : tab.category === "marketing" ? "border-red-600 text-red-600" : "border-purple-600 text-purple-600"}`
+                : "border-transparent text-mm-gray"
+            }`}
+          >
+            <span>{tab.name}</span>
+            {isTabLocked && <Lock className="w-3.5 h-3.5 text-mm-gray/60" />}
+          </button>
+        );
+      })}
+    </div>
+  );
 
-      const relativeTrigger = triggerPoint - timelineTop - 48; // offset header/padding
-      const totalScrollableHeight = timelineHeight - 96; // padding/margin adjustments
-
-      let pct = (relativeTrigger / totalScrollableHeight) * 100;
-      pct = Math.max(0, Math.min(100, pct));
-      setScrollPercent(pct);
-    };
-
-    window.addEventListener("scroll", handleScroll);
-    // Trigger initial calculation
-    handleScroll();
-
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [activeProjectId]);
-
-  return (
-    <div className="w-full flex flex-col gap-8 select-none">
-      {/* Project Switcher Tabs */}
-      <div className="flex border-b border-[#E2E6EE] gap-6 pb-px">
-        {projects.map((project) => {
-          const isActive = project.id === activeProject.id;
-          const config = {
-            report: {
-              activeBorder: "border-mm-orange",
-              activeText: "text-mm-orange",
-            },
-            seo: {
-              activeBorder: "border-blue-600",
-              activeText: "text-blue-600",
-            },
-            marketing: {
-              activeBorder: "border-red-600",
-              activeText: "text-red-600",
-            },
-            automation: {
-              activeBorder: "border-purple-600",
-              activeText: "text-purple-600",
-            },
-          }[project.category];
-
-          return (
-            <button
-              key={project.id}
-              onClick={() => {
-                onActiveProjectChange?.(project.id);
-                if (project.locked) {
-                  onUpgradeTrigger?.();
-                }
-              }}
-              className={`pb-3 text-sm font-semibold transition-all border-b-2 hover:text-mm-dark cursor-pointer flex items-center gap-2 -mb-px ${
-                isActive
-                  ? `${config.activeBorder} ${config.activeText}`
-                  : "border-transparent text-mm-gray"
-              }`}
-            >
-              <span>{project.name}</span>
-              {project.locked && <Lock className="w-3.5 h-3.5 text-mm-gray/60" />}
-            </button>
-          );
-        })}
+  const planGateFallback = (
+    <div className="bg-white border border-mm-border rounded-[32px] p-8 md:p-12 text-center max-w-2xl mx-auto shadow-sm flex flex-col items-center justify-center relative overflow-hidden min-h-[450px]">
+      <div className="absolute inset-0 bg-gradient-to-tr from-purple-500/5 via-transparent to-indigo-500/5 pointer-events-none" />
+      <div className="h-20 w-20 rounded-3xl bg-purple-50 border border-purple-100 flex items-center justify-center mb-6 shadow-md">
+        <Lock className="h-8 w-8 text-purple-600 animate-pulse" />
       </div>
 
-      {/* Title and Badge Header */}
-      {activeProject.category !== "report" && (
-        <div className="flex items-center gap-3.5">
-          <ProjectLogo category={activeProject.category} size="md" />
-          <div className="flex items-center gap-3">
-            <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-[#111418] font-sans">
-              {activeProject.name}
-            </h2>
-            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${theme.badgeClass}`}>
-              {activeProject.locked ? "locked" : "in progress"}
-            </span>
+      <h3 className="text-2xl font-black text-mm-dark mb-3">Automation Suite is Locked</h3>
+      <p className="text-sm text-mm-gray leading-relaxed max-w-md mb-8">
+        Unlock custom webhook triggers, CRM synchronization, lead-routing rules, and automated workflows. Elevate your operations to the Pro tier today.
+      </p>
+
+      <button
+        onClick={onUpgradeTrigger}
+        className="inline-flex items-center justify-center gap-2.5 bg-purple-600 hover:bg-purple-700 active:scale-95 text-white font-extrabold text-sm px-8 py-4 rounded-2xl shadow-lg shadow-purple-600/20 transition-all cursor-pointer"
+      >
+        <Sparkles className="h-4.5 w-4.5 fill-white text-purple-600" />
+        Upgrade to Pro Plan
+      </button>
+    </div>
+  );
+
+  const emptyState = (
+    <div className="bg-white border border-mm-border rounded-[32px] p-8 md:p-12 text-center max-w-2xl mx-auto shadow-sm flex flex-col items-center justify-center min-h-[380px] relative overflow-hidden">
+      <div className="absolute inset-0 bg-radial-gradient pointer-events-none" />
+      <div className={`h-16 w-16 rounded-2xl flex items-center justify-center mb-6 border ${theme.badgeClass}`}>
+        {activeTab === "Website" ? (
+          <Globe className="h-7 w-7" />
+        ) : activeTab === "Marketing" ? (
+          <Megaphone className="h-7 w-7" />
+        ) : (
+          <Zap className="h-7 w-7" />
+        )}
+      </div>
+
+      <h3 className="text-xl font-bold text-mm-dark mb-2">No Active {activeTab} Projects</h3>
+      <p className="text-xs sm:text-sm text-mm-gray leading-relaxed max-w-sm mb-6">
+        Ready to take your digital experience to the next level? Connect with our team to start a new campaign, audit, or development project.
+      </p>
+
+      <Link
+        to="/chat/$domain"
+        params={{ domain: activeTab.toLowerCase() }}
+        className={`inline-flex items-center justify-center gap-2 font-extrabold text-xs px-6 py-3 rounded-xl transition-all active:scale-95 shadow-sm border ${
+          activeTab === "Website"
+            ? "bg-blue-500 hover:bg-blue-600 border-blue-600 text-white"
+            : activeTab === "Marketing"
+              ? "bg-red-500 hover:bg-red-600 border-red-600 text-white"
+              : "bg-purple-500 hover:bg-purple-600 border-purple-600 text-white"
+        }`}
+      >
+        <MessageSquare className="h-4 w-4" />
+        Start a Conversation
+      </Link>
+    </div>
+  );
+
+  const renderFilterBar = () => (
+    <div className="bg-white border border-[#E2E6EE] rounded-[24px] p-5 shadow-[0_4px_20px_rgba(0,0,0,0.01)] flex flex-col gap-4">
+      <div className="flex flex-wrap items-center gap-4 text-xs">
+        {/* Status Select */}
+        <div className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 shrink-0">
+          <span className="font-semibold text-mm-gray">Status:</span>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="bg-transparent font-bold text-mm-dark outline-none cursor-pointer"
+          >
+            <option value="All">All Statuses</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Completed">Completed</option>
+            <option value="Pending">Pending</option>
+            <option value="On Hold">On Hold</option>
+            <option value="Cancelled">Cancelled</option>
+          </select>
+        </div>
+
+        {/* Priority Select */}
+        <div className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 shrink-0">
+          <span className="font-semibold text-mm-gray">Priority:</span>
+          <select
+            value={priorityFilter}
+            onChange={(e) => setPriorityFilter(e.target.value)}
+            className="bg-transparent font-bold text-mm-dark outline-none cursor-pointer"
+          >
+            <option value="All">All Priorities</option>
+            <option value="Low">Low</option>
+            <option value="Medium">Medium</option>
+            <option value="High">High</option>
+          </select>
+        </div>
+
+        {/* Date Filter */}
+        <div className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 shrink-0">
+          <span className="font-semibold text-mm-gray">Timeline:</span>
+          <select
+            value={dateFilter}
+            onChange={(e) => setDateFilter(e.target.value)}
+            className="bg-transparent font-bold text-mm-dark outline-none cursor-pointer"
+          >
+            <option value="All Time">All Time</option>
+            <option value="Overdue">Overdue</option>
+            <option value="This Month">This Month</option>
+            <option value="Next Month">Next Month</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Services Multi-Select Pills */}
+      {allServices.length > 0 && (
+        <div className="flex flex-col gap-1.5 pt-2 border-t border-gray-100">
+          <span className="text-[10px] font-bold text-mm-gray uppercase tracking-wider">Filter by Services</span>
+          <div className="flex flex-wrap gap-2 mt-1">
+            {allServices.map((service) => {
+              const isSelected = selectedServices.includes(service);
+              return (
+                <button
+                  key={service}
+                  onClick={() => {
+                    setSelectedServices((prev) =>
+                      prev.includes(service)
+                        ? prev.filter((s) => s !== service)
+                        : [...prev, service]
+                    );
+                  }}
+                  className={`text-[11px] font-bold px-3 py-1.5 rounded-full border transition-all cursor-pointer ${
+                    isSelected
+                      ? "bg-mm-dark text-white border-mm-dark"
+                      : "bg-white text-mm-gray border-gray-200 hover:border-gray-300"
+                  }`}
+                >
+                  {service}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
+    </div>
+  );
 
-      {/* Main Content Area */}
-      <div className="relative w-full">
-        {activeProject.category === "report" ? (
-          <Report apiUrl={apiUrl} />
-        ) : (
-          <>
-            {/* KPI Metrics Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
+  const renderProjectsContent = () => {
+    if (filteredProjects.length === 0) {
+      return (
+        <div className="space-y-6">
+          {renderFilterBar()}
+          <div className="bg-white border border-[#E2E6EE] rounded-[32px] p-8 text-center min-h-[220px] flex flex-col items-center justify-center">
+            <AlertCircle className="w-8 h-8 text-mm-gray mb-3" />
+            <h4 className="text-sm font-bold text-mm-dark mb-1">No Projects Match Selected Filters</h4>
+            <p className="text-xs text-mm-gray max-w-xs">
+              Try updating or clearing your status, priority, services, or timeline filters.
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-8">
+        {/* Header Title with Status */}
+        <div className="flex items-center gap-4">
+          <ProjectLogo category={getLogoCategory(activeTab)} size="md" />
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight text-[#111418] font-sans">
+              {activeTab}
+            </h2>
+            <div className="flex items-center gap-2 mt-1">
+              <span className={`inline-flex px-2 py-0.5 rounded-md text-[9px] font-extrabold uppercase tracking-wide border ${theme.badgeClass}`}>
+                {getOverallStatus()}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* KPI Cards Row */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {/* Total Tasks Card */}
-          <div className="bg-white border border-[#E2E6EE] rounded-3xl p-6 flex items-center justify-between shadow-xs">
-            <div>
-              <p className="text-sm font-semibold text-[#748297] mb-1">Total Tasks</p>
-              <h4 className="text-3xl font-extrabold text-[#111418]">
-                {activeProject.tasks.length}
-              </h4>
+          <div className="bg-white border border-[#E2E6EE] rounded-[24px] p-6 flex items-center justify-between shadow-xs">
+            <div className="space-y-1">
+              <p className="text-xs font-bold text-mm-gray uppercase tracking-wider">Total Tasks</p>
+              <h4 className="text-3xl font-black text-mm-dark">{totalTasksCount}</h4>
             </div>
             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${theme.iconBoxClass}`}>
               <ListTodo className="w-6 h-6" />
@@ -362,217 +409,301 @@ export function ProjectDashboard({
           </div>
 
           {/* Overall Progress Card */}
-          <div className="bg-white border border-[#E2E6EE] rounded-3xl p-6 flex items-center justify-between shadow-xs min-h-[120px]">
-            <div>
-              <p className="text-sm font-semibold text-[#748297] mb-1">Overall Progress</p>
-              <h4 className="text-3xl font-extrabold text-[#111418]">{activeProject.progress}%</h4>
+          <div className="bg-white border border-[#E2E6EE] rounded-[24px] p-6 flex items-center justify-between shadow-xs">
+            <div className="space-y-1">
+              <p className="text-xs font-bold text-mm-gray uppercase tracking-wider">Overall Progress</p>
+              <h4 className="text-3xl font-black text-mm-dark">{averageProgress}%</h4>
             </div>
-            {/* Donut Chart using Recharts */}
-            <div className="relative w-20 h-20 shrink-0">
+            <div className="relative w-16 h-16 shrink-0">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={chartData}
+                    data={kpiChartData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={24}
-                    outerRadius={32}
+                    innerRadius={20}
+                    outerRadius={26}
                     startAngle={90}
                     endAngle={-270}
                     dataKey="value"
                   >
                     <Cell fill={theme.primary} stroke="none" />
-                    <Cell fill="#E5E7EB" stroke="none" />
+                    <Cell fill="#E2E6EE" stroke="none" />
                   </Pie>
                 </PieChart>
               </ResponsiveContainer>
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-[11px] font-extrabold text-[#111418]">
-                  {activeProject.progress}%
+                <span className="text-[10px] font-black text-mm-dark">
+                  {averageProgress}%
                 </span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Vertical Timeline Card */}
-        <div
-          ref={timelineRef}
-          className="bg-white border border-[#E2E6EE] rounded-3xl p-6 md:p-8 shadow-xs relative"
-        >
-          <div className="flex items-center gap-2 mb-8">
-            <CheckCircle2 className={`w-5 h-5 ${theme.textAccentClass}`} />
-            <h5 className={`font-bold text-sm uppercase tracking-wider ${theme.textAccentClass}`}>
-              Project Timeline
-            </h5>
-          </div>
+        {/* Filter controls */}
+        {renderFilterBar()}
 
-          <div className="relative pl-8 md:pl-10 space-y-12 py-2">
-            {/* Background Line Track */}
-            <div className="absolute left-[17px] md:left-[21px] top-4 bottom-4 w-0.5 bg-[#E2E6EE] rounded-full" />
+        {/* Timeline Panel */}
+        <div className="bg-white border border-mm-border rounded-[32px] p-6 sm:p-8 shadow-xs space-y-6">
+          <h5 className="font-extrabold text-xs uppercase tracking-wider text-mm-gray flex items-center gap-2">
+            <CheckCircle2 className="w-4.5 h-4.5 text-mm-gray" />
+            Project Timeline
+          </h5>
 
-            {/* Filled Progress Line Track */}
-            <div
-              className="absolute left-[17px] md:left-[21px] top-4 w-0.5 rounded-full transition-all duration-300 origin-top"
-              style={{
-                height: `${scrollPercent}%`,
-                background: theme.primary,
-              }}
-            />
+          <div className="relative pl-12 space-y-8 py-2">
+            {/* Left timeline connecting track */}
+            <div className="absolute left-[15px] top-6 bottom-6 w-0.5 bg-gray-100 rounded-full" />
 
-            {activeProject.tasks.map((task, idx) => {
-              const isCompleted = task.status === "completed";
-              const isInProgress = task.status === "in-progress";
-              const isUpcoming = task.status === "upcoming";
+            {sortedProjects.map((project) => {
+              const isCompleted = project.status === "Completed";
+              const isInProgress = project.status === "In Progress";
 
-              const threshold =
-                activeProject.tasks.length > 1
-                  ? (idx / (activeProject.tasks.length - 1)) * 100
-                  : 0;
-              const isPassed = scrollPercent >= threshold;
-              const dotFilled = isCompleted || (isUpcoming && isPassed);
+              const startDate = parseDate(project.startDate);
+              const deadline = parseDate(project.deadline);
+
+              const dateStr =
+                startDate && deadline
+                  ? `${startDate.toLocaleDateString("en-US", { month: "short", day: "2-digit" })} - ${deadline.toLocaleDateString("en-US", { month: "short", day: "2-digit" })}`
+                  : "";
 
               return (
-                <div
-                  key={task.id}
-                  className="relative flex flex-col md:flex-row md:items-center justify-between gap-6 md:gap-12 pl-2"
-                >
-                  {/* Vertical Timeline Dot */}
-                  <div className="absolute left-[-27px] md:left-[-31px] top-1.5 flex items-center justify-center z-10">
+                <div key={project.id} className="relative flex items-start gap-4">
+                  {/* Left indicator node */}
+                  <div className="absolute left-[-48px] top-1.5 flex items-center justify-center z-10">
                     {isCompleted ? (
-                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-white bg-green-500 border border-green-600 shadow-xs">
-                        <Check className="w-4.5 h-4.5 stroke-[3]" />
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-white bg-green-500 border-2 border-white shadow-xs">
+                        <Check className="w-4 h-4 stroke-[3]" />
                       </div>
                     ) : isInProgress ? (
-                      <div className="relative w-8 h-8 flex items-center justify-center">
-                        <span
-                          className="absolute inline-flex h-full w-full rounded-full opacity-35 animate-ping"
-                          style={{ backgroundColor: theme.primary }}
-                        />
-                        <div
-                          className="w-5 h-5 rounded-full shadow-sm z-10"
-                          style={{ backgroundColor: theme.primary }}
-                        />
+                      <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center border-2 border-white shadow-xs shrink-0 relative">
+                        <div className="absolute inset-0 rounded-full bg-blue-500/15 animate-ping" />
+                        <div className="w-3.5 h-3.5 rounded-full bg-blue-600" />
                       </div>
                     ) : (
-                      <div
-                        className={`w-6 h-6 rounded-full border-2 transition-all duration-300 flex items-center justify-center bg-white ${
-                          dotFilled
-                            ? `${theme.textAccentClass}`
-                            : "border-[#748297]"
-                        }`}
-                        style={dotFilled ? { borderColor: theme.primary } : undefined}
-                      >
-                        {dotFilled && (
-                          <div
-                            className="w-2.5 h-2.5 rounded-full"
-                            style={{ backgroundColor: theme.primary }}
-                          />
-                        )}
+                      <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center border-2 border-white shadow-xs">
+                        <div className="w-3 h-3 rounded-full border-2 border-gray-300 bg-white" />
                       </div>
                     )}
                   </div>
 
-                  {/* Task Content Details */}
-                  <div className="flex-1 space-y-2.5">
-                    <div className="flex flex-wrap items-center gap-3">
-                      {/* Date Range Chip */}
-                      <span className="inline-flex text-[11px] font-bold text-mm-gray bg-gray-50 border border-gray-100 rounded-lg px-2.5 py-0.5">
-                        {task.startDate} - {task.endDate}
+                  {/* Task item card button */}
+                  <button
+                    onClick={() => setActiveDrawerProject(project)}
+                    className="flex-1 text-left bg-white hover:bg-gray-50/40 p-4 sm:p-5 rounded-2xl border border-transparent hover:border-gray-100 transition-all select-none group"
+                  >
+                    <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                      {dateStr && (
+                        <span className="text-[10px] font-black text-mm-gray tracking-wider uppercase bg-gray-100 px-2.5 py-0.5 rounded-md">
+                          {dateStr}
+                        </span>
+                      )}
+                      <span
+                        className={`text-[9px] font-black tracking-wider uppercase px-2.5 py-0.5 rounded-md ${
+                          isCompleted
+                            ? "bg-green-50 text-green-600 border border-green-100"
+                            : isInProgress
+                              ? "bg-blue-50 text-blue-600 border border-blue-100 animate-pulse"
+                              : "bg-gray-50 text-gray-500 border border-gray-100"
+                        }`}
+                      >
+                        {isInProgress ? "Current Task" : project.status}
                       </span>
-
-                      {/* Status Badges */}
-                      {isInProgress && (
-                        <span
-                          className="inline-flex text-[9px] font-extrabold uppercase tracking-wider text-white px-2.5 py-0.5 rounded-full shadow-xs"
-                          style={{ backgroundColor: theme.primary }}
-                        >
-                          Current Task
-                        </span>
-                      )}
-                      {isUpcoming && (
-                        <span
-                          className={`inline-flex text-[9px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${
-                            isPassed
-                              ? `${theme.badgeClass}`
-                              : "bg-gray-50 text-mm-gray border-gray-200"
-                          }`}
-                        >
-                          Upcoming Task
-                        </span>
-                      )}
-                      {isCompleted && (
-                        <span className="inline-flex text-[9px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-gray-50 text-gray-500 border border-gray-200">
-                          Completed
-                        </span>
-                      )}
                     </div>
 
-                    <h4 className="text-base md:text-lg font-bold text-[#111418] tracking-tight">
-                      {task.title}
+                    <h4 className="text-base font-extrabold text-mm-dark group-hover:text-blue-600 transition-colors">
+                      {project.name}
                     </h4>
-                    <p className="text-xs md:text-sm text-[#748297] leading-relaxed max-w-2xl">
-                      {task.description}
-                    </p>
-                  </div>
 
-                  {/* Progress / Readiness Bar */}
-                  {task.progress !== undefined && (
-                    <div className="w-full md:w-80 shrink-0 self-end md:self-center">
-                      <div className="flex justify-between items-center text-xs font-semibold text-[#748297] mb-1.5">
-                        <span>{isInProgress ? "Progress" : "Readiness"}</span>
-                        <span
-                          className={`font-bold ${
-                            isPassed || isInProgress ? theme.textAccentClass : "text-[#748297]"
-                          }`}
-                        >
-                          {task.progress}%
-                        </span>
+                    <p className="text-xs text-mm-gray mt-1.5 max-w-2xl leading-relaxed">
+                      {project.description || "No project description provided."}
+                    </p>
+
+                    {isInProgress && (
+                      <div className="mt-4 max-w-md space-y-1.5">
+                        <div className="flex justify-between items-center text-[10px] text-mm-gray">
+                          <span>Progress</span>
+                          <span className="font-bold text-blue-600">
+                            {project.progress}%
+                          </span>
+                        </div>
+                        <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all duration-300"
+                            style={{
+                              width: `${project.progress}%`,
+                              backgroundColor: theme.primary,
+                            }}
+                          />
+                        </div>
                       </div>
-                      <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all duration-500"
-                          style={{
-                            width: `${task.progress}%`,
-                            background: isInProgress
-                              ? theme.gradient
-                              : isPassed
-                                ? theme.primary
-                                : "#E5E7EB",
-                          }}
-                        />
-                      </div>
-                    </div>
-                  )}
+                    )}
+                  </button>
                 </div>
               );
             })}
           </div>
         </div>
+      </div>
+    );
+  };
 
-        {/* Glassmorphic Locked Overlay for locked projects */}
-        {activeProject.locked && (
-          <div className="absolute inset-0 bg-white/60 backdrop-blur-md rounded-3xl flex flex-col items-center justify-center p-8 text-center z-10 border border-gray-200/50">
-            <div className="h-16 w-16 rounded-full bg-purple-50 border border-purple-100 flex items-center justify-center mb-4 shadow-md">
-              <Lock className="h-6 w-6 text-purple-600 animate-pulse" />
+  return (
+    <div className="w-full flex flex-col gap-8 select-none relative">
+      {renderTabSwitcher()}
+
+      {activeTab === "report" && <Report apiUrl={apiUrl} />}
+
+      {activeTab === "Automation" && (
+        <PlanGate requiredPlan="Pro" fallback={planGateFallback}>
+          {domainProjects.length === 0 ? emptyState : renderProjectsContent()}
+        </PlanGate>
+      )}
+
+      {activeTab !== "report" && activeTab !== "Automation" && (
+        domainProjects.length === 0 ? emptyState : renderProjectsContent()
+      )}
+
+      {/* Sliding Details Drawer overlay */}
+      {activeDrawerProject && (
+        <>
+          {/* Backdrop overlay */}
+          <div
+            className="fixed inset-0 bg-black/35 backdrop-blur-[1px] z-40 transition-opacity animate-in fade-in duration-300"
+            onClick={() => setActiveDrawerProject(null)}
+          />
+
+          {/* Aside Drawer */}
+          <aside
+            className="fixed top-0 right-0 h-full w-full sm:w-[460px] bg-white border-l border-mm-border shadow-2xl z-50 flex flex-col transition-transform duration-300 translate-x-0 animate-in slide-in-from-right"
+          >
+            {/* Drawer Header */}
+            <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-extrabold tracking-wider uppercase px-2 py-0.5 rounded bg-gray-50 border border-gray-100 text-mm-gray">
+                  Task Details
+                </span>
+              </div>
+              <button
+                onClick={() => setActiveDrawerProject(null)}
+                className="p-1.5 rounded-lg hover:bg-gray-50 text-gray-400 hover:text-gray-600 transition-all cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
-            <h3 className="text-xl font-bold text-mm-dark mb-2">Automation Suite is Locked</h3>
-            <p className="text-sm text-mm-gray leading-relaxed max-w-sm mb-6">
-              Upgrade your plan to unlock automated CRM synchronization, webhooks, and advanced lead-generation triggers.
-            </p>
+            {/* Drawer Content */}
+            <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
+              {/* Project Title & Status */}
+              <div className="space-y-2.5">
+                <h3 className="text-lg font-bold text-mm-dark leading-tight">
+                  {activeDrawerProject.name}
+                </h3>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span
+                    className={`text-[9px] font-extrabold tracking-wider uppercase px-2.5 py-0.5 rounded-full ${
+                      activeDrawerProject.status === "Completed"
+                        ? "bg-green-50 text-green-600 border border-green-100"
+                        : activeDrawerProject.status === "In Progress"
+                          ? "bg-blue-50 text-blue-600 border border-blue-100"
+                          : "bg-gray-50 text-gray-500 border border-gray-100"
+                    }`}
+                  >
+                    {activeDrawerProject.status}
+                  </span>
+                  <span className="text-[9px] font-bold text-mm-gray bg-gray-100 rounded-full px-2.5 py-0.5 uppercase tracking-wider">
+                    {activeDrawerProject.priority} Priority
+                  </span>
+                </div>
+              </div>
 
-            <button
-              onClick={onUpgradeTrigger}
-              className="inline-flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-bold px-6 py-3 rounded-2xl shadow-md transition-all active:scale-95 cursor-pointer"
-            >
-              Upgrade Plan
-            </button>
-          </div>
-        )}
-      </>
-    )}
-  </div>
+              {/* Date & Assignee info */}
+              <div className="grid grid-cols-2 gap-4 bg-gray-50/70 border border-gray-100 rounded-2xl p-4 text-xs">
+                <div className="space-y-1">
+                  <span className="text-[10px] font-semibold text-mm-gray uppercase tracking-wider block">Timeline</span>
+                  <span className="font-bold text-mm-dark">
+                    {(() => {
+                      const start = parseDate(activeDrawerProject.startDate);
+                      const due = parseDate(activeDrawerProject.deadline);
+                      return start && due
+                        ? `${start.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} - ${due.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
+                        : "Not scheduled";
+                    })()}
+                  </span>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-[10px] font-semibold text-mm-gray uppercase tracking-wider block">Assignee</span>
+                  <span className="font-bold text-mm-dark">{activeDrawerProject.assignee}</span>
+                </div>
+              </div>
+
+              {/* Project brief */}
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-bold text-mm-gray uppercase tracking-wider block">Project Brief</span>
+                <p className="text-xs sm:text-sm text-mm-dark leading-relaxed">
+                  {activeDrawerProject.description || "No project brief provided."}
+                </p>
+              </div>
+
+              {/* Services rendered as Tags */}
+              {activeDrawerProject.services && activeDrawerProject.services.length > 0 && (
+                <div className="space-y-2">
+                  <span className="text-[10px] font-bold text-mm-gray uppercase tracking-wider block">Services / Tags</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {activeDrawerProject.services.map((service, idx) => (
+                      <span
+                        key={idx}
+                        className="text-[10px] font-bold px-2.5 py-1 bg-white border border-gray-200 text-mm-gray rounded-lg"
+                      >
+                        {service}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Activity / Updates Feed */}
+              <div className="space-y-4 pt-6 border-t border-gray-100">
+                <span className="text-[10px] font-bold text-mm-gray uppercase tracking-wider block">Activity Log</span>
+                <div className="space-y-4">
+                  {activeDrawerProject.updates && activeDrawerProject.updates.length > 0 ? (
+                    activeDrawerProject.updates.map((update, idx) => {
+                      const uDate = parseDate(update.timestamp);
+                      return (
+                        <div key={idx} className="border-l-2 border-gray-200 pl-4 py-1 relative">
+                          <div className="absolute left-[-5px] top-2.5 h-2 w-2 rounded-full bg-gray-300" />
+                          <div className="flex justify-between items-baseline mb-1">
+                            <span className="text-[10px] font-bold text-mm-dark">
+                              {update.designation || "System Update"}
+                            </span>
+                            {uDate && (
+                              <span className="text-[9px] text-mm-gray">
+                                {uDate.toLocaleDateString(undefined, {
+                                  month: "short",
+                                  day: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-mm-gray leading-relaxed">
+                            {update.message}
+                          </p>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="text-center py-6 bg-gray-50 border border-gray-100 border-dashed rounded-2xl">
+                      <p className="text-xs text-mm-gray italic">No activity updates logged yet.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </aside>
+        </>
+      )}
     </div>
   );
 }

@@ -3,28 +3,67 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ProjectDashboard } from "@/components/client/ProjectDashboard";
 import UpgradeCard from "@/components/client/UpgradeCard";
 import { X } from "lucide-react";
+import { useBusiness } from "@/hooks/use-business";
+import { getProjectsByBusinessFn } from "@/lib/server-functions";
 
 export const Route = createFileRoute("/_client/projects")({
-  validateSearch: (search: Record<string, unknown>) => {
+  validateSearch: (
+    search: Record<string, unknown>
+  ): { activeCard?: string; businessId?: string } => {
     return {
       activeCard:
         typeof search.activeCard === "string" ? search.activeCard : undefined,
+      businessId:
+        typeof search.businessId === "string" ? search.businessId : undefined,
     };
+  },
+  loaderDeps: ({ search: { businessId } }) => ({ businessId }),
+  loader: async ({ deps: { businessId } }) => {
+    if (!businessId) {
+      return { projects: [] };
+    }
+    try {
+      const projects = await getProjectsByBusinessFn({ data: businessId });
+      return { projects };
+    } catch (err) {
+      console.error("Failed to load projects for business:", businessId, err);
+      return { projects: [] };
+    }
   },
   component: RouteComponent,
 });
 
 function RouteComponent() {
-  const { activeCard } = Route.useSearch();
+  const { projects } = Route.useLoaderData();
+  const { activeCard, businessId } = Route.useSearch();
+  const { activeBusiness } = useBusiness();
   const navigate = useNavigate();
   const [activeProjectId, setActiveProjectId] = useState<string>("report");
   const [showUpgrade, setShowUpgrade] = useState(false);
 
-  // If redirected with activeCard from dashboard, set state and check if it's automation (locked)
+  // Sync activeBusiness context with businessId query param
+  useEffect(() => {
+    if (activeBusiness && businessId !== activeBusiness.id) {
+      navigate({
+        to: "/projects",
+        search: (prev) => ({
+          activeCard: prev.activeCard,
+          businessId: activeBusiness.id,
+        }),
+        replace: true,
+      });
+    }
+  }, [activeBusiness, businessId, navigate]);
+
+  // If redirected with activeCard from dashboard, set state
   useEffect(() => {
     if (activeCard) {
-      if (activeCard === "automation") {
-        setShowUpgrade(true);
+      if (activeCard.toLowerCase() === "automation") {
+        setActiveProjectId("Automation");
+      } else if (activeCard.toLowerCase() === "seo" || activeCard.toLowerCase() === "website") {
+        setActiveProjectId("Website");
+      } else if (activeCard.toLowerCase() === "marketing") {
+        setActiveProjectId("Marketing");
       } else {
         setActiveProjectId(activeCard);
       }
@@ -40,7 +79,10 @@ function RouteComponent() {
   const handleResetActiveCard = () => {
     navigate({
       to: "/projects",
-      search: { activeCard: undefined },
+      search: (prev) => ({
+        activeCard: undefined,
+        businessId: prev.businessId,
+      }),
     });
   };
 
@@ -48,6 +90,7 @@ function RouteComponent() {
     <div className="flex-1 w-full px-4.5 py-6 min-[769px]:px-8 min-[769px]:py-10 space-y-8 min-[769px]:space-y-10 select-none font-sans text-mm-dark relative pb-24">
       {/* Render the Project Dashboard component */}
       <ProjectDashboard
+        projects={projects}
         activeProjectId={activeProjectId}
         onActiveProjectChange={(id) => setActiveProjectId(id)}
         onUpgradeTrigger={() => setShowUpgrade(true)}
@@ -72,3 +115,4 @@ function RouteComponent() {
     </div>
   );
 }
+

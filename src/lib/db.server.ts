@@ -222,6 +222,20 @@ export const deleteProject = async (projectId: string): Promise<void> => {
   await db.collection("projects").doc(projectId).delete();
 };
 
+export const getProjectsByBusiness = async (businessId: string): Promise<Project[]> => {
+  const db = getDb();
+  const businessRef = db.collection("businesses").doc(businessId);
+  const snapRef = await db.collection("projects").where("businessId", "==", businessRef).withConverter(projectConverter).get();
+  const snapStr = await db.collection("projects").where("businessId", "==", businessId).withConverter(projectConverter).get();
+  
+  const map = new Map<string, Project>();
+  snapRef.docs.forEach((d) => map.set(d.id, d.data()));
+  snapStr.docs.forEach((d) => map.set(d.id, d.data()));
+  
+  return Array.from(map.values());
+};
+
+
 // ==================== PAYMENTS REPOSITORY ====================
 
 export const getPayments = async (): Promise<Payment[]> => {
@@ -350,6 +364,20 @@ export const getReportsByUser = async (uid: string): Promise<Report[]> => {
   const snap = await db.collection("reports").where("userId", "==", uid).withConverter(reportConverter).get();
   return snap.docs.map((d) => d.data());
 };
+
+export const getReportsByBusiness = async (businessId: string): Promise<Report[]> => {
+  const db = getDb();
+  const businessRef = db.collection("businesses").doc(businessId);
+  const snapRef = await db.collection("reports").where("businessId", "==", businessRef).withConverter(reportConverter).get();
+  const snapStr = await db.collection("reports").where("businessId", "==", businessId).withConverter(reportConverter).get();
+  
+  const map = new Map<string, Report>();
+  snapRef.docs.forEach((d) => map.set(d.id, d.data()));
+  snapStr.docs.forEach((d) => map.set(d.id, d.data()));
+  
+  return Array.from(map.values());
+};
+
 
 export const saveReport = async (report: Report): Promise<void> => {
   const db = getDb();

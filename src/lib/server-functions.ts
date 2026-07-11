@@ -290,6 +290,23 @@ export const deleteProjectFn = createServerFn({ method: "POST" })
     return (await getDb()).deleteProject(data);
   });
 
+export const getProjectsByBusinessFn = createServerFn({ method: "GET" })
+  .validator((d: unknown) => z.string().parse(d))
+  .handler(async ({ data: businessId }) => {
+    const decoded = await verifyServerSession();
+    const db = await getDb();
+    const biz = await db.getBusiness(businessId);
+    if (!biz) {
+      throw new Error("Business not found.");
+    }
+    const bizUserId = typeof biz.userId === "string" ? biz.userId : biz.userId?.id;
+    if (bizUserId !== decoded.uid && decoded.admin !== true) {
+      throw new Error("Unauthorized: You do not own this business.");
+    }
+    return db.getProjectsByBusiness(businessId);
+  });
+
+
 // ==================== PAYMENTS ====================
 
 export const getPaymentsFn = createServerFn({ method: "GET" })
@@ -505,6 +522,23 @@ export const getReportsByUserFn = createServerFn({ method: "GET" })
     }
     return (await getDb()).getReportsByUser(data);
   });
+
+export const getReportsByBusinessFn = createServerFn({ method: "GET" })
+  .validator((d: unknown) => z.string().parse(d))
+  .handler(async ({ data: businessId }) => {
+    const decoded = await verifyServerSession();
+    const db = await getDb();
+    const biz = await db.getBusiness(businessId);
+    if (!biz) {
+      throw new Error("Business not found.");
+    }
+    const bizUserId = typeof biz.userId === "string" ? biz.userId : biz.userId?.id;
+    if (bizUserId !== decoded.uid && decoded.admin !== true) {
+      throw new Error("Unauthorized: You do not own this business.");
+    }
+    return db.getReportsByBusiness(businessId);
+  });
+
 
 export const saveReportFn = createServerFn({ method: "POST" })
   .validator((d: unknown) => ReportSchema.parse(d))
