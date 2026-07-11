@@ -117,7 +117,7 @@ function MymindPage() {
       <MymindDownloads />
       <AddOnsSection />
       <MymindContact />
-      {/* <StoreboxFAQ/> */}
+      <StoreboxFAQ/>
       <MymindFooter />
     </div>
   );

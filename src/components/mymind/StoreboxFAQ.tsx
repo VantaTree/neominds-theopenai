@@ -8,45 +8,101 @@ interface FAQItem {
 
 const FAQ_ITEMS: FAQItem[] = [
   {
-    question: "What can I store in Storebox.ai?",
+    question: "What is Business Buddy",
     answer:
-      "Anything — files, links, images, PDFs, videos, notes, screenshots, articles, and more. If it matters to your team, Storebox can hold it.",
+      "Business Buddy is an AI-powered digital growth platform that helps businesses grow through website development, SEO, digital marketing, branding, AI automation, and business strategy all in one place.",
   },
   {
-    question: "Do I need to organize anything manually?",
+    question: "How is Business Buddy different from other agencies?",
     answer:
-      "No. That's the whole point. Storebox.ai's AI reads what you save and organizes it automatically. You just save, and it handles the rest.",
+      "We don't start by selling services. We first understand your business through an AI Business Audit and then recommend the right strategy for your goals.",
   },
   {
-    question: "Is my team's data private?",
+    question: "What is an AI Business Audit?",
     answer:
-      "Absolutely. We do not sell your data, share it with third parties, or use it for advertising. Your files are yours — always.",
+      "Our AI Business Audit analyzes your website, SEO, branding, competitors, and online presence to identify opportunities and recommend a personalized growth strategy.",
   },
   {
-    question: "How is this different from Google Drive or Notion?",
+    question: "Why does my business need a website?",
     answer:
-      "Google Drive requires folders. Notion requires structure. Storebox requires neither. It's built for speed — save anything in one click, find it in seconds.",
+      "A professional website builds trust, improves your Google visibility, generates leads, and gives your business a strong online presence.",
   },
   {
-    question: "Can I use it on my phone?",
+    question: "What services do you offer?",
     answer:
-      "Yes. Storebox.ai has native iOS and Android apps, plus browser extensions for Chrome, Edge, and Safari. Everything syncs in real time.",
+      "We provide website development, SEO, digital marketing, branding, social media management, AI chatbots, AI voicebots, business automation, and ongoing website support.",
+  },
+  // {
+  //   question: "Who are your services for?",
+  //   answer:
+  //   "We work with startups, local businesses, small businesses, growing companies, and enterprises looking to strengthen their digital presence.",
+  // },
+  // {
+  //   question: "How long does it take to build a website?",
+  //   answer:
+  //   "Most business websites are completed within 1–3 weeks, depending on the project requirements.",
+  // },
+  // {
+  //   question: "Will my website work on mobile devices?",
+  //   answer:
+  //   "Yes. Every website we build is fully responsive, fast, and optimized for mobile, tablet, and desktop users.",
+  // },
+  {
+    question: "Do you provide website maintenance?",
+    answer:
+    "Yes. We provide ongoing maintenance, updates, security, and technical support based on your subscription plan.",
   },
   {
-    question: "What happens when I hit my storage limit?",
+    question: "Can you redesign my existing website?",
     answer:
-      "You'll get a clear notification and the option to upgrade — no surprises, no data loss, no files deleted without your permission.",
+    "Absolutely. We redesign outdated websites with a modern, SEO-friendly, and high-performing design that improves user experience.",
+  },
+  // {
+  //   question: "Why are your pricing plans affordable?",
+  //   answer:
+  //   "Our subscription model makes professional website development, SEO, and digital marketing accessible without high upfront costs.",
+  // },
+  // {
+  //   question: "Do I need all your services?",
+  //   answer:
+  //   "No. Every business is different. We recommend only the services that match your business goals.",
+  // },
+  {
+    question: "Can you help my website rank on Google?",
+    answer:
+    "Yes. Our SEO experts optimize your website using technical SEO, local SEO, keyword research, and content optimization to improve search rankings.",
   },
   {
-    question: "Is there a free trial for paid plans?",
+    question: "What is AI Automation?",
     answer:
-      "Yes — all paid plans come with a 14-day free trial, no credit card required.",
+    "AI Automation helps businesses save time by automating customer support, lead generation, follow-ups, and repetitive tasks.",
   },
+  // {
+  //   question: "Do you provide AI Chatbots and Voicebots?",
+  //   answer:
+  //   "Yes. We build AI chatbots and AI voice assistants to handle customer enquiries, appointments, and support 24/7.",
+  // },
   {
-    question: "Can I migrate from Google Drive or Notion?",
+    question: "Can I upgrade my plan later?",
     answer:
-      "Yes. We have one-click import tools for Google Drive, Notion, and Dropbox. Your team can be fully set up in under 15 minutes.",
+    "Yes. You can upgrade your plan anytime as your business grows.",
   },
+  // {
+  //   question: "Why choose The Business Buddy?",
+  //   answer:
+  //   "We provide complete digital growth solutions under one roof, offer AI-driven insights, transparent pricing, and commit to your long-term success.",
+  // },
+  // {
+  //   question: "Do you work with international clients?",
+  //   answer:
+  //   "Yes. We provide website development, SEO, digital marketing, and AI solutions for businesses worldwide.",
+  // },
+  // {
+  //   question: "How do I get started?",
+  //   answer:
+  //   "Simply contact us for a Free AI Business Audit, and we'll create a personalized digital growth strategy for your business.",
+  // },
+  
 ];
 
 export function StoreboxFAQ() {

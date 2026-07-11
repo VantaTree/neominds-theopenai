@@ -67,7 +67,7 @@ function WhyPage() {
       <WhyInvisible />
       <WhyPrinciples />
       <WhyClosingCTA />
-      <WhyDownloads />
+      {/* <WhyDownloads /> */}
       <MymindFooter />
     </div>
   );

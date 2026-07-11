@@ -39,7 +39,7 @@ export default function WhyHero() {
               Everything we do starts with this question.
             </p>
             <p className="mb-8">
-              Why should mymind exist? Why should anyone care to use it? Why is privacy so important to us?
+              Why should TheOpenAi exist? Why should anyone care to use it? 
             </p>
             <p>
               Eventually, the “why” led us to the because.
@@ -53,12 +53,12 @@ export default function WhyHero() {
             transition={{ duration: 0.6, delay: 0.4, ease: "easeOut" }}
             className="w-10 h-10 flex items-center justify-center"
           >
-            <img
+            {/* <img
               src="/images/why/Why-Icon-1.svg"
               alt="Intro icon"
               className="h-auto w-full"
               draggable={false}
-            />
+            /> */}
           </motion.div>
         </div>
       </div>

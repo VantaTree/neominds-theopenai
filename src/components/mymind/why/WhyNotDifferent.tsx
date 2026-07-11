@@ -16,7 +16,7 @@ export default function WhyNotDifferent() {
           className="mb-8 font-serif text-[1.778rem] leading-[2rem] tracking-[-0.044em] md:text-[2.222rem] md:leading-[2.444rem]"
           style={{ color: "var(--color-mm-charcoal)" }}
         >
-          Because why not do something different?
+         Because Business Has Changed.
         </motion.h2>
 
         {/* Content Paragraphs */}
@@ -29,10 +29,10 @@ export default function WhyNotDifferent() {
           style={{ color: "var(--color-mm-charcoal)" }}
         >
           <p className="mb-6 font-sans tracking-[-0.011em]">
-            We’ve always approached product design this way. We look at our current tools and ask ourselves why it’s done the way it is. Why do bookmarking tools have social features? Why do we use folders? Dropdowns? Are these outdated UI patterns still useful or are they just clutter? What if we do it better? Or just different?
+            In today's digital world, having a business is not enough. If people can't find you online, they can't choose you. 
           </p>
           <p className="font-sans tracking-[-0.011em]">
-            With mymind we ultimately asked ourselves, why not? Why not find a different way to save what we care about? Why not remove all the other stuff that just gets in the way? Forget how it’s usually done. Why not make it better?
+            Many businesses still rely on methods that worked years ago, such as word of mouth, printed marketing, walk-in customers, and manual follow-ups. While these approaches still have value, they are no longer enough on their own.
           </p>
         </motion.div>
 
@@ -45,11 +45,11 @@ export default function WhyNotDifferent() {
           className="mb-6 text-xs font-semibold uppercase tracking-[0.22em]"
           style={{ color: "var(--color-mm-gray)" }}
         >
-          MORE ON HOW WE THINK
+          {/* MORE ON HOW WE THINK */}
         </motion.p>
 
         {/* Links Cards */}
-        <div className="w-full max-w-lg flex flex-col gap-3">
+        {/* <div className="w-full max-w-lg flex flex-col gap-3">
           {[
             {
               title: "How did we end up creating mymind?",
@@ -88,7 +88,7 @@ export default function WhyNotDifferent() {
               </span>
             </motion.a>
           ))}
-        </div>
+        </div> */}
       </div>
     </section>
   );

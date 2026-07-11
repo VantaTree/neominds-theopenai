@@ -15,12 +15,12 @@ export default function WhyTechRelationship() {
           transition={{ duration: 0.5 }}
           className="mb-8 w-10 h-10 flex items-center justify-center"
         >
-          <img
+          {/* <img
             src="/images/why/Why-Icon-2.svg"
             alt="Relationship with tech icon"
             className="h-auto w-full"
             draggable={false}
-          />
+          /> */}
         </motion.div>
 
         {/* Title */}
@@ -32,7 +32,7 @@ export default function WhyTechRelationship() {
           className="mb-8 font-serif text-[1.778rem] leading-[2rem] tracking-[-0.044em] md:text-[2.222rem] md:leading-[2.444rem]"
           style={{ color: "var(--color-mm-charcoal)" }}
         >
-          Because we need better relationships with technology.
+          Because Businesses Deserve Better.
         </motion.h2>
 
         {/* Content Paragraphs */}
@@ -45,17 +45,18 @@ export default function WhyTechRelationship() {
           style={{ color: "var(--color-mm-charcoal)" }}
         >
           <p className="mb-6 font-sans tracking-[-0.011em]">
-            There was a time when our tools were just tools. We picked up a hammer to build something, then put it back on the shelf when we were finished. It was a tool made for one simple purpose. It had no ulterior motives.
+            There are small -to medium-sized business owners who want to invest in digital marketing. Instead of receiving a complete digital solution, they are sold individual services, and most of them are surprised by how much they are asked to pay for even a simple website, and they end up regretting paying more. 
           </p>
           <p className="mb-6 font-sans tracking-[-0.011em]">
-            Fast forward to today, and our tools have evolved. They’ve become smarter. They have algorithms, feeds, notifications. They are designed to make us spend as much time with them as possible. We must feed them, manage them, clean them, engage with them. Our tools no longer serve our purpose. We serve theirs.
+           At times, the most visually appealing websites may also fail to deliver meaningful results,
+for minor content updates or any changes, they charge more and more, which initially seemed to be an affordable project will become increasingly expensive over time.
           </p>
           <p className="mb-6 font-sans tracking-[-0.011em]">
-            Could we not use the magic of technology to build something better? Something that truly benefits us, rather than taking from us. Something designed in a way that fosters a special relationship with our tools once again. Something that serves a simple, necessary purpose.
+            Agencies usually  start charging from 30k, going till lakhs, which ultimately can't be afforded by a small-medium sized business owners
           </p>
-          <p className="font-sans tracking-[-0.011em]">
+          {/* <p className="font-sans tracking-[-0.011em]">
             We decided we could.
-          </p>
+          </p> */}
         </motion.div>
 
         {/* Section divider label */}
@@ -67,11 +68,11 @@ export default function WhyTechRelationship() {
           className="mb-6 text-xs font-semibold uppercase tracking-[0.22em]"
           style={{ color: "var(--color-mm-gray)" }}
         >
-          HOW WE MAKE OUR DECISIONS
+       
         </motion.p>
 
         {/* Links Cards */}
-        <div className="w-full max-w-lg flex flex-col gap-3">
+        {/* <div className="w-full max-w-lg flex flex-col gap-3">
           {[
             {
               title: "Our promise from us to you.",
@@ -114,7 +115,7 @@ export default function WhyTechRelationship() {
               </span>
             </motion.a>
           ))}
-        </div>
+        </div> */}
       </div>
     </section>
   );

@@ -15,12 +15,12 @@ export default function WhyInvisible() {
           transition={{ duration: 0.5 }}
           className="mb-8 w-10 h-10 flex items-center justify-center"
         >
-          <img
+          {/* <img
             src="/images/why/Why-Icon-5.svg"
             alt="Software should be invisible icon"
             className="h-auto w-full"
             draggable={false}
-          />
+          /> */}
         </motion.div>
 
         {/* Title */}
@@ -32,7 +32,7 @@ export default function WhyInvisible() {
           className="mb-6 font-serif text-[1.778rem] leading-[2rem] tracking-[-0.011em] md:text-[2.222rem] md:leading-[2.444rem] md:tracking-[-0.044em]"
           style={{ color: "var(--color-mm-charcoal)" }}
         >
-          We believe software should stay out of the way and be invisible.
+          The Story Behind the BusinessBuddy
         </motion.h2>
 
         {/* Subtitle */}
@@ -44,7 +44,7 @@ export default function WhyInvisible() {
           className="text-center font-sans text-sm md:text-base leading-[1.556rem] md:leading-[1.889rem] tracking-[-0.011em]"
           style={{ color: "var(--color-mm-charcoal)" }}
         >
-          Here are the guiding principles of how we built and designed mymind.
+           Realities that inspired us to rethink how businesses grow.
         </motion.p>
       </div>
     </section>

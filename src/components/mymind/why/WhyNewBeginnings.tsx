@@ -15,12 +15,12 @@ export default function WhyNewBeginnings() {
           transition={{ duration: 0.5 }}
           className="mb-8 w-10 h-10 flex items-center justify-center"
         >
-          <img
+          {/* <img
             src="/images/why/Why-Icon-3.svg"
             alt="New beginnings icon"
             className="h-auto w-full"
             draggable={false}
-          />
+          /> */}
         </motion.div>
 
         {/* Title */}
@@ -32,7 +32,7 @@ export default function WhyNewBeginnings() {
           className="mb-8 font-serif text-[1.778rem] leading-[2rem] tracking-[-0.044em] md:text-[2.222rem] md:leading-[2.444rem]"
           style={{ color: "var(--color-mm-charcoal)" }}
         >
-          Because new beginnings are beautiful.
+          Because There Had to Be a Better Way.
         </motion.h2>
 
         {/* Content Paragraphs */}
@@ -45,10 +45,18 @@ export default function WhyNewBeginnings() {
           style={{ color: "var(--color-mm-charcoal)" }}
         >
           <p className="mb-6 font-sans tracking-[-0.011em]">
-            There's a reason we don't have an import feature. We like the idea of starting from scratch. Not only because humanity revolves around fresh starts, but this also requires you to reevaluate your relationship with data. It inspires you to be more conscious, more meticulous, more mindful of the things you save and collect.
+            On the other were cheap solutions and delivered very generic websites, poor marketing strategies and if client wanted any updates they were charged  a high amount which was not even needed for minor changes or updates 
+
+there was very little line in between 
+
           </p>
           <p className="font-sans tracking-[-0.011em]">
-            Digital clutter and information fatigue affect our real minds, whether we’re aware of it or not. We want your new mind to be a break from that. It’s a clean slate where you can deliberately choose what to save and consume. A mental sigh of relief.
+            
+We asked ourselves:
+why does digital growth feel complicated, expensive , and out of reach for businesses that need it the most 
+
+Why should professional websites, AI - powered insights , branding , SEO, and digital marketing  be considered a  luxury or expensive instead of necessity?
+
           </p>
         </motion.div>
       </div>

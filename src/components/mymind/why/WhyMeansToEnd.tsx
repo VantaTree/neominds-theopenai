@@ -15,12 +15,12 @@ export default function WhyMeansToEnd() {
           transition={{ duration: 0.5 }}
           className="mb-8 w-10 h-10 flex items-center justify-center"
         >
-          <img
+          {/* <img
             src="/images/why/Why-Icon-4.svg"
             alt="Means to an end icon"
             className="h-auto w-full"
             draggable={false}
-          />
+          /> */}
         </motion.div>
 
         {/* Title */}
@@ -32,7 +32,7 @@ export default function WhyMeansToEnd() {
           className="mb-8 font-serif text-[1.778rem] leading-[2rem] tracking-[-0.044em] md:text-[2.222rem] md:leading-[2.444rem]"
           style={{ color: "var(--color-mm-charcoal)" }}
         >
-          Because a tool is just the means to an end, not the end in itself.
+          Because We Chose to Build, Not Just Sell.
         </motion.h2>
 
         {/* Content Paragraphs */}
@@ -45,13 +45,14 @@ export default function WhyMeansToEnd() {
           style={{ color: "var(--color-mm-charcoal)" }}
         >
           <p className="mb-6 font-sans tracking-[-0.011em]">
-            We built mymind for doers and makers. For people who are busy doing other things and simply need a place to collect and remember what they care about.
+           We believed there had to be a better way.
+
           </p>
           <p className="mb-6 font-sans tracking-[-0.011em]">
-            mymind doesn't interfere, doesn't bother and doesn't ask to be maintained. It’s meant to serve you, as an extension of your mind. So you can think about anything and everything except the tool itself.
+            No solution that combined AI-powered business analysis, professional website development, SEO optimization, digital marketing, branding, and guidance all at a price that growing businesses could realistically invest in
           </p>
           <p className="font-sans tracking-[-0.011em]">
-            Because that’s all it is: A tool meant to help you achieve something else. Those who like to procrastinate with folders and unmaintainable systems will find plenty of other apps to keep them busy. mymind is for those who would rather draw, write, build, dance and sing.
+            So we created one the BusinessBuddy
           </p>
         </motion.div>
       </div>

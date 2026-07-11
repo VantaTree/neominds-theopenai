@@ -15,12 +15,12 @@ export default function WhyClosingCTA() {
           transition={{ duration: 0.6 }}
           className="mb-8 w-16 h-16 flex items-center justify-center"
         >
-          <img
+          {/* <img
             src="/images/why/Closing-Icon.svg"
             alt="Closing Icon"
             className="h-auto w-full"
             draggable={false}
-          />
+          /> */}
         </motion.div>
 
         {/* Title */}
@@ -32,11 +32,11 @@ export default function WhyClosingCTA() {
           className="mb-12 font-serif text-[2.222rem] leading-[2.444rem] tracking-[-0.044em] md:text-[3.6rem] md:leading-[4rem] lg:text-[4.444rem] lg:leading-[4.889rem]"
           style={{ color: "var(--color-mm-charcoal)" }}
         >
-          We’re trying to do something different with mymind.
+          We’re trying to do something different with BusinessBuddyy
           <br />
           <br />
-          It’s a refreshing approach to remembering the things you deeply care
-          about.
+          We are Building the Future of Business Growth
+         
         </motion.h2>
 
         {/* Button */}

@@ -19,12 +19,12 @@ export default function WhyPrinciples() {
         >
           {/* MM Crest */}
           <div className="mb-10 w-16 h-16 flex items-center justify-center">
-            <img
+            {/* <img
               src="/images/why/MM-Crest.svg"
               alt="MM Crest"
               className="h-auto w-full"
               draggable={false}
-            />
+            /> */}
           </div>
 
           {/* Principle 1 */}
@@ -33,13 +33,13 @@ export default function WhyPrinciples() {
               className="mb-4 font-serif text-[1.778rem] leading-[2rem] tracking-[-0.011em] md:text-[2.222rem] md:leading-[2.444rem] md:tracking-[-0.044em]"
               style={{ color: "var(--color-mm-charcoal)" }}
             >
-              Beauty is a function.
+             The Online Choice.
             </h3>
             <p
               className="font-sans text-sm md:text-base leading-[1.556rem] md:leading-[1.889rem] tracking-[-0.011em] max-w-xl"
               style={{ color: "var(--color-mm-charcoal)" }}
             >
-              If we strive to make it beautiful, we automatically make it useful. Design that pleases the mind serves it. Our minds are a beautiful mess, and instead of interfering with that, we embrace it.
+              Having a great business is no longer enough. Traditional methods like word-of-mouth and manual outreach still hold value, but they can't scale alone. In a digital market, if people can't easily find you online, they simply won't choose you.
             </p>
           </div>
 
@@ -52,13 +52,13 @@ export default function WhyPrinciples() {
               className="mb-4 font-serif text-[1.778rem] leading-[2rem] tracking-[-0.044em] md:text-[2.222rem] md:leading-[2.444rem]"
               style={{ color: "var(--color-mm-charcoal)" }}
             >
-              Make it invisible.
+             High Costs and Complexities.
             </h3>
             <p
               className="font-sans text-sm md:text-base leading-[1.556rem] md:leading-[1.889rem] tracking-[-0.011em] max-w-xl"
               style={{ color: "var(--color-mm-charcoal)" }}
             >
-              The less you think about mymind, the better. We believe in clutter-free experiences, without dropdowns, filters and the usual UI you’ll find in other apps. Your mind should be a place of rest and inspiration.
+             The market has forced you into an unfair choice: pay high agency rates (from 30k up) for complex services, or settle for generic, template-driven solutions. Neither delivers true value or transparent pricing for growth. Why should these essentials be luxuries?
             </p>
           </div>
 
@@ -71,24 +71,24 @@ export default function WhyPrinciples() {
               className="mb-4 font-serif text-[1.778rem] leading-[2rem] tracking-[-0.044em] md:text-[2.222rem] md:leading-[2.444rem]"
               style={{ color: "var(--color-mm-charcoal)" }}
             >
-              Less features, more magic.
+              A Real Solution.
             </h3>
             <p
               className="font-sans text-sm md:text-base leading-[1.556rem] md:leading-[1.889rem] tracking-[-0.011em] max-w-xl"
               style={{ color: "var(--color-mm-charcoal)" }}
             >
-              We’re not concerned with churning out more features and functionalities. Your mind *just works.* It doesn’t really matter how. It does all the work for you, and not the other way around.
+              We believe growing businesses deserve a real partner. So, we created BusinessBuddy. A single, integrated approach that combines AI-driven insights, professional web design, SEO, and marketing, all at an affordable, realistic price you can truly invest in.
             </p>
           </div>
 
           {/* Signature */}
           <div className="w-40 flex items-center justify-center">
-            <img
+            {/* <img
               src="/images/why/Team-Signature.svg"
               alt="Team Signature"
               className="h-auto w-full"
               draggable={false}
-            />
+            /> */}
           </div>
         </motion.div>
       </div>
