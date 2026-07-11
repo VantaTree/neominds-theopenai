@@ -5,50 +5,23 @@ from tools import website_audit_tool, competitor_research_tool, seo_research_too
 
 load_dotenv()
 
-# Define the default model at the top of the file.
-# You can change this to any free model from OpenRouter depending on upstream rate limits:
-# - "meta-llama/llama-3.3-70b-instruct:free"   (Large Llama 3.3 model, highly capable but frequently rate-limited)
-# - "google/gemma-4-31b-it:free"               (Strong Google model)
-# - "qwen/qwen3-next-80b-a3b-instruct:free"    (Capable large Qwen model)
-# - "meta-llama/llama-3.2-3b-instruct:free"    (Small, very fast model, least likely to rate-limit)
-MODEL = "meta-llama/llama-3.3-70b-instruct:free"
+# Default model for Groq
+MODEL = "llama-3.3-70b-versatile"
 
-# Determine which provider to use
-provider = os.getenv("LLM_PROVIDER", os.getenv("PROVIDER", "groq")).strip().lower()
-
-if provider == "groq":
-    # Resolve the model name for Groq. Default to llama-3.3-70b-versatile.
-    model_name = os.getenv("LLM_MODEL") or os.getenv("GROQ_MODEL")
-    if not model_name or "openrouter/free" in model_name:
-        groq_model = "groq/llama-3.3-70b-versatile"
-    elif "llama-3.3-70b" in model_name:
-        groq_model = "groq/llama-3.3-70b-versatile"
-    else:
-        groq_model = model_name if model_name.startswith("groq/") else f"groq/{model_name}"
-        
-    llm = LLM(
-        model=groq_model,
-        temperature=0.3,
-        num_retries=5,
-        max_tokens=4000
-    )
+# Resolve the model name for Groq
+model_name = os.getenv("LLM_MODEL") or os.getenv("GROQ_MODEL") or MODEL
+if not model_name.startswith("groq/"):
+    groq_model = f"groq/{model_name}"
 else:
-    # Map key for LiteLLM / CrewAI
-    openrouter_api_key = os.getenv("OPEN_ROUTER")
-    if openrouter_api_key:
-        os.environ["OPENROUTER_API_KEY"] = openrouter_api_key
-    
-    # Allow model override, default to the defined MODEL
-    model_name = os.getenv("LLM_MODEL") or os.getenv("OPENROUTER_MODEL") or MODEL
-    if not model_name.startswith("openrouter/"):
-        model_name = f"openrouter/{model_name}"
-        
-    llm = LLM(
-        model=model_name,
-        temperature=0.3,
-        max_tokens=4000,
-        base_url="https://openrouter.ai/api/v1"
-    )
+    groq_model = model_name
+
+llm = LLM(
+    model=groq_model,
+    temperature=0.3,
+    num_retries=5,
+    max_tokens=4000
+)
+
 
 # DISCOVERY AGENT
 
@@ -622,11 +595,28 @@ marketing_agent = Agent(
     ==================================================
 
     Generate the report using EXACTLY this structure.
+    The report must recommend ONE service plan
+    (Basic, Plus or Pro).
+
+    In addition, identify every recommended service
+    that is NOT included in the selected plan.
+
+    These should be returned in the "addons"
+    section.
+
+    Only include add-ons that are supported by the
+    audit findings.
+
+    Do not recommend unnecessary services simply
+    to increase the package value.
+
+    An add-on should only appear if it provides
+    clear business value and is not already included
+    in the recommended plan.
 
     {
     "executive_summary": {
         "overall_score": 0,
-        "business_stage": "",
         "summary": "",
         "top_strength": "",
         "biggest_challenge": "",
@@ -714,15 +704,6 @@ marketing_agent = Agent(
         "reason": "",
         "expected_results": [],
     },
-
-    # "metrics_summary": {
-    #     "overall_health": 0,
-    #     "growth_potential": 0,
-    #     "digital_readiness": 0,
-    #     "marketing_effectiveness": 0,
-    #     "brand_strength": 0,
-    #     "priority_level": ""
-    # }
     }
 
     ==================================================
@@ -800,6 +781,54 @@ marketing_agent = Agent(
 
     The recommendation must always be supported
     by the audit findings.
+
+    Recommend ONLY ONE plan.
+
+    The chosen plan should satisfy the majority
+    of the business requirements.
+
+    After selecting the plan, compare the complete
+    audit findings against the features included
+    within that plan.
+
+    If the business requires additional services
+    that are NOT included in the selected plan,
+    list them under "addons".
+
+    Do NOT duplicate features that already exist
+    inside the selected plan.
+
+    Only recommend add-ons that are supported by
+    the audit.
+
+    Each add-on must include:
+
+    - service
+    - reason
+    - priority (High, Medium or Low)
+
+    Examples:
+
+    If BASIC is recommended but the audit shows
+    the business would strongly benefit from
+    Google Ads management,
+    return it as an add-on.
+
+    If PLUS is recommended but the audit indicates
+    the business also needs:
+
+    - Google Ads
+    - Meta Ads
+    - GEO Optimization
+
+    these should appear under "addons".
+
+    If PRO already includes Advanced SEO,
+    do NOT recommend Advanced SEO as an add-on.
+
+    If every required service is already included
+    in the selected plan,
+    return an empty addons array.
 
     ==================================================
     FINAL INSTRUCTIONS

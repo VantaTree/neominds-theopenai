@@ -1,8 +1,11 @@
+import warnings
+warnings.filterwarnings("ignore", category=RuntimeWarning)
 from crewai.tools import tool
 import requests
 from bs4 import BeautifulSoup
-from duckduckgo_search import DDGS
+from ddgs import DDGS
 import time
+
 
 @tool
 def website_audit_tool(url: str) -> str:

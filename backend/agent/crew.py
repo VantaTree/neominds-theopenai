@@ -100,14 +100,9 @@ os.environ["LITELLM_NUM_RETRIES"] = "0"
 os.environ["LITELLM_MAX_RETRIES"] = "0"
 
 # LLM Provider Configuration
-# Set this to "openrouter" or "groq"
 provider = "groq"
 
 # API Key Configuration
-# You can set this variable to:
-# 1. The name of an environment variable (e.g., "OPEN_ROUTER", "OPENROUTER_API_KEY", "GROQ_API_KEY")
-# 2. A direct API key string (e.g., "sk-or-v1-...")
-# 3. None or "" to let the system auto-detect the key from the environment
 api_key = "GROQ_API_KEY"
 
 def resolve_api_key(key_var):
@@ -118,7 +113,7 @@ def resolve_api_key(key_var):
         return os.environ[key_var_str]
     return key_var_str
 
-def get_candidate_keys(provider_name):
+def get_candidate_keys():
     keys = []
     # 1. First candidate: the resolved primary api_key
     primary = resolve_api_key(api_key)
@@ -126,43 +121,20 @@ def get_candidate_keys(provider_name):
         keys.append(primary)
         
     # 2. Add other candidate environment variable keys
-    candidate_env_vars = []
-    if provider_name == "openrouter":
-        candidate_env_vars = ["OPEN_ROUTER", "OPENROUTER_API_KEY"]
-    elif provider_name == "groq":
-        candidate_env_vars = ["GROQ_API_KEY"]
-    else:
-        candidate_env_vars = ["OPEN_ROUTER", "OPENROUTER_API_KEY", "GROQ_API_KEY"]
-        
-    for var in candidate_env_vars:
-        val = os.getenv(var)
-        if val and val not in keys:
-            keys.append(val)
-            
-    # Also add any of the general keys as fallback
-    for var in ["OPEN_ROUTER", "OPENROUTER_API_KEY", "GROQ_API_KEY"]:
-        val = os.getenv(var)
-        if val and val not in keys:
-            keys.append(val)
+    val = os.getenv("GROQ_API_KEY")
+    if val and val not in keys:
+        keys.append(val)
             
     return keys
 
-def get_candidate_models(provider_name):
-    from models import FREE_MODELS, GROQ_MODELS
-    if provider_name == "openrouter":
-        configured_model = os.getenv("LLM_MODEL") or os.getenv("OPENROUTER_MODEL") or "meta-llama/llama-3.3-70b-instruct:free"
-        models = [configured_model]
-        for m in FREE_MODELS:
-            if m not in models:
-                models.append(m)
-        return models
-    else:  # groq
-        configured_model = os.getenv("LLM_MODEL") or os.getenv("GROQ_MODEL") or "llama-3.3-70b-versatile"
-        models = [configured_model]
-        for m in GROQ_MODELS:
-            if m not in models:
-                models.append(m)
-        return models
+def get_candidate_models():
+    from models import GROQ_MODELS
+    configured_model = os.getenv("LLM_MODEL") or os.getenv("GROQ_MODEL") or "llama-3.3-70b-versatile"
+    models = [configured_model]
+    for m in GROQ_MODELS:
+        if m not in models:
+            models.append(m)
+    return models
 
 def is_wrong_api_key_error(e):
     err_str = str(e).lower()
@@ -240,9 +212,8 @@ def run_assessment_crew(data: dict) -> dict:
     log_file_path = os.path.join(logs_dir, "agent.log")
 
     import crew
-    active_provider = crew.provider.strip().lower() if getattr(crew, "provider", None) else os.getenv("LLM_PROVIDER", os.getenv("PROVIDER", "groq")).strip().lower()
-    api_keys = get_candidate_keys(active_provider)
-    models = get_candidate_models(active_provider)
+    api_keys = get_candidate_keys()
+    models = get_candidate_models()
 
     key_idx = 0
     model_idx = 0
@@ -254,39 +225,29 @@ def run_assessment_crew(data: dict) -> dict:
         current_key = api_keys[key_idx]
         current_model = models[model_idx]
 
-        # Determine pacing callback if groq
-        if active_provider == "groq" or "groq" in current_model.lower():
-            def task_pacing_callback(output):
-                print("\n" + "="*70)
-                print(" [Pacing] Sleeping for 35 seconds to reset the Groq TPM limit window... ")
-                print("="*70 + "\n")
-                time.sleep(35)
-            discovery_task.callback = task_pacing_callback
-            research_task.callback = task_pacing_callback
-            marketing_task.callback = task_pacing_callback
-        else:
-            discovery_task.callback = None
-            research_task.callback = None
-            marketing_task.callback = None
+        # Use pacing callback for Groq
+        def task_pacing_callback(output):
+            print("\n" + "="*70)
+            print(" [Pacing] Sleeping for 35 seconds to reset the Groq TPM limit window... ")
+            print("="*70 + "\n")
+            time.sleep(35)
+        discovery_task.callback = task_pacing_callback
+        research_task.callback = task_pacing_callback
+        marketing_task.callback = task_pacing_callback
 
         # Print the requested three things to stdout BEFORE redirection
-        provider_print = "openrouter" if active_provider == "openrouter" else "groqai"
-        print(f"API = {provider_print}")
+        print("API = groqai")
         print(f"model = {current_model}")
         print("started agent")
 
-        # Set API keys in environment so LiteLLM resolves them correctly
-        if active_provider == "openrouter":
-            os.environ["OPENROUTER_API_KEY"] = current_key
-            os.environ["OPEN_ROUTER"] = current_key
-        else:
-            os.environ["GROQ_API_KEY"] = current_key
+        # Set API key in environment
+        os.environ["GROQ_API_KEY"] = current_key
 
         try:
             with open(log_file_path, "a", encoding="utf-8") as log_file:
                 log_file.write(f"\n--- Assessment Agent Crew Run Started: {time.strftime('%Y-%m-%d %H:%M:%S')} ---\n")
                 log_file.write(f"Inputs:\n{discovery_interview}\n")
-                log_file.write(f"Active Provider: {provider_print}, Model: {current_model}\n")
+                log_file.write(f"Active Provider: groqai, Model: {current_model}\n")
                 log_file.flush()
 
                 # Set thread-local redirection target safely
@@ -295,23 +256,13 @@ def run_assessment_crew(data: dict) -> dict:
 
                 try:
                     # Dynamically instantiate the LLM
-                    if active_provider == "openrouter":
-                        active_llm = LLM(
-                            model=current_model if current_model.startswith("openrouter/") else f"openrouter/{current_model}",
-                            temperature=0.3,
-                            max_tokens=4000,
-                            base_url="https://openrouter.ai/api/v1",
-                            api_key=current_key,
-                            max_retries=0
-                        )
-                    else:
-                        active_llm = LLM(
-                            model=current_model if current_model.startswith("groq/") else f"groq/{current_model}",
-                            temperature=0.3,
-                            num_retries=0,
-                            max_tokens=4000,
-                            api_key=current_key
-                        )
+                    active_llm = LLM(
+                        model=current_model if current_model.startswith("groq/") else f"groq/{current_model}",
+                        temperature=0.3,
+                        num_retries=0,
+                        max_tokens=4000,
+                        api_key=current_key
+                    )
 
                     # Update agents
                     discovery_agent.llm = active_llm
