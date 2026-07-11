@@ -1,4 +1,4 @@
-import { Link, useMatchRoute } from "@tanstack/react-router";
+import { Link, useMatchRoute, useRouter } from "@tanstack/react-router";
 import {
   LayoutDashboard,
   Users,
@@ -31,6 +31,8 @@ export function AdminLayout({ children }: { children: ReactNode }) {
   // fuzzy:true matches the route AND all its children (e.g. /projects and /projects/$id).
   // fuzzy:false (Dashboard) matches ONLY the exact "/" route.
   const matchRoute = useMatchRoute();
+  const router = useRouter();
+  const isLoading = router.state.status === "pending";
 
   return (
     <div className="min-h-screen flex bg-[var(--color-mm-bg-gray)]">
@@ -120,8 +122,15 @@ export function AdminLayout({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
-      <main className="flex-1 md:ml-60 p-6 md:p-8 max-w-full overflow-x-hidden">
-        {children}
+      <main className="flex-1 md:ml-60 p-6 md:p-8 max-w-full overflow-x-hidden relative">
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+            <div className="w-8 h-8 border-4 border-mm-orange border-t-transparent rounded-full animate-spin"></div>
+            <span className="text-sm font-semibold text-mm-gray">Loading page...</span>
+          </div>
+        ) : (
+          children
+        )}
       </main>
     </div>
   );

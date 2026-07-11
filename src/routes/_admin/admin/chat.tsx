@@ -115,6 +115,9 @@ interface ChatSidebarProps {
   actionMenuRef: React.RefObject<HTMLDivElement | null>;
   activeBusinessId: string | undefined;
   typingStates: Record<string, boolean>;
+  isChatListLoading: boolean;
+  chatFilter: "all" | "unread" | "website" | "marketing" | "automation";
+  setChatFilter: (f: "all" | "unread" | "website" | "marketing" | "automation") => void;
 }
 
 function ChatSidebar({
@@ -135,6 +138,9 @@ function ChatSidebar({
   dropdownRef,
   actionMenuRef,
   typingStates,
+  isChatListLoading,
+  chatFilter,
+  setChatFilter,
 }: ChatSidebarProps) {
   const { businesses } = Route.useLoaderData();
   return (
@@ -144,7 +150,7 @@ function ChatSidebar({
       } w-full md:w-[320px] lg:w-[380px] border-r border-mm-border flex-col h-full bg-[#FCFDFE] shrink-0`}
     >
       {/* Sidebar Search Bar */}
-      <div className="p-3.5 shrink-0 bg-[#FCFDFE] border-b border-mm-border/50">
+      <div className="p-3.5 shrink-0 bg-[#FCFDFE]">
         <div className="relative flex items-center bg-[#F0F2F5] rounded-xl px-3 py-2 text-mm-gray focus-within:text-mm-dark transition-all">
           <Search className="h-4 w-4 shrink-0 mr-3 text-mm-gray/80" />
           <input
@@ -157,9 +163,40 @@ function ChatSidebar({
         </div>
       </div>
 
+      {/* Sidebar Chat Filters */}
+      <div className="px-3.5 pb-3 shrink-0 bg-[#FCFDFE] border-b border-mm-border/50 flex gap-1.5 overflow-x-auto scrollbar-none select-none">
+        {[
+          { id: "all", label: "All" },
+          { id: "unread", label: "Unread" },
+          { id: "website", label: "Website" },
+          { id: "marketing", label: "Marketing" },
+          { id: "automation", label: "Automation" },
+        ].map((f) => {
+          const isActive = chatFilter === f.id;
+          return (
+            <button
+              key={f.id}
+              onClick={() => setChatFilter(f.id as any)}
+              className={`px-3 py-1 rounded-full text-[10px] font-bold tracking-tight transition-all shrink-0 cursor-pointer ${
+                isActive
+                  ? "bg-mm-orange text-white"
+                  : "bg-[#F0F2F5] text-mm-gray hover:bg-mm-border/40 hover:text-mm-dark"
+              }`}
+            >
+              {f.label}
+            </button>
+          );
+        })}
+      </div>
+
       {/* Chats Sidebar Rows */}
       <div className="flex-1 h-full overflow-y-auto divide-y divide-mm-border/30 relative">
-        {groupedChats.length > 0 ? (
+        {isChatListLoading ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center px-6">
+            <div className="w-8 h-8 border-4 border-mm-orange border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p className="text-xs font-bold text-mm-gray animate-pulse">Loading recent chats...</p>
+          </div>
+        ) : groupedChats.length > 0 ? (
           groupedChats.map((chat) => {
             const groupKey = `${chat.userId}_${chat.businessId}`;
             const isActive = activeGroupKey === groupKey;
@@ -248,28 +285,6 @@ function ChatSidebar({
               : "No messages yet";
             let lastMsgTime = "";
 
-            const activeChans = Object.values(chat.channels);
-            if (activeChans.length > 0 && !isGroupTyping) {
-              let latestMsgObj: any = null;
-              activeChans.forEach((c: any) => {
-                const messagesList = c.state?.messages || [];
-                if (messagesList.length > 0) {
-                  const lm = messagesList[messagesList.length - 1];
-                  if (
-                    !latestMsgObj ||
-                    new Date(lm.created_at).getTime() >
-                      new Date(latestMsgObj.created_at).getTime()
-                  ) {
-                    latestMsgObj = lm;
-                  }
-                }
-              });
-              if (latestMsgObj) {
-                displayLastMsg = `${latestMsgObj.user?.id === "admin" ? "You" : (latestMsgObj.user?.name || chat.userName || "Client")}: ${latestMsgObj.text}`;
-                lastMsgTime = formatChatTimestamp(latestMsgObj.created_at);
-              }
-            }
-
             const lastDom =
               (typeof window !== "undefined"
                 ? localStorage.getItem(
@@ -277,7 +292,75 @@ function ChatSidebar({
                   )
                 : null) || "website";
 
-            const displayDom = chat.latestDomain || lastDom || "website";
+            let displayDom = chat.latestDomain || lastDom || "website";
+
+            const isDomainFilterActive =
+              chatFilter === "website" ||
+              chatFilter === "marketing" ||
+              chatFilter === "automation";
+
+            if (isDomainFilterActive) {
+              displayDom = chatFilter;
+              const activeChan = chat.channels[chatFilter];
+              const isChanTyping = !!(activeChan && typingStates[activeChan.id]);
+              if (isChanTyping) {
+                displayLastMsg = "typing...";
+              } else {
+                const messagesList = activeChan?.state?.messages || [];
+                if (messagesList.length > 0) {
+                  const lm = messagesList[messagesList.length - 1];
+                  displayLastMsg = `${lm.user?.id === "admin" ? "You" : (lm.user?.name || chat.userName || "Client")}: ${lm.text}`;
+                  lastMsgTime = formatChatTimestamp(lm.created_at);
+                } else {
+                  displayLastMsg = chatFilter === "automation" && isAutomationLocked
+                    ? "Upgrade to unlock automation chat & sync task updates directly."
+                    : "No messages yet";
+                }
+              }
+            } else if (isActive && activeDomain) {
+              displayDom = activeDomain;
+              const activeChan = chat.channels[activeDomain];
+              const isChanTyping = !!(activeChan && typingStates[activeChan.id]);
+              if (isChanTyping) {
+                displayLastMsg = "typing...";
+              } else {
+                const messagesList = activeChan?.state?.messages || [];
+                if (messagesList.length > 0) {
+                  const lm = messagesList[messagesList.length - 1];
+                  displayLastMsg = `${lm.user?.id === "admin" ? "You" : (lm.user?.name || chat.userName || "Client")}: ${lm.text}`;
+                  lastMsgTime = formatChatTimestamp(lm.created_at);
+                } else {
+                  displayLastMsg = activeDomain === "automation" && isAutomationLocked
+                    ? "Upgrade to unlock automation chat & sync task updates directly."
+                    : "No messages yet";
+                }
+              }
+            } else {
+              const activeChans = Object.values(chat.channels);
+              if (activeChans.length > 0 && !isGroupTyping) {
+                let latestMsgObj: any = null;
+                let latestDomName = displayDom;
+                Object.entries(chat.channels).forEach(([domName, c]: [string, any]) => {
+                  const messagesList = c.state?.messages || [];
+                  if (messagesList.length > 0) {
+                    const lm = messagesList[messagesList.length - 1];
+                    if (
+                      !latestMsgObj ||
+                      new Date(lm.created_at).getTime() >
+                        new Date(latestMsgObj.created_at).getTime()
+                    ) {
+                      latestMsgObj = lm;
+                      latestDomName = domName;
+                    }
+                  }
+                });
+                if (latestMsgObj) {
+                  displayLastMsg = `${latestMsgObj.user?.id === "admin" ? "You" : (latestMsgObj.user?.name || chat.userName || "Client")}: ${latestMsgObj.text}`;
+                  lastMsgTime = formatChatTimestamp(latestMsgObj.created_at);
+                  displayDom = latestDomName;
+                }
+              }
+            }
 
             return (
               <div
@@ -644,6 +727,7 @@ interface ChatAreaProps {
   activeDomain: string | undefined;
   scrollRef: React.RefObject<HTMLDivElement | null>;
   isTyping: boolean;
+  isChatLoading: boolean;
 }
 
 function ChatArea({
@@ -661,6 +745,7 @@ function ChatArea({
   activeDomain,
   scrollRef,
   isTyping,
+  isChatLoading,
 }: ChatAreaProps) {
   return (
     <div className="flex-1 flex-col h-full bg-[#F9FAFC] relative min-w-0 flex">
@@ -702,117 +787,127 @@ function ChatArea({
       {/* Messages Scroll Area */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto px-4.5 py-5 space-y-3.5 bg-white"
+        className="flex-1 overflow-y-auto px-4.5 py-5 space-y-3.5 bg-white relative"
       >
-        {messages.map((msg, index) => {
-          const isMe = msg.user?.id === "admin";
-          const senderName = isMe ? "Admin" : msg.user?.name || "Client";
-          const isSystem = msg.user?.id === "system";
+        {isChatLoading ? (
+          <div className="flex flex-col items-center justify-center h-full space-y-4">
+            <div className="w-8 h-8 border-4 border-mm-orange border-t-transparent rounded-full animate-spin"></div>
+            <span className="text-xs font-semibold text-mm-gray animate-pulse">Loading chat history...</span>
+          </div>
+        ) : (
+          <>
+            {messages.map((msg, index) => {
+              const isMe = msg.user?.id === "admin";
+              const senderName = isMe ? "Admin" : msg.user?.name || "Client";
+              const isSystem = msg.user?.id === "system";
 
-          if (isSystem) {
-            return (
-              <div
-                key={msg.id || index}
-                className="w-full flex justify-center py-2 select-none"
-              >
-                <span className="bg-[#F0F2F5] text-mm-gray px-3 py-1 rounded-full text-[9px] font-bold border border-mm-border/40 flex items-center gap-1">
-                  <Sparkles size={10} className="text-mm-orange" />
-                  {msg.text}
-                </span>
-              </div>
-            );
-          }
+              if (isSystem) {
+                return (
+                  <div
+                    key={msg.id || index}
+                    className="w-full flex justify-center py-2 select-none"
+                  >
+                    <span className="bg-[#F0F2F5] text-mm-gray px-3 py-1 rounded-full text-[9px] font-bold border border-mm-border/40 flex items-center gap-1">
+                      <Sparkles size={10} className="text-mm-orange" />
+                      {msg.text}
+                    </span>
+                  </div>
+                );
+              }
 
-          const isClientRead = () => {
-            if (!activeUserId || !activeChannel?.state?.read?.[activeUserId])
-              return false;
-            const lastReadTime = new Date(
-              activeChannel.state.read[activeUserId].last_read,
-            );
-            const msgTime = new Date(msg.created_at);
-            return msgTime <= lastReadTime;
-          };
+              const isClientRead = () => {
+                if (!activeUserId || !activeChannel?.state?.read?.[activeUserId])
+                  return false;
+                const lastReadTime = new Date(
+                  activeChannel.state.read[activeUserId].last_read,
+                );
+                const msgTime = new Date(msg.created_at);
+                return msgTime <= lastReadTime;
+              };
 
-          return (
-            <div
-              key={msg.id || index}
-              className={`flex w-full ${isMe ? "justify-end" : "justify-start"}`}
-            >
-              <div
-                className={`max-w-[75%] px-4 py-2.5 rounded-2xl shadow-2xs text-xs font-semibold relative ${
-                  isMe
-                    ? "bg-mm-orange text-white rounded-tr-none"
-                    : "bg-[#F0F2F5] text-mm-dark rounded-tl-none border border-mm-border/30"
-                }`}
-              >
-                {!isMe && (
-                  <span className="block text-[8px] font-bold text-mm-orange mb-0.5">
-                    {senderName}
-                  </span>
-                )}
-                <p className="whitespace-pre-line leading-relaxed">
-                  {msg.text}
-                </p>
-                <span
-                  className={`block text-[8px] text-right mt-1.5 font-bold tracking-tight ${isMe ? "text-white/80" : "text-mm-gray/80"}`}
+              return (
+                <div
+                  key={msg.id || index}
+                  className={`flex w-full ${isMe ? "justify-end" : "justify-start"}`}
                 >
-                  {msg.created_at
-                    ? new Date(msg.created_at).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })
-                    : ""}
-                  {isMe && (
-                    <span className="inline-flex ml-1.5 align-middle select-none">
-                      {isClientRead() ? (
-                        <CheckCheck className="h-3 w-3 text-sky-400" />
-                      ) : (
-                        <Check className="h-3 w-3 text-white/60" />
+                  <div
+                    className={`max-w-[75%] px-4 py-2.5 rounded-2xl shadow-2xs text-xs font-semibold relative ${
+                      isMe
+                        ? "bg-mm-orange text-white rounded-tr-none"
+                        : "bg-[#F0F2F5] text-mm-dark rounded-tl-none border border-mm-border/30"
+                    }`}
+                  >
+                    {!isMe && (
+                      <span className="block text-[8px] font-bold text-mm-orange mb-0.5">
+                        {senderName}
+                      </span>
+                    )}
+                    <p className="whitespace-pre-line leading-relaxed">
+                      {msg.text}
+                    </p>
+                    <span
+                      className={`block text-[8px] text-right mt-1.5 font-bold tracking-tight ${isMe ? "text-white/80" : "text-mm-gray/80"}`}
+                    >
+                      {msg.created_at
+                        ? new Date(msg.created_at).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : ""}
+                      {isMe && (
+                        <span className="inline-flex ml-1.5 align-middle select-none">
+                          {isClientRead() ? (
+                            <CheckCheck className="h-3 w-3 text-sky-400" />
+                          ) : (
+                            <Check className="h-3 w-3 text-white/60" />
+                          )}
+                        </span>
                       )}
                     </span>
-                  )}
-                </span>
-              </div>
-            </div>
-          );
-        })}
+                  </div>
+                </div>
+              );
+            })}
 
-        {isTyping && (
-          <div className="flex w-full justify-start animate-in fade-in duration-200">
-            <div className="bg-[#F0F2F5] text-mm-dark px-4 py-3 rounded-2xl rounded-tl-none border border-mm-border/30 flex items-center gap-1 shadow-2xs">
-              <span
-                className="w-1.5 h-1.5 bg-mm-gray/60 rounded-full animate-bounce"
-                style={{ animationDelay: "0ms" }}
-              />
-              <span
-                className="w-1.5 h-1.5 bg-mm-gray/60 rounded-full animate-bounce"
-                style={{ animationDelay: "150ms" }}
-              />
-              <span
-                className="w-1.5 h-1.5 bg-mm-gray/60 rounded-full animate-bounce"
-                style={{ animationDelay: "300ms" }}
-              />
-            </div>
-          </div>
+            {isTyping && (
+              <div className="flex w-full justify-start animate-in fade-in duration-200">
+                <div className="bg-[#F0F2F5] text-mm-dark px-4 py-3 rounded-2xl rounded-tl-none border border-mm-border/30 flex items-center gap-1 shadow-2xs">
+                  <span
+                    className="w-1.5 h-1.5 bg-mm-gray/60 rounded-full animate-bounce"
+                    style={{ animationDelay: "0ms" }}
+                  />
+                  <span
+                    className="w-1.5 h-1.5 bg-mm-gray/60 rounded-full animate-bounce"
+                    style={{ animationDelay: "150ms" }}
+                  />
+                  <span
+                    className="w-1.5 h-1.5 bg-mm-gray/60 rounded-full animate-bounce"
+                    style={{ animationDelay: "300ms" }}
+                  />
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
 
       {/* Input Message Area */}
       <div className="p-3 bg-[#F0F2F5] border-t border-mm-border/60 flex items-center gap-3 w-full shrink-0">
         <input
+          disabled={isChatLoading}
           type="text"
-          placeholder="Type a message..."
+          placeholder={isChatLoading ? "Loading chat..." : "Type a message..."}
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
           onKeyDown={handleKeyPress}
-          className="flex-1 bg-white border border-mm-border/45 rounded-2xl px-4 py-2.5 text-xs font-semibold placeholder-mm-gray/60 outline-hidden transition-all text-mm-dark focus:border-mm-orange/70"
+          className="flex-1 bg-white border border-mm-border/45 rounded-2xl px-4 py-2.5 text-xs font-semibold placeholder-mm-gray/60 outline-hidden transition-all text-mm-dark focus:border-mm-orange/70 disabled:opacity-60 disabled:cursor-not-allowed"
         />
 
         <button
           onClick={handleSendMessage}
-          disabled={!inputText.trim()}
+          disabled={!inputText.trim() || isChatLoading}
           className={`h-9 w-9 rounded-full flex items-center justify-center shrink-0 transition-all select-none ${
-            inputText.trim()
+            inputText.trim() && !isChatLoading
               ? "bg-mm-orange text-white shadow-md active:scale-90 hover:opacity-95 cursor-pointer"
               : "bg-mm-border/40 text-mm-gray cursor-not-allowed"
           }`}
@@ -872,6 +967,9 @@ function ChatRouteComponent() {
 
   const [chatClient, setChatClient] = useState<StreamChat | null>(null);
   const [channels, setChannels] = useState<any[]>([]);
+  const [isChatListLoading, setIsChatListLoading] = useState(true);
+  const [isChatLoading, setIsChatLoading] = useState(false);
+  const [chatFilter, setChatFilter] = useState<"all" | "unread" | "website" | "marketing" | "automation">("all");
   const [activeChannel, setActiveChannel] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [inputText, setInputText] = useState("");
@@ -965,6 +1063,8 @@ function ChatRouteComponent() {
       setChannels(queryList);
     } catch (e) {
       console.error("Failed to query Stream channels:", e);
+    } finally {
+      setIsChatListLoading(false);
     }
   };
 
@@ -1010,8 +1110,12 @@ function ChatRouteComponent() {
     if (!chatClient || !activeUserId || !activeBusinessId) {
       setActiveChannel(null);
       setMessages([]);
+      setIsChatLoading(false);
       return;
     }
+
+    setIsChatLoading(true);
+    setMessages([]);
 
     // Resolve user and business details
     const userObj = users.find((u) => u.id === activeUserId);
@@ -1043,6 +1147,7 @@ function ChatRouteComponent() {
         const state = await channel.watch();
         setActiveChannel(channel);
         setMessages(state.messages || []);
+        setIsChatLoading(false);
 
         // Mark read immediately
         await channel.markRead();
@@ -1089,6 +1194,7 @@ function ChatRouteComponent() {
         };
       } catch (err) {
         console.error("Error watching channel:", err);
+        setIsChatLoading(false);
       }
     }
 
@@ -1098,6 +1204,34 @@ function ChatRouteComponent() {
       if (unsubscribe) unsubscribe();
     };
   }, [chatClient, activeUserId, activeBusinessId, activeDomain]);
+
+  // Synchronize active chat domain with the selected domain filter
+  useEffect(() => {
+    if (!activeUserId || !activeBusinessId) return;
+
+    const isDomainFilterActive =
+      chatFilter === "website" ||
+      chatFilter === "marketing" ||
+      chatFilter === "automation";
+
+    if (isDomainFilterActive) {
+      if (activeDomain !== chatFilter) {
+        handleSelectDomain(activeUserId, activeBusinessId, chatFilter);
+      }
+    } else {
+      // Revert back to the preselected / fallback domain when selecting a non-domain option
+      const activeChatObj = groupedChats.find(
+        (c) => c.userId === activeUserId && c.businessId === activeBusinessId,
+      );
+      const lastDom =
+        activeChatObj?.latestDomain ||
+        localStorage.getItem(`last_domain_${activeUserId}_${activeBusinessId}`) ||
+        "website";
+      if (activeDomain !== lastDom) {
+        handleSelectDomain(activeUserId, activeBusinessId, lastDom);
+      }
+    }
+  }, [chatFilter, activeUserId, activeBusinessId]);
 
   // Auto-scroll to bottom of messages
   useEffect(() => {
@@ -1278,9 +1412,10 @@ function ChatRouteComponent() {
     filteredList.sort((a, b) => getSortTime(b) - getSortTime(a));
 
     // Apply Search query filter
+    let finalFiltered = filteredList;
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      return filteredList.filter(
+      finalFiltered = finalFiltered.filter(
         (chat) =>
           chat.userName.toLowerCase().includes(query) ||
           chat.businessName.toLowerCase().includes(query) ||
@@ -1288,7 +1423,33 @@ function ChatRouteComponent() {
       );
     }
 
-    return filteredList;
+    // Apply Filter type
+    if (chatFilter === "unread") {
+      finalFiltered = finalFiltered.filter((chat) => {
+        const totalUnread =
+          (chat.channels["website"]?.countUnread?.() || 0) +
+          (chat.channels["marketing"]?.countUnread?.() || 0) +
+          (chat.channels["automation"]?.countUnread?.() || 0);
+        return totalUnread > 0;
+      });
+    } else if (chatFilter === "website") {
+      finalFiltered = finalFiltered.filter((chat) => {
+        const chan = chat.channels["website"];
+        return chan && (chan.state?.messages?.length > 0 || (activeUserId === chat.userId && activeBusinessId === chat.businessId && activeDomain === "website"));
+      });
+    } else if (chatFilter === "marketing") {
+      finalFiltered = finalFiltered.filter((chat) => {
+        const chan = chat.channels["marketing"];
+        return chan && (chan.state?.messages?.length > 0 || (activeUserId === chat.userId && activeBusinessId === chat.businessId && activeDomain === "marketing"));
+      });
+    } else if (chatFilter === "automation") {
+      finalFiltered = finalFiltered.filter((chat) => {
+        const chan = chat.channels["automation"];
+        return chan && (chan.state?.messages?.length > 0 || (activeUserId === chat.userId && activeBusinessId === chat.businessId && activeDomain === "automation"));
+      });
+    }
+
+    return finalFiltered;
   }, [
     channels,
     users,
@@ -1299,6 +1460,7 @@ function ChatRouteComponent() {
     activeDomain,
     hiddenChats,
     typingStates,
+    chatFilter,
   ]);
 
   // Navigation handlers
@@ -1308,6 +1470,16 @@ function ChatRouteComponent() {
     domain: string,
   ) => {
     setActiveDropdownId(null);
+
+    const isDomainFilterActive =
+      chatFilter === "website" ||
+      chatFilter === "marketing" ||
+      chatFilter === "automation";
+
+    if (isDomainFilterActive && domain !== chatFilter) {
+      setChatFilter("all");
+    }
+
     navigate({
       to: "/admin/chat",
       search: { user: userId, business: businessId, domain },
@@ -1315,6 +1487,16 @@ function ChatRouteComponent() {
   };
 
   const handleSelectGroup = (chat: any) => {
+    const isDomainFilterActive =
+      chatFilter === "website" ||
+      chatFilter === "marketing" ||
+      chatFilter === "automation";
+
+    if (isDomainFilterActive) {
+      handleSelectDomain(chat.userId, chat.businessId, chatFilter);
+      return;
+    }
+
     const biz = businesses.find((b) => b.id === chat.businessId);
     const isAutomationLocked = biz?.plan !== "Pro";
 
@@ -1401,6 +1583,9 @@ function ChatRouteComponent() {
         actionMenuRef={actionMenuRef}
         activeBusinessId={activeBusinessId}
         typingStates={typingStates}
+        isChatListLoading={isChatListLoading}
+        chatFilter={chatFilter}
+        setChatFilter={setChatFilter}
       />
 
       {activeChannel ? (
@@ -1428,6 +1613,7 @@ function ChatRouteComponent() {
           activeDomain={activeDomain}
           scrollRef={scrollRef}
           isTyping={isTyping}
+          isChatLoading={isChatLoading}
         />
       ) : (
         <NoChatSelected
