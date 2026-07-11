@@ -2,71 +2,97 @@ import { useState, useEffect } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ProjectDashboard } from "@/components/client/ProjectDashboard";
 import UpgradeCard from "@/components/client/UpgradeCard";
-import { X } from "lucide-react";
+import { X, Loader2 } from "lucide-react";
 import { useBusiness } from "@/hooks/use-business";
 import { getProjectsByBusinessFn } from "@/lib/server-functions";
+import { type Project } from "@/lib/schemas";
 
 export const Route = createFileRoute("/_client/projects")({
   validateSearch: (
     search: Record<string, unknown>
-  ): { activeCard?: string; businessId?: string } => {
+  ): { activeCard?: string } => {
     return {
       activeCard:
         typeof search.activeCard === "string" ? search.activeCard : undefined,
-      businessId:
-        typeof search.businessId === "string" ? search.businessId : undefined,
     };
-  },
-  loaderDeps: ({ search: { businessId } }) => ({ businessId }),
-  loader: async ({ deps: { businessId } }) => {
-    if (!businessId) {
-      return { projects: [] };
-    }
-    try {
-      const projects = await getProjectsByBusinessFn({ data: businessId });
-      return { projects };
-    } catch (err) {
-      console.error("Failed to load projects for business:", businessId, err);
-      return { projects: [] };
-    }
   },
   component: RouteComponent,
 });
 
 function RouteComponent() {
-  const { projects } = Route.useLoaderData();
-  const { activeCard, businessId } = Route.useSearch();
+  const { activeCard } = Route.useSearch();
   const { activeBusiness } = useBusiness();
   const navigate = useNavigate();
-  const [activeProjectId, setActiveProjectId] = useState<string>("report");
+
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // Retrieve initial tab from query parameter, fallback to localStorage, fallback to 'report'
+  const getInitialTab = () => {
+    if (activeCard) {
+      if (activeCard.toLowerCase() === "automation") return "Automation";
+      if (activeCard.toLowerCase() === "seo" || activeCard.toLowerCase() === "website") return "Website";
+      if (activeCard.toLowerCase() === "marketing") return "Marketing";
+      return activeCard;
+    }
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("projects_last_tab") || "report";
+    }
+    return "report";
+  };
+
+  const [activeProjectId, setActiveProjectId] = useState<string>(getInitialTab);
   const [showUpgrade, setShowUpgrade] = useState(false);
 
-  // Sync activeBusiness context with businessId query param
+  // Load projects dynamically when activeBusiness changes
   useEffect(() => {
-    if (activeBusiness && businessId !== activeBusiness.id) {
-      navigate({
-        to: "/projects",
-        search: (prev) => ({
-          activeCard: prev.activeCard,
-          businessId: activeBusiness.id,
-        }),
-        replace: true,
-      });
+    const businessId = activeBusiness?.id;
+    if (!businessId) {
+      setProjects([]);
+      return;
     }
-  }, [activeBusiness, businessId, navigate]);
 
-  // If redirected with activeCard from dashboard, set state
+    let active = true;
+    async function loadProjects() {
+      setLoading(true);
+      try {
+        const fetchedProjects = await getProjectsByBusinessFn({ data: businessId });
+        if (active) {
+          setProjects(fetchedProjects);
+        }
+      } catch (err) {
+        console.error("Failed to load projects:", err);
+        if (active) {
+          setProjects([]);
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadProjects();
+    return () => {
+      active = false;
+    };
+  }, [activeBusiness?.id]);
+
+  // Handle activeCard parameter from URL navigation (e.g. from dashboard widgets)
   useEffect(() => {
     if (activeCard) {
+      let resolvedTab = "report";
       if (activeCard.toLowerCase() === "automation") {
-        setActiveProjectId("Automation");
+        resolvedTab = "Automation";
       } else if (activeCard.toLowerCase() === "seo" || activeCard.toLowerCase() === "website") {
-        setActiveProjectId("Website");
+        resolvedTab = "Website";
       } else if (activeCard.toLowerCase() === "marketing") {
-        setActiveProjectId("Marketing");
+        resolvedTab = "Marketing";
       } else {
-        setActiveProjectId(activeCard);
+        resolvedTab = activeCard;
       }
+      setActiveProjectId(resolvedTab);
+      localStorage.setItem("projects_last_tab", resolvedTab);
       handleResetActiveCard();
     }
   }, [activeCard]);
@@ -75,27 +101,37 @@ function RouteComponent() {
     setShowUpgrade(false);
   };
 
-  // Reset active card in URL query parameters to avoid double triggers
+  // Reset active card query parameter to keep URL clean
   const handleResetActiveCard = () => {
     navigate({
       to: "/projects",
-      search: (prev) => ({
+      search: () => ({
         activeCard: undefined,
-        businessId: prev.businessId,
       }),
     });
   };
 
+  const handleTabChange = (id: string) => {
+    setActiveProjectId(id);
+    localStorage.setItem("projects_last_tab", id);
+  };
+
   return (
     <div className="flex-1 w-full px-4.5 py-6 min-[769px]:px-8 min-[769px]:py-10 space-y-8 min-[769px]:space-y-10 select-none font-sans text-mm-dark relative pb-24">
-      {/* Render the Project Dashboard component */}
-      <ProjectDashboard
-        projects={projects}
-        activeProjectId={activeProjectId}
-        onActiveProjectChange={(id) => setActiveProjectId(id)}
-        onUpgradeTrigger={() => setShowUpgrade(true)}
-        apiUrl="/api/projects"
-      />
+      {loading ? (
+        <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
+          <Loader2 className="w-8 h-8 text-mm-orange animate-spin" />
+          <p className="text-sm font-semibold text-mm-gray">Loading projects...</p>
+        </div>
+      ) : (
+        <ProjectDashboard
+          projects={projects}
+          activeProjectId={activeProjectId}
+          onActiveProjectChange={handleTabChange}
+          onUpgradeTrigger={() => setShowUpgrade(true)}
+          apiUrl="/api/projects"
+        />
+      )}
 
       {/* Upgrade Modal overlay */}
       {showUpgrade && (
@@ -115,4 +151,3 @@ function RouteComponent() {
     </div>
   );
 }
-
