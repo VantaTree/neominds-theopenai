@@ -301,7 +301,8 @@ export default function Report({ apiUrl }: ReportProps) {
     matchedIndex = 0; // Default fallback to Basic plan
   }
 
-  const matchedPlan = PLANS[matchedIndex];
+  let matchedPlan = PLANS[matchedIndex];
+  matchedPlan.highlight = true;
   const cardType = matchedIndex === 3 ? "custom" : "default";
 
   const scoreChartData = [
