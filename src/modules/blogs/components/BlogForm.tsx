@@ -5,24 +5,9 @@ import {
   Code2, Quote, Minus, Image, Sparkles
 } from "lucide-react";
 import { type Blog, type BlogStatus } from "@/lib/schemas";
+import { uploadFileToStorage } from "@/lib/firebase";
 
 export type CreateBlogInput = Omit<Blog, "id" | "createdAt" | "updatedAt">;
-
-// Helper for cover image uploads (converts file to Base64 dataURL)
-const uploadImage = async (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      if (typeof reader.result === "string") {
-        resolve(reader.result);
-      } else {
-        reject(new Error("Failed to convert file to base64"));
-      }
-    };
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
-};
 
 interface BlogFormProps {
   initialBlog?: Blog | null;
@@ -217,7 +202,8 @@ export default function BlogForm({
     setIsUploading(true);
     setUploadError("");
     try {
-      const url = await uploadImage(file);
+      const blogId = initialBlog?.id || slug || "new";
+      const url = await uploadFileToStorage(file, "blogs", blogId, "blogImg");
       setCoverImageUrl(url);
     } catch (err: any) {
       setUploadError(err.message || "Failed to upload image");

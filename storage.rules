@@ -1,0 +1,41 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return request.auth != null && request.auth.token.admin == true;
+    }
+    
+    // Helper function to check if user owns the user profile
+    function isUserOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Helper function to check if user owns/is associated with the business
+    function isBusinessOwner(businessId) {
+      return request.auth != null && (
+        firestore.get(/databases/(default)/documents/businesses/$(businessId)).data.userId == request.auth.uid ||
+        firestore.get(/databases/(default)/documents/businesses/$(businessId)).data.userId == /databases/(default)/documents/users/$(request.auth.uid)
+      );
+    }
+
+    // Users profile images
+    match /users/{userId}/profileImg/{filename} {
+      allow read: if true;
+      allow write: if isAdmin() || isUserOwner(userId);
+    }
+    
+    // Businesses images/logos
+    match /businesses/{businessId}/businessImg/{filename} {
+      allow read: if true;
+      allow write: if isAdmin() || isBusinessOwner(businessId);
+    }
+    
+    // Blogs cover images (only admin write)
+    match /blogs/{blogId}/blogImg/{filename} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}

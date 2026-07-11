@@ -18,9 +18,11 @@ import {
   Camera,
   User,
   MessageSquare,
+  Loader2,
 } from "lucide-react";
 import { useState, useEffect, useRef, useMemo, Fragment } from "react";
 import { Avatar, PlanBadge, StatusBadge } from "@/components/admin/shared";
+import { uploadFileToStorage } from "@/lib/firebase";
 import {
   getUsersFn,
   saveUserFn,
@@ -79,19 +81,25 @@ function UsersPage() {
   }, [initialUsers, initialBusinesses]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingUserAvatar, setIsUploadingUserAvatar] = useState(false);
 
   const handleAvatarClick = () => {
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setEditForm((prev: any) => ({ ...prev, image: reader.result as string }));
-      };
-      reader.readAsDataURL(file);
+    if (file && editingUser) {
+      setIsUploadingUserAvatar(true);
+      try {
+        const url = await uploadFileToStorage(file, "users", editingUser.id, "profileImg");
+        setEditForm((prev: any) => ({ ...prev, image: url }));
+      } catch (err: any) {
+        console.error("Failed to upload avatar:", err);
+        alert(err.message || "Failed to upload avatar");
+      } finally {
+        setIsUploadingUserAvatar(false);
+      }
     }
   };
 
@@ -106,19 +114,25 @@ function UsersPage() {
   const [editBusinessErrors, setEditBusinessErrors] = useState<Record<string, string>>({});
   const [isSavingBusiness, setIsSavingBusiness] = useState(false);
   const businessFileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingBusinessLogo, setIsUploadingBusinessLogo] = useState(false);
 
   const handleBusinessAvatarClick = () => {
     businessFileInputRef.current?.click();
   };
 
-  const handleBusinessFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleBusinessFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setEditBusinessForm((prev: any) => ({ ...prev, image: reader.result as string }));
-      };
-      reader.readAsDataURL(file);
+    if (file && editingBusiness) {
+      setIsUploadingBusinessLogo(true);
+      try {
+        const url = await uploadFileToStorage(file, "businesses", editingBusiness.id, "businessImg");
+        setEditBusinessForm((prev: any) => ({ ...prev, image: url }));
+      } catch (err: any) {
+        console.error("Failed to upload logo:", err);
+        alert(err.message || "Failed to upload logo");
+      } finally {
+        setIsUploadingBusinessLogo(false);
+      }
     }
   };
 
@@ -2046,7 +2060,11 @@ function UsersPage() {
                   overflow: "hidden",
                 }}
               >
-                {editForm.image && editForm.image.trim() !== "" && editForm.image !== "undefined" && editForm.image !== "null" ? (
+                {isUploadingUserAvatar ? (
+                  <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                    <Loader2 className="w-6 h-6 text-mm-orange animate-spin" />
+                  </div>
+                ) : editForm.image && editForm.image.trim() !== "" && editForm.image !== "undefined" && editForm.image !== "null" ? (
                   <img src={editForm.image} alt="Profile" className="w-full h-full object-cover" />
                 ) : (
                   <User className="w-12 h-12 text-mm-gray" />
@@ -2320,8 +2338,9 @@ function UsersPage() {
                 Cancel
               </button>
               <button
+                disabled={isUploadingUserAvatar}
                 onClick={handleEditSubmit}
-                className="px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity cursor-pointer"
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ background: "var(--color-mm-orange)", color: "white" }}
               >
                 Save Changes
@@ -2397,7 +2416,11 @@ function UsersPage() {
                   overflow: "hidden",
                 }}
               >
-                {editBusinessForm.image && editBusinessForm.image.trim() !== "" && editBusinessForm.image !== "undefined" && editBusinessForm.image !== "null" ? (
+                {isUploadingBusinessLogo ? (
+                  <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                    <Loader2 className="w-6 h-6 text-mm-orange animate-spin" />
+                  </div>
+                ) : editBusinessForm.image && editBusinessForm.image.trim() !== "" && editBusinessForm.image !== "undefined" && editBusinessForm.image !== "null" ? (
                   <img src={editBusinessForm.image} alt="Business Avatar" className="w-full h-full object-cover" />
                 ) : (
                   <User className="w-12 h-12 text-mm-gray" />
@@ -2678,9 +2701,9 @@ function UsersPage() {
                 Cancel
               </button>
               <button
-                disabled={isSavingBusiness}
+                disabled={isSavingBusiness || isUploadingBusinessLogo}
                 onClick={handleEditBusinessSubmit}
-                className="px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity cursor-pointer flex items-center justify-center min-w-[120px]"
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity cursor-pointer flex items-center justify-center min-w-[120px] disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ background: "var(--color-mm-orange)", color: "white" }}
               >
                 {isSavingBusiness ? "Saving..." : "Save Changes"}

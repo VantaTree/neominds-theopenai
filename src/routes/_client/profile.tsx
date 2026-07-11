@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Camera, User, Mail, Phone, Loader2 } from "lucide-react";
-import { auth } from "@/lib/firebase";
+import { auth, uploadFileToStorage } from "@/lib/firebase";
 import { onAuthStateChanged, updateProfile } from "firebase/auth";
 import { getUserFn, saveUserFn } from "@/lib/server-functions";
 
@@ -44,6 +44,7 @@ function RouteComponent() {
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
   // Sync auth details and database fields
   useEffect(() => {
@@ -108,14 +109,20 @@ function RouteComponent() {
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData((prev) => ({ ...prev, avatar: reader.result as string }));
-      };
-      reader.readAsDataURL(file);
+    const currentUser = auth.currentUser;
+    if (file && currentUser) {
+      setIsUploadingAvatar(true);
+      try {
+        const url = await uploadFileToStorage(file, "users", currentUser.uid, "profileImg");
+        setFormData((prev) => ({ ...prev, avatar: url }));
+      } catch (err: any) {
+        console.error("Failed to upload avatar:", err);
+        alert(err.message || "Failed to upload avatar");
+      } finally {
+        setIsUploadingAvatar(false);
+      }
     }
   };
 
@@ -185,7 +192,11 @@ function RouteComponent() {
         <div className="flex flex-col items-center text-center space-y-4">
           <div className="relative group cursor-pointer" onClick={handleAvatarClick}>
             <div className="h-28 w-28 rounded-full border border-mm-border overflow-hidden bg-white flex items-center justify-center transition-all group-hover:opacity-90 shadow-sm relative">
-              {formData.avatar ? (
+              {isUploadingAvatar ? (
+                <div className="absolute inset-0 bg-mm-dark/20 flex items-center justify-center">
+                  <Loader2 className="h-6 w-6 text-mm-orange animate-spin" />
+                </div>
+              ) : formData.avatar ? (
                 <img src={formData.avatar} alt="Avatar" className="h-full w-full object-cover" />
               ) : (
                 <div className="h-full w-full bg-mm-orange/10 text-mm-orange text-3xl font-black flex items-center justify-center">
@@ -296,7 +307,7 @@ function RouteComponent() {
             </button>
             <button
               type="submit"
-              disabled={isSaving}
+              disabled={isSaving || isUploadingAvatar}
               className="px-6 py-3 rounded-2xl bg-mm-dark hover:opacity-95 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSaving ? (
