@@ -172,11 +172,11 @@ function RouteComponent() {
 
     if (isMobile) {
       return (
-        <div className="h-dvh w-screen bg-[#F9FAFC] flex flex-col font-sans relative pb-16 overflow-hidden">
+        <div className="h-dvh w-screen bg-[#F9FAFC] flex flex-col font-sans relative overflow-hidden">
           <ClientNav />
           <div className="h-16 shrink-0" />
 
-          <main className="flex-1 w-full flex flex-col overflow-y-auto">
+          <main className="flex-1 w-full flex flex-col overflow-y-auto pb-20">
             <PageTransitionWrapper>
               <Outlet />
             </PageTransitionWrapper>

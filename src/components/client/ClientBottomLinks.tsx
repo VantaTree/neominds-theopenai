@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
-import { Home, Folder, Building2, MessageCircle, Crown } from "lucide-react";
+import { Home, Folder, Building2, MessageCircle, Crown, Plus } from "lucide-react";
 import { useBusiness } from "@/hooks/use-business";
 import { getClientStreamCredentialsFn } from "@/lib/server-functions";
 
@@ -176,6 +176,15 @@ export default function ClientBottomLinks() {
                   </button>
                 </div>
               ))}
+              <div className="border-t border-mm-border my-1" />
+              <Link
+                to="/assessment"
+                onClick={() => setDropdownOpen(false)}
+                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-mm-orange font-semibold hover:bg-mm-orange/5 transition-colors cursor-pointer"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Add Business</span>
+              </Link>
             </div>
           )}
         </div>

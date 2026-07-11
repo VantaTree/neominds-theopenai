@@ -86,7 +86,7 @@ export default function ClientDashboardMobile() {
   const categories: ("google" | "website" | "social" | "campaign")[] = ["google", "website", "social", "campaign"];
 
   return (
-    <div className="min-h-screen bg-[#F9FAFC] flex flex-col font-sans select-none relative pb-20">
+    <div className="min-h-screen bg-[#F9FAFC] font-sans select-none relative pb-20">
 
 
 
