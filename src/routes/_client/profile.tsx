@@ -197,7 +197,7 @@ function RouteComponent() {
                   <Loader2 className="h-6 w-6 text-mm-orange animate-spin" />
                 </div>
               ) : formData.avatar ? (
-                <img src={formData.avatar} alt="Avatar" className="h-full w-full object-cover" />
+                <img src={formData.avatar} alt="Avatar" className="h-full w-full object-cover aspect-square" />
               ) : (
                 <div className="h-full w-full bg-mm-orange/10 text-mm-orange text-3xl font-black flex items-center justify-center">
                   {getInitials(formData.name || "JD")}

@@ -481,7 +481,15 @@ function ProjectsPage() {
                     <tr key={p.id} style={{ borderTop: "1px solid var(--color-mm-border)" }} className="hover:bg-mm-subtle transition-colors">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
-                          <Avatar name={clientName} size={32} />
+                          {matchedUser?.image ? (
+                            <img
+                              src={matchedUser.image}
+                              alt={clientName}
+                              className="w-8 h-8 rounded-full object-cover aspect-square shrink-0"
+                            />
+                          ) : (
+                            <Avatar name={clientName} size={32} />
+                          )}
                           <div>
                             <div className="font-semibold" style={{ color: "var(--color-mm-dark)" }}>
                               {clientName}
@@ -494,7 +502,15 @@ function ProjectsPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
-                          <Avatar name={businessName} size={32} />
+                          {biz?.image ? (
+                            <img
+                              src={biz.image}
+                              alt={businessName}
+                              className="w-8 h-8 rounded-full object-cover aspect-square shrink-0"
+                            />
+                          ) : (
+                            <Avatar name={businessName} size={32} />
+                          )}
                           <div>
                             <div className="font-semibold" style={{ color: "var(--color-mm-dark)" }}>
                               {businessName}
@@ -581,7 +597,19 @@ function ProjectsPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label style={{ color: "var(--color-mm-gray)", fontWeight: 600, fontSize: "13px", display: "block", marginBottom: "4px" }}>Client / User*</label>
+                  <div className="flex items-center justify-between" style={{ marginBottom: "4px" }}>
+                    <label style={{ color: "var(--color-mm-gray)", fontWeight: 600, fontSize: "13px" }}>Client / User*</label>
+                    {(newProjectForm.client || newProjectForm.businessId) && (
+                      <button
+                        type="button"
+                        onClick={() => setNewProjectForm(prev => ({ ...prev, client: "", businessId: "" }))}
+                        className="text-xs font-semibold hover:opacity-80 transition-opacity cursor-pointer"
+                        style={{ color: "var(--color-mm-orange)", background: "none", border: "none", padding: 0 }}
+                      >
+                        Clear User & Business
+                      </button>
+                    )}
+                  </div>
                   <select 
                     value={newProjectForm.client} 
                     onChange={(e) => handleClientChange(e.target.value)} 

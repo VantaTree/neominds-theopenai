@@ -676,7 +676,7 @@ function UsersPage() {
                   <img
                     src={selectedUser.image}
                     alt={selectedUser.name}
-                    className="rounded-full object-cover shrink-0"
+                    className="rounded-full object-cover aspect-square shrink-0"
                     style={{ width: 72, height: 72 }}
                   />
                 ) : (
@@ -1445,7 +1445,7 @@ function UsersPage() {
                                   <img
                                     src={u.image}
                                     alt={u.name}
-                                    className="rounded-full object-cover shrink-0"
+                                    className="rounded-full object-cover aspect-square shrink-0"
                                     style={{ width: 36, height: 36 }}
                                   />
                                 ) : (
@@ -1550,7 +1550,7 @@ function UsersPage() {
                                                     <img
                                                       src={b.image}
                                                       alt={b.businessName}
-                                                      className="rounded-full object-cover shrink-0"
+                                                      className="rounded-full object-cover aspect-square shrink-0"
                                                       style={{ width: 32, height: 32 }}
                                                     />
                                                   ) : (
@@ -2065,7 +2065,7 @@ function UsersPage() {
                     <Loader2 className="w-6 h-6 text-mm-orange animate-spin" />
                   </div>
                 ) : editForm.image && editForm.image.trim() !== "" && editForm.image !== "undefined" && editForm.image !== "null" ? (
-                  <img src={editForm.image} alt="Profile" className="w-full h-full object-cover" />
+                  <img src={editForm.image} alt="Profile" className="w-full h-full object-cover aspect-square" />
                 ) : (
                   <User className="w-12 h-12 text-mm-gray" />
                 )}
@@ -2421,7 +2421,7 @@ function UsersPage() {
                     <Loader2 className="w-6 h-6 text-mm-orange animate-spin" />
                   </div>
                 ) : editBusinessForm.image && editBusinessForm.image.trim() !== "" && editBusinessForm.image !== "undefined" && editBusinessForm.image !== "null" ? (
-                  <img src={editBusinessForm.image} alt="Business Avatar" className="w-full h-full object-cover" />
+                  <img src={editBusinessForm.image} alt="Business Avatar" className="w-full h-full object-cover aspect-square" />
                 ) : (
                   <User className="w-12 h-12 text-mm-gray" />
                 )}

@@ -190,7 +190,7 @@ export default function ClientNav() {
                 className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold text-mm-gray hover:text-mm-dark hover:bg-mm-subtle transition-all cursor-pointer"
               >
                 {activeBusiness?.image ? (
-                  <img src={activeBusiness.image} alt={activeBusiness.businessName} className="h-4 w-4 rounded object-cover" />
+                  <img src={activeBusiness.image} alt={activeBusiness.businessName} className="h-4 w-4 rounded object-cover aspect-square" />
                 ) : (
                   <div className="h-4 w-4 rounded bg-mm-orange/10 text-mm-orange flex items-center justify-center text-[9px] font-black uppercase">
                     {activeBusiness?.businessName?.charAt(0) || "B"}
@@ -220,7 +220,7 @@ export default function ClientNav() {
                     >
                       <div className="flex items-center gap-2 truncate flex-1 min-w-0">
                         {biz.image ? (
-                          <img src={biz.image} alt={biz.businessName} className="h-4.5 w-4.5 rounded object-cover shrink-0" />
+                          <img src={biz.image} alt={biz.businessName} className="h-4.5 w-4.5 rounded object-cover aspect-square shrink-0" />
                         ) : (
                           <div className="h-4.5 w-4.5 rounded bg-mm-orange/10 text-mm-orange flex items-center justify-center text-[9px] font-black uppercase shrink-0">
                             {biz.businessName.charAt(0)}
@@ -276,7 +276,7 @@ export default function ClientNav() {
               className="flex items-center gap-1 p-1 rounded-xl hover:bg-mm-subtle transition-all cursor-pointer"
             >
               {activeBusiness?.image ? (
-                <img src={activeBusiness.image} alt={activeBusiness.businessName} className="h-4.5 w-4.5 rounded object-cover" />
+                <img src={activeBusiness.image} alt={activeBusiness.businessName} className="h-4.5 w-4.5 rounded object-cover aspect-square" />
               ) : (
                 <div className="h-4.5 w-4.5 rounded bg-mm-orange/10 text-mm-orange flex items-center justify-center text-[9px] font-black uppercase">
                   {activeBusiness?.businessName?.charAt(0) || "B"}
@@ -300,7 +300,7 @@ export default function ClientNav() {
                   >
                     <div className="flex items-center gap-2 truncate flex-1 min-w-0">
                       {biz.image ? (
-                        <img src={biz.image} alt={biz.businessName} className="h-4.5 w-4.5 rounded object-cover shrink-0" />
+                        <img src={biz.image} alt={biz.businessName} className="h-4.5 w-4.5 rounded object-cover aspect-square shrink-0" />
                       ) : (
                         <div className="h-4.5 w-4.5 rounded bg-mm-orange/10 text-mm-orange flex items-center justify-center text-[9px] font-black uppercase shrink-0">
                           {biz.businessName.charAt(0)}
@@ -346,7 +346,7 @@ export default function ClientNav() {
               <img
                 src={userProfile.avatar}
                 alt={userProfile.name}
-                className="h-7 w-7 rounded-full object-cover border border-mm-orange/20"
+                className="h-7 w-7 rounded-full object-cover border border-mm-orange/20 aspect-square"
               />
             ) : (
               <div className="h-7 w-7 rounded-full bg-mm-orange/10 text-mm-orange border border-mm-orange/20 flex items-center justify-center text-xs font-extrabold">

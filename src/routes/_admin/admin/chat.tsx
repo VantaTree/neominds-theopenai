@@ -304,7 +304,7 @@ function ChatSidebar({
                         <img
                           src={chat.businessImage}
                           alt={chat.businessName}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover aspect-square"
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center bg-mm-orange text-white text-xs font-black">
@@ -319,7 +319,7 @@ function ChatSidebar({
                         <img
                           src={chat.userImage}
                           alt={chat.userName}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover aspect-square"
                         />
                       ) : (
                         <Avatar name={chat.userName} size={20} />

@@ -1358,7 +1358,7 @@ function DetailedTab({
                     <img
                       src={usr.image}
                       alt={usr.fullName}
-                      className="w-8 h-8 rounded-full object-cover shrink-0"
+                      className="w-8 h-8 rounded-full object-cover aspect-square shrink-0"
                     />
                   ) : (
                     <Avatar name={usr?.fullName || "Client"} size={32} />
@@ -1418,7 +1418,7 @@ function DetailedTab({
                     <img
                       src={biz.image}
                       alt={biz.businessName}
-                      className="w-8 h-8 rounded-full object-cover shrink-0"
+                      className="w-8 h-8 rounded-full object-cover aspect-square shrink-0"
                     />
                   ) : (
                     <Avatar name={biz?.businessName || "Business"} size={32} />

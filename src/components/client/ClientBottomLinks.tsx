@@ -122,7 +122,7 @@ export default function ClientBottomLinks() {
             className={`flex flex-col items-center justify-center space-y-1 cursor-pointer transition-colors ${dropdownOpen ? "text-mm-orange" : "text-mm-gray hover:text-mm-dark"}`}
           >
             {activeBusiness?.image ? (
-              <img src={activeBusiness.image} alt={activeBusiness.businessName} className="h-4.5 w-4.5 rounded object-cover" />
+              <img src={activeBusiness.image} alt={activeBusiness.businessName} className="h-4.5 w-4.5 rounded object-cover aspect-square" />
             ) : (
               <div className="h-4.5 w-4.5 rounded bg-mm-orange/10 text-mm-orange flex items-center justify-center text-[9px] font-black uppercase">
                 {activeBusiness?.businessName?.charAt(0) || "B"}
@@ -149,7 +149,7 @@ export default function ClientBottomLinks() {
                 >
                   <div className="flex items-center gap-2 truncate flex-1 min-w-0">
                     {biz.image ? (
-                      <img src={biz.image} alt={biz.businessName} className="h-4.5 w-4.5 rounded object-cover shrink-0" />
+                      <img src={biz.image} alt={biz.businessName} className="h-4.5 w-4.5 rounded object-cover aspect-square shrink-0" />
                     ) : (
                       <div className="h-4.5 w-4.5 rounded bg-mm-orange/10 text-mm-orange flex items-center justify-center text-[9px] font-black uppercase shrink-0">
                         {biz.businessName.charAt(0)}
