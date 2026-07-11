@@ -17,6 +17,6 @@ beautifulsoup4
 
 lxml
 
-duckduckgo-search
+ddgs
 
 tiktoken

@@ -11,6 +11,6 @@ pydantic
 requests
 beautifulsoup4
 lxml
-duckduckgo-search
+ddgs
 tiktoken
 litellm
