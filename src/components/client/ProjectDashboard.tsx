@@ -93,6 +93,17 @@ export function ProjectDashboard({
   // Selected project state for sliding details drawer
   const [activeDrawerProject, setActiveDrawerProject] = useState<Project | null>(null);
 
+  const drawerProjectDomain = activeDrawerProject?.domain;
+  const drawerProjectThemeKey =
+    drawerProjectDomain === "Website"
+      ? "seo"
+      : drawerProjectDomain === "Marketing"
+        ? "marketing"
+        : drawerProjectDomain === "Automation"
+          ? "automation"
+          : "report";
+  const drawerProjectTheme = CATEGORY_THEMES[drawerProjectThemeKey];
+
   // Filters state
   const [statusFilter, setStatusFilter] = useState<string>("All");
   const [priorityFilter, setPriorityFilter] = useState<string>("All");
@@ -467,18 +478,38 @@ export function ProjectDashboard({
                   ? `${startDate.toLocaleDateString("en-US", { month: "short", day: "2-digit" })} - ${deadline.toLocaleDateString("en-US", { month: "short", day: "2-digit" })}`
                   : "";
 
+              const projectDomain = project.domain;
+              const projectThemeKey =
+                projectDomain === "Website"
+                  ? "seo"
+                  : projectDomain === "Marketing"
+                    ? "marketing"
+                    : projectDomain === "Automation"
+                      ? "automation"
+                      : "report";
+              const projectTheme = CATEGORY_THEMES[projectThemeKey];
+
               return (
                 <div key={project.id} className="relative flex items-start gap-4">
                   {/* Left indicator node */}
                   <div className="absolute left-[-48px] top-1.5 flex items-center justify-center z-10">
                     {isCompleted ? (
                       <div className="w-8 h-8 rounded-full flex items-center justify-center text-white bg-green-500 border-2 border-white shadow-xs">
-                        <Check className="w-4 h-4 stroke-[3]" />
+                        <Check className="w-4 h-4 stroke-3" />
                       </div>
                     ) : isInProgress ? (
-                      <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center border-2 border-white shadow-xs shrink-0 relative">
-                        <div className="absolute inset-0 rounded-full bg-blue-500/15 animate-ping" />
-                        <div className="w-3.5 h-3.5 rounded-full bg-blue-600" />
+                      <div
+                        className="w-8 h-8 rounded-full flex items-center justify-center border-2 border-white shadow-xs shrink-0 relative"
+                        style={{ backgroundColor: `${projectTheme.primary}1A` }}
+                      >
+                        <div
+                          className="absolute inset-0 rounded-full animate-ping"
+                          style={{ backgroundColor: `${projectTheme.primary}26` }}
+                        />
+                        <div
+                          className="w-3.5 h-3.5 rounded-full"
+                          style={{ backgroundColor: projectTheme.primary }}
+                        />
                       </div>
                     ) : (
                       <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center border-2 border-white shadow-xs">
@@ -487,58 +518,105 @@ export function ProjectDashboard({
                     )}
                   </div>
 
-                  {/* Task item card button */}
-                  <button
+                  {/* Task item card container */}
+                  <div
+                    style={{ "--hover-color": projectTheme.primary } as React.CSSProperties}
+                    className="cursor-pointer flex-1 flex flex-col lg:flex-row gap-6 bg-white p-4 sm:p-5 rounded-2xl border border-mm-border hover:border-(--hover-color) hover:shadow-[0_6px_20px_rgba(0,0,0,0.035)] hover:-translate-y-0.5 transition-all duration-300 select-none group"
                     onClick={() => setActiveDrawerProject(project)}
-                    className="flex-1 text-left bg-white hover:bg-gray-50/40 p-4 sm:p-5 rounded-2xl border border-transparent hover:border-gray-100 transition-all select-none group"
                   >
-                    <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                      {dateStr && (
-                        <span className="text-[10px] font-black text-mm-gray tracking-wider uppercase bg-gray-100 px-2.5 py-0.5 rounded-md">
-                          {dateStr}
-                        </span>
-                      )}
-                      <span
-                        className={`text-[9px] font-black tracking-wider uppercase px-2.5 py-0.5 rounded-md ${
-                          isCompleted
-                            ? "bg-green-50 text-green-600 border border-green-100"
-                            : isInProgress
-                              ? "bg-blue-50 text-blue-600 border border-blue-100 animate-pulse"
-                              : "bg-gray-50 text-gray-500 border border-gray-100"
-                        }`}
-                      >
-                        {isInProgress ? "Current Task" : project.status}
-                      </span>
-                    </div>
-
-                    <h4 className="text-base font-extrabold text-mm-dark group-hover:text-blue-600 transition-colors">
-                      {project.name}
-                    </h4>
-
-                    <p className="text-xs text-mm-gray mt-1.5 max-w-2xl leading-relaxed">
-                      {project.description || "No project description provided."}
-                    </p>
-
-                    {isInProgress && (
-                      <div className="mt-4 max-w-md space-y-1.5">
-                        <div className="flex justify-between items-center text-[10px] text-mm-gray">
-                          <span>Progress</span>
-                          <span className="font-bold text-blue-600">
-                            {project.progress}%
+                    {/* Main Info */}
+                    <div
+                      className="flex-1 text-left flex flex-col justify-between"
+                    >
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                          {dateStr && (
+                            <span className="text-[10px] font-black text-mm-gray tracking-wider uppercase bg-gray-100 px-2.5 py-0.5 rounded-md">
+                              {dateStr}
+                            </span>
+                          )}
+                          <span
+                            className={`text-[9px] font-black tracking-wider uppercase px-2.5 py-0.5 rounded-md ${
+                              isCompleted
+                                ? "bg-green-50 text-green-600 border border-green-100"
+                                : isInProgress
+                                  ? `${projectTheme.badgeClass} animate-pulse`
+                                  : "bg-gray-50 text-gray-500 border border-gray-100"
+                            }`}
+                          >
+                            {isInProgress ? "Current Task" : project.status}
                           </span>
                         </div>
-                        <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
-                          <div
-                            className="h-full rounded-full transition-all duration-300"
-                            style={{
-                              width: `${project.progress}%`,
-                              backgroundColor: theme.primary,
-                            }}
-                          />
-                        </div>
+
+                        <h4 className="text-base font-extrabold text-mm-dark group-hover:text-(--hover-color) transition-colors duration-300">
+                          {project.name}
+                        </h4>
+
+                        <p className="text-xs text-mm-gray mt-1.5 max-w-2xl leading-relaxed">
+                          {project.description || "No project description provided."}
+                        </p>
                       </div>
-                    )}
-                  </button>
+
+                      {isInProgress && (
+                        <div className="mt-4 max-w-md space-y-1.5">
+                          <div className="flex justify-between items-center text-[10px] text-mm-gray">
+                            <span>Progress</span>
+                            <span className="font-bold" style={{ color: projectTheme.primary }}>
+                              {project.progress}%
+                            </span>
+                          </div>
+                          <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                            <div
+                              className="h-full rounded-full transition-all duration-300"
+                              style={{
+                                width: `${project.progress}%`,
+                                backgroundColor: projectTheme.primary,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Right part: Scrollable activity log (Desktop only) */}
+                    <div className="hidden lg:block lg:w-80 shrink-0 border-l border-mm-border/80 pl-6 self-stretch">
+                      <span className="text-[10px] font-extrabold text-mm-gray uppercase tracking-wider block mb-2.5">
+                        Activity Log
+                      </span>
+                      {project.updates && project.updates.length > 0 ? (
+                        <div className="space-y-3 overflow-y-auto max-h-[110px] pr-1.5 scrollbar-none">
+                          {project.updates.map((update, idx) => {
+                            const uDate = parseDate(update.timestamp);
+                            return (
+                              <div key={idx} className="border-l border-gray-200 pl-3 py-0.5 relative">
+                                <div className="absolute left-[-4.5px] top-1.5 h-2 w-2 rounded-full bg-gray-300" />
+                                <div className="flex justify-between items-baseline mb-0.5">
+                                  <span className="text-[10px] font-bold text-mm-dark">
+                                    {update.designation || "System Update"}
+                                  </span>
+                                  {uDate && (
+                                    <span className="text-[9px] text-mm-gray/80">
+                                      {uDate.toLocaleDateString(undefined, {
+                                        month: "short",
+                                        day: "numeric",
+                                      })}
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-[11px] text-mm-gray leading-normal line-clamp-2">
+                                  {update.message}
+                                </p>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="h-[100px] flex items-center justify-center bg-gray-50/50 border border-dashed border-gray-200/80 rounded-xl px-4 text-center">
+                          <p className="text-[11px] text-mm-gray/80 italic">No recent activity logged</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               );
             })}
@@ -605,7 +683,7 @@ export function ProjectDashboard({
                       activeDrawerProject.status === "Completed"
                         ? "bg-green-50 text-green-600 border border-green-100"
                         : activeDrawerProject.status === "In Progress"
-                          ? "bg-blue-50 text-blue-600 border border-blue-100"
+                          ? drawerProjectTheme.badgeClass
                           : "bg-gray-50 text-gray-500 border border-gray-100"
                     }`}
                   >
