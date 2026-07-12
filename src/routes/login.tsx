@@ -11,7 +11,7 @@ import {
   User,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { ensureUserDocumentFn, createSessionCookieFn } from "@/lib/server-functions";
+import { ensureUserDocumentFn, createSessionCookieFn, checkUserExistsFn } from "@/lib/server-functions";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const loginSearchSchema = z.object({
@@ -46,6 +46,16 @@ function LoginPage() {
       if (user) {
         setIsLoading(true);
         try {
+          // Check if user document exists in database
+          const { exists } = await checkUserExistsFn({ data: { uid: user.uid } });
+          if (!exists) {
+            await auth.signOut();
+            document.cookie = `__session=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+            setError("No account exists. Please sign up first.");
+            setIsLoading(false);
+            return;
+          }
+
           const token = await user.getIdToken();
           const { sessionCookie } = await createSessionCookieFn({ data: { idToken: token } });
           const isSecure = window.location.protocol === "https:";
@@ -81,6 +91,17 @@ function LoginPage() {
         password,
       );
       const user = userCredential.user;
+
+      // Check if user document exists in database
+      const { exists } = await checkUserExistsFn({ data: { uid: user.uid } });
+      if (!exists) {
+        await auth.signOut();
+        document.cookie = `__session=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+        setError("No account exists. Please sign up first.");
+        setIsLoading(false);
+        return;
+      }
+
       const token = await user.getIdToken();
 
       // Request session cookie from server
@@ -90,23 +111,16 @@ function LoginPage() {
       const isSecure = window.location.protocol === "https:";
       document.cookie = `__session=${sessionCookie}; path=/; max-age=604800;${isSecure ? " Secure;" : ""} SameSite=Lax`;
 
-      // Ensure user document exists in database via server function
-      await ensureUserDocumentFn({
-        data: {
-          user: {
-            uid: user.uid,
-            displayName: user.displayName,
-            email: user.email,
-            phoneNumber: user.phoneNumber,
-          },
-        },
-      });
-
       // Redirect back to intended page or dashboard
       navigate({ to: search.redirect || "/dashboard" });
     } catch (err: any) {
       console.error("Login error:", err);
-      setError(err.message || "Invalid email or password.");
+      // Custom user-friendly message for auth/user-not-found
+      if (err.code === "auth/user-not-found" || err.code === "auth/invalid-credential") {
+        setError("No account exists. Please sign up first.");
+      } else {
+        setError(err.message || "Invalid email or password.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -124,6 +138,17 @@ function LoginPage() {
       const provider = new GoogleAuthProvider();
       const userCredential = await signInWithPopup(auth, provider);
       const user = userCredential.user;
+
+      // Check if user document exists in database
+      const { exists } = await checkUserExistsFn({ data: { uid: user.uid } });
+      if (!exists) {
+        await auth.signOut();
+        document.cookie = `__session=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+        setError("No account exists. Please sign up first.");
+        setIsLoading(false);
+        return;
+      }
+
       const token = await user.getIdToken();
 
       // Request session cookie from server
@@ -132,18 +157,6 @@ function LoginPage() {
       // Set session cookie for SSR (7 days)
       const isSecure = window.location.protocol === "https:";
       document.cookie = `__session=${sessionCookie}; path=/; max-age=604800;${isSecure ? " Secure;" : ""} SameSite=Lax`;
-
-      // Ensure user document exists in database via server function
-      await ensureUserDocumentFn({
-        data: {
-          user: {
-            uid: user.uid,
-            displayName: user.displayName,
-            email: user.email,
-            phoneNumber: user.phoneNumber,
-          },
-        },
-      });
 
       // Redirect back to intended page or dashboard
       navigate({ to: search.redirect || "/dashboard" });

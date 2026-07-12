@@ -200,6 +200,14 @@ export const ensureUserDocumentFn = createServerFn({ method: "POST" })
     return (await getDb()).ensureUserDocument(data.user);
   });
 
+export const checkUserExistsFn = createServerFn({ method: "POST" })
+  .validator((d: { uid: string }) => d)
+  .handler(async ({ data }) => {
+    const db = await getDb();
+    const user = await db.getUser(data.uid);
+    return { exists: !!user };
+  });
+
 // ==================== BUSINESSES ====================
 
 export const getBusinessesFn = createServerFn({ method: "GET" })
@@ -838,8 +846,15 @@ export const submitAssessmentFn = createServerFn({ method: "POST" })
     // 1. Verify the requester is authenticated
     const decoded = await verifyServerSession();
 
-    // 2. TODO: Add additional validation / business rule checks before calling the agent backend
-    // (e.g., check if the user has active credits, paid subscription status, rate-limits, etc.)
+    // 2. Validate that the user owns no business without a paid plan
+    const db = await getDb();
+    const userBusinesses = await db.getBusinessesByUser(decoded.uid);
+    const hasUnpaidBusiness = userBusinesses.some((b) => b.plan === "None");
+    if (hasUnpaidBusiness) {
+      throw new Error(
+        "You must purchase a paid plan for your existing business before you can add a new one."
+      );
+    }
 
     // 3. Call the agent backend using fetch
     const agentBackendUrl = process.env.VITE_AGENT_BACKEND_URL || "http://localhost:8081";
@@ -851,7 +866,14 @@ export const submitAssessmentFn = createServerFn({ method: "POST" })
         "Content-Type": "application/json",
         "X-API-Key": apiKey,
       },
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        businessName: data.businessName,
+        industry: data.industry,
+        businessDescription: data.businessDescription,
+        websiteUrl: data.websiteUrl || "",
+        primaryGoal: data.primaryGoal,
+        targetAudience: data.targetAudience,
+      }),
     });
 
     if (!response.ok) {
@@ -861,10 +883,47 @@ export const submitAssessmentFn = createServerFn({ method: "POST" })
     }
 
     const result = await response.json();
-    
-    // 4. TODO: "do some stuff" with the result (e.g. save to database, notify admins, trigger workflows)
-    
-    return result;
+
+    // 4. Create and save new Business document in Firestore
+    const businessId = `biz_${Date.now()}`;
+    const newBusiness: Business = {
+      id: businessId,
+      userId: decoded.uid,
+      plan: "None",
+      addons: [],
+      businessName: data.businessName,
+      businessType: data.industry,
+      contactEmail: decoded.email || null,
+      contactPhone: "",
+      websiteUrl: data.websiteUrl || "",
+      paymentStatus: "Pending",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    await db.saveBusiness(newBusiness);
+
+    // 5. Create and save new Report document in Firestore
+    const reportId = `rpt_${Date.now()}`;
+    const newReport: any = {
+      id: reportId,
+      businessId: businessId,
+      title: `${data.businessName} - AI Assessment Report`,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      data: result,
+    };
+    await db.saveReport(newReport);
+
+    // 6. Update user document businessCount
+    const userDoc = await db.getUser(decoded.uid);
+    if (userDoc) {
+      const updatedBusinesses = await db.getBusinessesByUser(decoded.uid);
+      userDoc.businessCount = updatedBusinesses.length;
+      userDoc.updatedAt = new Date();
+      await db.saveUser(userDoc);
+    }
+
+    return { result, businessId, reportId };
   });
 
 

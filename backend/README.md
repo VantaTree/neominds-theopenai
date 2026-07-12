@@ -149,7 +149,7 @@ python -m uvicorn main:app --reload --port 8081
   {
     "businessName": "Acme Corp",
     "industry": "Technology & Software",
-    "businessDescription": "A SaaS business building next-gen developer productivity tools.",
+    "businessDescription": "A SaaS business b uilding next-gen developer productivity tools.",
     "websiteUrl": "https://acme.com",
     "primaryGoal": "Generate leads and increase trials",
     "targetAudience": "Software engineers and engineering managers aged 25-45"

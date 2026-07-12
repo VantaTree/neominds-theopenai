@@ -1,7 +1,19 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import React, { useState, useEffect, useRef } from "react";
-import { ArrowRight, Lock, Mail, Eye, EyeOff, X } from "lucide-react";
+import { ArrowRight, Lock, Mail, Eye, EyeOff, X, Loader2 } from "lucide-react";
 import { questions } from "@/data/questions";
+import {
+  createUserWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
+  type User,
+} from "firebase/auth";
+import { auth } from "@/lib/firebase";
+import {
+  ensureUserDocumentFn,
+  createSessionCookieFn,
+  submitAssessmentFn,
+} from "@/lib/server-functions";
 
 export const Route = createFileRoute("/assessment")({
   component: AssessmentPage,
@@ -125,10 +137,22 @@ function AssessmentPage() {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [confirmationAction, setConfirmationAction] = useState<"analyze" | "google_signup" | "email_signup" | null>(null);
   const [isConfirmed, setIsConfirmed] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!auth) return;
+    const unsubscribe = auth.onAuthStateChanged((user: User | null) => {
+      setCurrentUser(user);
+    });
+    return unsubscribe;
+  }, []);
 
   useEffect(() => {
     if (!showConfirmation) {
       setIsConfirmed(false);
+      setError("");
     }
   }, [showConfirmation]);
 
@@ -143,7 +167,7 @@ function AssessmentPage() {
   const handleAnalyzeClick = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Save assessment data and proceed straight to the teaser signup card
+    // Save assessment data
     const assessmentData = {
       businessName: formData.businessName || "",
       industry: formData.industry || "",
@@ -156,14 +180,22 @@ function AssessmentPage() {
 
     try {
       localStorage.setItem("assessment_data", JSON.stringify(assessmentData));
-      setShowTeaser(true); // Move straight to Step 2 of 2
+      
+      // If already logged in, skip step 2 and go directly to confirmation
+      if (currentUser) {
+        setConfirmationAction("analyze");
+        setShowConfirmation(true);
+      } else {
+        setShowTeaser(true); // Move straight to Step 2 of 2
+      }
     } catch (err) {
       console.error("Failed to save assessment to localStorage:", err);
     }
   };
 
-  const handleConfirmAction = () => {
-    setShowConfirmation(false);
+  const handleConfirmAction = async () => {
+    setIsLoading(true);
+    setError("");
 
     const assessmentData = {
       businessName: formData.businessName || "",
@@ -175,38 +207,87 @@ function AssessmentPage() {
       submittedAt: new Date().toISOString(),
     };
 
-    const mockSignupInfo = {
-      email: confirmationAction === "email_signup" ? signupEmail : "mockgoogleuser@example.com",
-      signupMethod: confirmationAction === "email_signup" ? "email" : "google",
-      completedAt: new Date().toISOString(),
-    };
-
     try {
-      // Save combined signup + assessment details to local storage
-      const combinedData = {
-        assessment: assessmentData,
-        auth: mockSignupInfo
-      };
-      localStorage.setItem("assessment_data", JSON.stringify(assessmentData));
-      localStorage.setItem("signup_data", JSON.stringify(mockSignupInfo));
-      localStorage.setItem("combined_assessment_data", JSON.stringify(combinedData));
+      let activeUser = currentUser;
 
-      // Mock unlock state
+      // 1. If not logged in, execute signup first
+      if (!activeUser) {
+        if (!auth) {
+          throw new Error("Authentication service is not available.");
+        }
+
+        if (confirmationAction === "email_signup") {
+          if (!signupEmail || !signupPassword) {
+            throw new Error("Please enter your email and password.");
+          }
+          const userCredential = await createUserWithEmailAndPassword(
+            auth,
+            signupEmail,
+            signupPassword
+          );
+          activeUser = userCredential.user;
+        } else if (confirmationAction === "google_signup") {
+          const provider = new GoogleAuthProvider();
+          const userCredential = await signInWithPopup(auth, provider);
+          activeUser = userCredential.user;
+        } else {
+          throw new Error("No signup method selected.");
+        }
+
+        if (!activeUser) {
+          throw new Error("Failed to create user account.");
+        }
+
+        // Get ID token and register cookie/db user
+        const token = await activeUser.getIdToken();
+        const { sessionCookie } = await createSessionCookieFn({
+          data: { idToken: token },
+        });
+
+        const isSecure = window.location.protocol === "https:";
+        document.cookie = `__session=${sessionCookie}; path=/; max-age=604800;${
+          isSecure ? " Secure;" : ""
+        } SameSite=Lax`;
+
+        await ensureUserDocumentFn({
+          data: {
+            user: {
+              uid: activeUser.uid,
+              displayName: activeUser.displayName,
+              email: activeUser.email,
+              phoneNumber: activeUser.phoneNumber,
+            },
+          },
+        });
+      }
+
+      // 2. Call the server function to create business/report
+      const res = await submitAssessmentFn({ data: assessmentData });
+
+      localStorage.setItem("assessment_data", JSON.stringify(assessmentData));
       localStorage.setItem("audit_unlocked", "true");
 
-      // Redirect to dashboard
-      navigate({ to: "/dashboard" });
-    } catch (err) {
-      console.error("Failed to execute mock signup flow:", err);
+      if (res && res.businessId) {
+        localStorage.setItem("active_business_id", res.businessId);
+      }
+
+      setShowConfirmation(false);
+      navigate({
+        to: "/projects",
+        search: { activeCard: "report" },
+      });
+    } catch (err: any) {
+      console.error("Failed to execute signup/assessment creation:", err);
+      setError(
+        err.message || "An error occurred during account creation/assessment submission."
+      );
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const triggerConfirm = () => {
-    if (isConfirmed) return;
-    setIsConfirmed(true);
-    setTimeout(() => {
-      handleConfirmAction();
-    }, 450);
+  const toggleConfirm = () => {
+    setIsConfirmed((prev) => !prev);
   };
 
   return (
@@ -226,13 +307,15 @@ function AssessmentPage() {
       {showConfirmation && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-fadeIn">
           <div className="bg-white border border-mm-border shadow-2xl rounded-3xl p-6 sm:p-10 max-w-sm w-full text-center space-y-6 animate-scaleIn relative">
-            <button
-              type="button"
-              onClick={() => setShowConfirmation(false)}
-              className="absolute top-4 right-4 text-mm-gray/40 hover:text-mm-dark transition-colors cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            {!isLoading && (
+              <button
+                type="button"
+                onClick={() => setShowConfirmation(false)}
+                className="absolute top-4 right-4 text-mm-gray/40 hover:text-mm-dark transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            )}
             <div className="space-y-2">
               <h3 className="font-serif text-xl sm:text-2xl font-bold text-mm-dark">
                 Confirm Details
@@ -241,14 +324,25 @@ function AssessmentPage() {
                 Are you sure all the information is correct?
               </p>
             </div>
+
+            {error && (
+              <div className="p-3 text-xs bg-red-50 border border-red-200 text-red-600 rounded-xl text-left font-medium leading-normal max-h-32 overflow-y-auto">
+                {error}
+              </div>
+            )}
             
-            <div className="flex flex-col items-center space-y-4">
+            <div className="flex flex-col items-center space-y-4 w-full">
               {/* Checkbox Banner - Government Declaration style */}
-              <button
-                type="button"
-                onClick={triggerConfirm}
-                className="flex items-center gap-3 p-3.5 rounded-2xl bg-mm-subtle/10 border border-mm-border hover:bg-mm-subtle/25 active:scale-[0.99] transition-all cursor-pointer w-full text-left"
+              <label
+                className="flex items-center gap-3 p-3.5 rounded-2xl bg-mm-subtle/10 border border-mm-border hover:bg-mm-subtle/25 transition-all cursor-pointer w-full text-left"
               >
+                <input
+                  type="checkbox"
+                  checked={isConfirmed}
+                  onChange={toggleConfirm}
+                  disabled={isLoading}
+                  className="sr-only"
+                />
                 <div
                   className={`w-7 h-7 flex-shrink-0 flex items-center justify-center rounded-[8px] transition-all duration-200 border-2 ${
                     isConfirmed
@@ -273,15 +367,35 @@ function AssessmentPage() {
                 <span className="text-xs font-semibold text-mm-dark select-none leading-snug">
                   I confirm that all the information provided is correct.
                 </span>
-              </button>
+              </label>
 
-              <button
-                type="button"
-                onClick={() => setShowConfirmation(false)}
-                className="w-full py-3 bg-mm-dark/5 hover:bg-mm-dark/10 text-mm-dark font-bold rounded-xl transition-all cursor-pointer text-sm"
-              >
-                Cancel
-              </button>
+              <div className="flex justify-between w-full gap-4">
+                <button
+                  type="button"
+                  onClick={handleConfirmAction}
+                  disabled={!isConfirmed || isLoading}
+                  className={`w-full py-3.5 text-white font-bold rounded-xl transition-all text-sm select-none shadow-md flex items-center justify-center gap-2 ${
+                    isConfirmed && !isLoading
+                      ? "bg-[#2563eb] hover:bg-[#1d4ed8] active:scale-[0.99] cursor-pointer"
+                      : "bg-gray-300 cursor-not-allowed shadow-none text-gray-500"
+                  }`}
+                >
+                  {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {isLoading ? "Processing..." : "Continue"}
+                </button>
+                <button
+                  type="button"
+                  disabled={isLoading}
+                  onClick={() => setShowConfirmation(false)}
+                  className={`w-full py-3 font-bold rounded-xl transition-all text-sm ${
+                    isLoading
+                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                      : "bg-mm-dark/5 hover:bg-mm-dark/10 text-mm-dark cursor-pointer"
+                  }`}
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
         </div>
