@@ -40,12 +40,14 @@ export function MymindFooter() {
                 AI Finds the <span className="text-mm-orange">Problem</span>.
               </p>
               <p className="text-lg font-bold text-mm-dark leading-tight font-sans">
-                Experts Deliver the <span className="text-mm-orange">Solution</span>.
+                Experts Deliver the{" "}
+                <span className="text-mm-orange">Solution</span>.
               </p>
             </div>
             <p className="text-sm text-mm-dark/60 leading-relaxed max-w-sm font-sans pt-2">
-              We help businesses identify growth bottlenecks, prioritize opportunities,
-              and execute the right solutions for sustainable growth.
+              We help businesses identify growth bottlenecks, prioritize
+              opportunities, and execute the right solutions for sustainable
+              growth.
             </p>
           </div>
 
@@ -57,10 +59,10 @@ export function MymindFooter() {
                   <Mail className="h-4 w-4" />
                 </div>
                 <a
-                  href="mailto:hello@theopenai.org"
+                  href="mailto:support@neomindstechhub.com"
                   className="hover:text-mm-orange transition-colors"
                 >
-                  hello@theopenai.org
+                  support@neomindstechhub.com
                 </a>
               </div>
               <div className="flex items-center gap-3">
@@ -68,17 +70,20 @@ export function MymindFooter() {
                   <Phone className="h-4 w-4" />
                 </div>
                 <a
-                  href="tel:+919876543210"
+                  href="tel:+919515654804"
                   className="hover:text-mm-orange transition-colors"
                 >
-                  +91 98765 43210
+                  +91 95156 54804
                 </a>
               </div>
               <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-mm-orange/10 text-mm-orange">
+                <div className="flex min-h-8 min-w-8 h-8 w-8 items-center justify-center rounded-full bg-mm-orange/10 text-mm-orange">
                   <MapPin className="h-4 w-4" />
                 </div>
-                <span>Hyderabad, India</span>
+                <span>
+                  Office Space No. 704, 7th Floor, 5-9-59 & 60, Moguls Court
+                  Building, Basheerbagh, Hyderabad-500001, Telangana State
+                </span>
               </div>
             </div>
           </div>
@@ -118,7 +123,7 @@ export function MymindFooter() {
               {[
                 { label: "About Us", href: "#" },
                 { label: "How It Works", href: "#" },
-                { label: "Pricing", href: "#" },
+                { label: "Pricing", to: "/", hash: "pricing" },
                 { label: "Contact Us", to: "/", hash: "contact" },
               ].map((link) => {
                 if (link.to) {

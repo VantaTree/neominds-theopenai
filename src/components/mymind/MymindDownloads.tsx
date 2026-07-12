@@ -10,9 +10,9 @@ export function MymindDownloads() {
       style={{
         background:
           // "linear-gradient(180deg, #FFF5F0 0%, #fff0ec 30%, #fff0ec 100%)",
-          "#FFFFFF"
+          "#FFFFFF",
       }}
-      id="downloads"
+      id="pricing"
     >
       <div className="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8">
         <motion.p
@@ -47,10 +47,21 @@ export function MymindDownloads() {
         {/* Pricing cards */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-4 ">
           {PLANS.slice(0, 3).map((plan, i) => (
-            <AnimatedPlanCard key={plan.name} plan={plan} i={i} cardType="default" />
+            <AnimatedPlanCard
+              key={plan.name}
+              plan={plan}
+              i={i}
+              cardType="default"
+            />
           ))}
           {PLANS.slice(3, 4).map((plan, i) => (
-            <AnimatedPlanCard key={plan.name} plan={plan} i={i} cardType="custom" animate={false} />
+            <AnimatedPlanCard
+              key={plan.name}
+              plan={plan}
+              i={i}
+              cardType="custom"
+              animate={false}
+            />
           ))}
         </div>
 
