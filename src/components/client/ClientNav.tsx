@@ -318,6 +318,15 @@ export default function ClientNav() {
               </Link>
 
               <Link
+                to="/businessProfile"
+                onClick={() => setDropdownOpen(false)}
+                className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-mm-dark hover:bg-mm-subtle transition-colors text-left cursor-pointer"
+              >
+                <Building2 className="h-4 w-4 text-mm-gray" />
+                <span>Business Profile</span>
+              </Link>
+
+              <Link
                 to="/settings"
                 onClick={() => setDropdownOpen(false)}
                 className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-mm-dark hover:bg-mm-subtle transition-colors text-left cursor-pointer"

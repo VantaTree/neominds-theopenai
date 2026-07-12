@@ -27,6 +27,7 @@ import { Route as ClientProjectsRouteImport } from './routes/_client/projects'
 import { Route as ClientProfileRouteImport } from './routes/_client/profile'
 import { Route as ClientPlanRouteImport } from './routes/_client/plan'
 import { Route as ClientDashboardRouteImport } from './routes/_client/dashboard'
+import { Route as ClientBusinessProfileRouteImport } from './routes/_client/businessProfile'
 import { Route as ClientChatRouteRouteImport } from './routes/_client/chat/route'
 import { Route as ClientChatIndexRouteImport } from './routes/_client/chat/index'
 import { Route as AdminAdminIndexRouteImport } from './routes/_admin/admin/index'
@@ -131,6 +132,11 @@ const ClientDashboardRoute = ClientDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => ClientRouteRoute,
 } as any)
+const ClientBusinessProfileRoute = ClientBusinessProfileRouteImport.update({
+  id: '/businessProfile',
+  path: '/businessProfile',
+  getParentRoute: () => ClientRouteRoute,
+} as any)
 const ClientChatRouteRoute = ClientChatRouteRouteImport.update({
   id: '/chat',
   path: '/chat',
@@ -217,6 +223,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/why': typeof WhyRoute
   '/chat': typeof ClientChatRouteRouteWithChildren
+  '/businessProfile': typeof ClientBusinessProfileRoute
   '/dashboard': typeof ClientDashboardRoute
   '/plan': typeof ClientPlanRoute
   '/profile': typeof ClientProfileRoute
@@ -248,6 +255,7 @@ export interface FileRoutesByTo {
   '/plans': typeof PlansRoute
   '/signup': typeof SignupRoute
   '/why': typeof WhyRoute
+  '/businessProfile': typeof ClientBusinessProfileRoute
   '/dashboard': typeof ClientDashboardRoute
   '/plan': typeof ClientPlanRoute
   '/profile': typeof ClientProfileRoute
@@ -284,6 +292,7 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/why': typeof WhyRoute
   '/_client/chat': typeof ClientChatRouteRouteWithChildren
+  '/_client/businessProfile': typeof ClientBusinessProfileRoute
   '/_client/dashboard': typeof ClientDashboardRoute
   '/_client/plan': typeof ClientPlanRoute
   '/_client/profile': typeof ClientProfileRoute
@@ -319,6 +328,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/why'
     | '/chat'
+    | '/businessProfile'
     | '/dashboard'
     | '/plan'
     | '/profile'
@@ -350,6 +360,7 @@ export interface FileRouteTypes {
     | '/plans'
     | '/signup'
     | '/why'
+    | '/businessProfile'
     | '/dashboard'
     | '/plan'
     | '/profile'
@@ -385,6 +396,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/why'
     | '/_client/chat'
+    | '/_client/businessProfile'
     | '/_client/dashboard'
     | '/_client/plan'
     | '/_client/profile'
@@ -550,6 +562,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClientDashboardRouteImport
       parentRoute: typeof ClientRouteRoute
     }
+    '/_client/businessProfile': {
+      id: '/_client/businessProfile'
+      path: '/businessProfile'
+      fullPath: '/businessProfile'
+      preLoaderRoute: typeof ClientBusinessProfileRouteImport
+      parentRoute: typeof ClientRouteRoute
+    }
     '/_client/chat': {
       id: '/_client/chat'
       path: '/chat'
@@ -708,6 +727,7 @@ const ClientChatRouteRouteWithChildren = ClientChatRouteRoute._addFileChildren(
 
 interface ClientRouteRouteChildren {
   ClientChatRouteRoute: typeof ClientChatRouteRouteWithChildren
+  ClientBusinessProfileRoute: typeof ClientBusinessProfileRoute
   ClientDashboardRoute: typeof ClientDashboardRoute
   ClientPlanRoute: typeof ClientPlanRoute
   ClientProfileRoute: typeof ClientProfileRoute
@@ -718,6 +738,7 @@ interface ClientRouteRouteChildren {
 
 const ClientRouteRouteChildren: ClientRouteRouteChildren = {
   ClientChatRouteRoute: ClientChatRouteRouteWithChildren,
+  ClientBusinessProfileRoute: ClientBusinessProfileRoute,
   ClientDashboardRoute: ClientDashboardRoute,
   ClientPlanRoute: ClientPlanRoute,
   ClientProfileRoute: ClientProfileRoute,
