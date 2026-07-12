@@ -23,5 +23,8 @@ export default defineConfig({
     resolve: {
       tsconfigPaths: true,
     },
+    ssr: {
+      noExternal: ['firebase', '@firebase/*'],
+    }
   },
 });
