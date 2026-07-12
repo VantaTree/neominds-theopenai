@@ -14,7 +14,15 @@ export default defineConfig({
   },
   nitro: {
     preset: "vercel",
-  },
+    externals: {
+      external: [
+        "firebase-admin",
+        "firebase-admin/auth",
+        "firebase-admin/firestore",
+        "@google-cloud/firestore"
+      ]
+    }
+  } as any,
   vite: {
     server: {
       host: "0.0.0.0",
@@ -24,6 +32,12 @@ export default defineConfig({
       tsconfigPaths: true,
     },
     ssr: {
+      external: [
+        "firebase-admin",
+        "firebase-admin/auth",
+        "firebase-admin/firestore",
+        "@google-cloud/firestore"
+      ],
       noExternal: ['firebase', '@firebase/*'],
     }
   },
