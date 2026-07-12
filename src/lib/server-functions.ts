@@ -200,6 +200,14 @@ export const ensureUserDocumentFn = createServerFn({ method: "POST" })
     return (await getDb()).ensureUserDocument(data.user);
   });
 
+export const checkUserExistsFn = createServerFn({ method: "POST" })
+  .validator((d: { uid: string }) => d)
+  .handler(async ({ data }) => {
+    const db = await getDb();
+    const user = await db.getUser(data.uid);
+    return { exists: !!user };
+  });
+
 // ==================== BUSINESSES ====================
 
 export const getBusinessesFn = createServerFn({ method: "GET" })
@@ -824,4 +832,99 @@ export const getClientStreamCredentialsFn = createServerFn({ method: "GET" })
 
     return { apiKey, token, uid, name };
   });
+
+export const submitAssessmentFn = createServerFn({ method: "POST" })
+  .validator((d: {
+    businessName: string;
+    industry: string;
+    businessDescription: string;
+    websiteUrl?: string | null;
+    primaryGoal: string;
+    targetAudience: string;
+  }) => d)
+  .handler(async ({ data }) => {
+    // 1. Verify the requester is authenticated
+    const decoded = await verifyServerSession();
+
+    // 2. Validate that the user owns no business without a paid plan
+    const db = await getDb();
+    const userBusinesses = await db.getBusinessesByUser(decoded.uid);
+    const hasUnpaidBusiness = userBusinesses.some((b) => b.plan === "None");
+    if (hasUnpaidBusiness) {
+      throw new Error(
+        "You must purchase a paid plan for your existing business before you can add a new one."
+      );
+    }
+
+    // 3. Call the agent backend using fetch
+    const agentBackendUrl = process.env.VITE_AGENT_BACKEND_URL || "http://localhost:8081";
+    const apiKey = process.env.BB_AGENT_API_KEY || "bb-agent-default-secret-key-2026";
+
+    const response = await fetch(`${agentBackendUrl}/api/assessment`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-API-Key": apiKey,
+      },
+      body: JSON.stringify({
+        businessName: data.businessName,
+        industry: data.industry,
+        businessDescription: data.businessDescription,
+        websiteUrl: data.websiteUrl || "",
+        primaryGoal: data.primaryGoal,
+        targetAudience: data.targetAudience,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Error from AI agent backend:", errorText);
+      throw new Error(`AI Agent backend returned error: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+
+    // 4. Create and save new Business document in Firestore
+    const firestoreDb = await getAdminDb();
+    const businessId = firestoreDb.collection("businesses").doc().id;
+    const newBusiness: Business = {
+      id: businessId,
+      userId: decoded.uid,
+      plan: "None",
+      addons: [],
+      businessName: data.businessName,
+      businessType: data.industry,
+      contactEmail: decoded.email || null,
+      contactPhone: "",
+      websiteUrl: data.websiteUrl || "",
+      paymentStatus: "Pending",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    await db.saveBusiness(newBusiness);
+
+    // 5. Create and save new Report document in Firestore
+    const reportId = firestoreDb.collection("reports").doc().id;
+    const newReport: any = {
+      id: reportId,
+      businessId: businessId,
+      title: `${data.businessName} - AI Assessment Report`,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      data: result,
+    };
+    await db.saveReport(newReport);
+
+    // 6. Update user document businessCount
+    const userDoc = await db.getUser(decoded.uid);
+    if (userDoc) {
+      const updatedBusinesses = await db.getBusinessesByUser(decoded.uid);
+      userDoc.businessCount = updatedBusinesses.length;
+      userDoc.updatedAt = new Date();
+      await db.saveUser(userDoc);
+    }
+
+    return { result, businessId, reportId };
+  });
+
 
