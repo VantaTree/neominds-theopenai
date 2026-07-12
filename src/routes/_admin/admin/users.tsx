@@ -385,23 +385,23 @@ function UsersPage() {
   };
 
   const handleEditSubmit = () => {
-    const errs: Record<string, string> = {};
-    if (!editForm.name?.trim()) errs.name = "Full Name is required.";
-    if (!editForm.business?.trim())
-      errs.business = "Business Name is required.";
-    if (!editForm.email?.trim()) errs.email = "Email Address is required.";
-    if (!editForm.phone?.trim()) errs.phone = "Phone Number is required.";
-    if (
-      editForm.newPassword &&
-      editForm.newPassword !== editForm.confirmPassword
-    ) {
-      errs.confirmPassword = "Passwords do not match.";
-    }
+    // const errs: Record<string, string> = {};
+    // if (!editForm.name?.trim()) errs.name = "Full Name is required.";
+    // if (!editForm.business?.trim())
+    //   errs.business = "Business Name is required.";
+    // if (!editForm.email?.trim()) errs.email = "Email Address is required.";
+    // if (!editForm.phone?.trim()) errs.phone = "Phone Number is required.";
+    // if (
+    //   editForm.newPassword &&
+    //   editForm.newPassword !== editForm.confirmPassword
+    // ) {
+    //   errs.confirmPassword = "Passwords do not match.";
+    // }
 
-    if (Object.keys(errs).length > 0) {
-      setEditErrors(errs);
-      return;
-    }
+    // if (Object.keys(errs).length > 0) {
+    //   setEditErrors(errs);
+    //   return;
+    // }
 
     const userId = editingUser!.id;
     const userSchemaData: DBUser = {
