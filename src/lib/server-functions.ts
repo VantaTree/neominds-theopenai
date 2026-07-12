@@ -825,3 +825,46 @@ export const getClientStreamCredentialsFn = createServerFn({ method: "GET" })
     return { apiKey, token, uid, name };
   });
 
+export const submitAssessmentFn = createServerFn({ method: "POST" })
+  .validator((d: {
+    businessName: string;
+    industry: string;
+    businessDescription: string;
+    websiteUrl?: string | null;
+    primaryGoal: string;
+    targetAudience: string;
+  }) => d)
+  .handler(async ({ data }) => {
+    // 1. Verify the requester is authenticated
+    const decoded = await verifyServerSession();
+
+    // 2. TODO: Add additional validation / business rule checks before calling the agent backend
+    // (e.g., check if the user has active credits, paid subscription status, rate-limits, etc.)
+
+    // 3. Call the agent backend using fetch
+    const agentBackendUrl = process.env.VITE_AGENT_BACKEND_URL || "http://localhost:8081";
+    const apiKey = process.env.BB_AGENT_API_KEY || "bb-agent-default-secret-key-2026";
+
+    const response = await fetch(`${agentBackendUrl}/api/assessment`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-API-Key": apiKey,
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Error from AI agent backend:", errorText);
+      throw new Error(`AI Agent backend returned error: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    
+    // 4. TODO: "do some stuff" with the result (e.g. save to database, notify admins, trigger workflows)
+    
+    return result;
+  });
+
+

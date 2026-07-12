@@ -48,21 +48,68 @@ This is the backend component for **The Open AI**, built with **FastAPI** and **
 ## Environment Variables
 
 ### Backend Configuration
-To run the AI Agent crew, configure your Groq API key. Create a `.env` file in the `backend/` directory or export it in your terminal session:
+Create a `.env` file in the `backend/` directory to configure the LLM provider and security access controls:
 
 ```env
 # Groq configuration (required)
 GROQ_API_KEY=your_groq_api_key_here
 LLM_PROVIDER=groq
+
+# Security settings (required)
+# Hash of your secret key: sha256(apiKey + salt)
+BB_AGENT_API_KEY_HASH=2e7dc858d0ae28d87de220490c3ab66315f7cbeaec2e3c2004be6ae66f7eab6c
+BB_AGENT_API_KEY_SALT=open_ai_backend_salt_2026
 ```
 
-### Frontend Configuration
-When deploying or running the JS frontend application, you can configure the backend URL once in the root `.env` file or environment variables:
+### Frontend Configuration (Web App Server)
+Configure the TanStack Start backend in the root `.env` file to communicate securely with the agent backend:
 
 ```env
-# Frontend API URL configuration
-VITE_BACKEND_URL=http://localhost:8081
+# Agent Backend URL
+VITE_AGENT_BACKEND_URL=http://localhost:8081
+
+# Plaintext API Key matching the hash/salt configured in the backend
+BB_AGENT_API_KEY=bb-agent-default-secret-key-2026
 ```
+
+---
+
+## API Security & Key Hashing
+
+All backend endpoints except the root status page (`/`) and documentation (`/docs`, `/redoc`, `/openapi.json`) are secured using a **Salted SHA-256 API Key verification middleware**. 
+
+Requests must include the API key in the `X-API-Key` header or as an `api_key` query parameter.
+
+### How to Generate a New Hash & Salt
+
+#### Using Node.js:
+Create a script or run the following logic to get your salted hash:
+```javascript
+const { createHash } = require('crypto');
+
+const apiKey = "your-custom-api-key";
+const salt = "your-custom-salt";
+
+const hash = createHash('sha256')
+  .update(apiKey + salt)
+  .digest('hex');
+
+console.log(`Hash: ${hash}`);
+```
+
+#### Using Python:
+```python
+import hashlib
+
+api_key = "your-custom-api-key"
+salt = "your-custom-salt"
+
+hasher = hashlib.sha256()
+hasher.update((api_key + salt).encode('utf-8'))
+print(f"Hash: {hasher.hexdigest()}")
+```
+
+Store the resulting hash and salt in `backend/.env`, and pass the plaintext API key in the `X-API-Key` header from the client/server caller.
 
 ---
 
@@ -96,6 +143,7 @@ python -m uvicorn main:app --reload --port 8081
 - **URL**: `POST /api/assessment`
 - **Headers**:
   - `Content-Type: application/json`
+  - `X-API-Key: <BB_AGENT_API_KEY>` (Required)
 - **Request Body (JSON)**:
   ```json
   {
