@@ -14,6 +14,7 @@ import {
   createSessionCookieFn,
   submitAssessmentFn,
 } from "@/lib/server-functions";
+import Loader from "@/components/Loader";
 
 export const Route = createFileRoute("/assessment")({
   component: AssessmentPage,
@@ -140,6 +141,44 @@ function AssessmentPage() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const [progress, setProgress] = useState(0);
+  const [statusText, setStatusText] = useState("Initializing analyzer...");
+
+  useEffect(() => {
+    if (!isLoading) {
+      setElapsedTime(0);
+      setProgress(0);
+      setStatusText("Initializing analyzer...");
+      return;
+    }
+
+    const startTime = Date.now();
+    const interval = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      setElapsedTime(elapsed);
+
+      // Simulate progress slowly: 1% every 1.5 seconds up to 98%
+      const calculatedProgress = Math.min(Math.floor((elapsed / 150) * 100), 98);
+      setProgress(calculatedProgress);
+
+      if (elapsed < 10) {
+        setStatusText("Resolving DNS records and mapping framework...");
+      } else if (elapsed < 25) {
+        setStatusText("Running Google Lighthouse check on website performance...");
+      } else if (elapsed < 45) {
+        setStatusText("Analyzing meta description, page speed, and keywords...");
+      } else if (elapsed < 70) {
+        setStatusText("Scraping competitor profiles and marketing channels...");
+      } else if (elapsed < 100) {
+        setStatusText("Generating personalized optimization report...");
+      } else {
+        setStatusText("Finalizing results, formatting database records...");
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isLoading]);
 
   useEffect(() => {
     if (!auth) return;
@@ -150,11 +189,11 @@ function AssessmentPage() {
   }, []);
 
   useEffect(() => {
-    if (!showConfirmation) {
+    if (!showConfirmation && !isLoading) {
       setIsConfirmed(false);
       setError("");
     }
-  }, [showConfirmation]);
+  }, [showConfirmation, isLoading]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -196,6 +235,7 @@ function AssessmentPage() {
   const handleConfirmAction = async () => {
     setIsLoading(true);
     setError("");
+    setShowConfirmation(false);
 
     const assessmentData = {
       businessName: formData.businessName || "",
@@ -281,6 +321,7 @@ function AssessmentPage() {
       setError(
         err.message || "An error occurred during account creation/assessment submission."
       );
+      setShowConfirmation(true);
     } finally {
       setIsLoading(false);
     }
@@ -401,7 +442,15 @@ function AssessmentPage() {
         </div>
       )}
 
-      <div className="max-w-7xl w-full grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center mt-8">
+      {isLoading ? (
+        <Loader
+          statusText={statusText}
+          elapsedTime={elapsedTime}
+          progress={progress}
+          showProgress={true}
+        />
+      ) : (
+        <div className="max-w-7xl w-full grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center mt-8">
         {/* Left Side: Descriptive Text with Orange-Red Gradient Accent */}
         <div className="lg:col-span-5 space-y-8">
           <div className="space-y-4">
@@ -642,6 +691,7 @@ function AssessmentPage() {
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 }
