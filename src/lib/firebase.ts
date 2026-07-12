@@ -3,6 +3,12 @@ import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
+// 1. Safe ESM polyfill for Server-Side rendering environment only
+if (typeof window === 'undefined') {
+  // Use modern Node.js native property if available, otherwise mock it safely
+  globalThis.__dirname = import.meta.dirname || '';
+}
+
 // Read configuration from environment variables
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
