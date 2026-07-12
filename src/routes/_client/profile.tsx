@@ -294,8 +294,8 @@ function RouteComponent() {
 
           {/* Conditional Save changes bar: Only visible when unsaved data is detected */}
           <div
-            className={`flex items-center justify-end gap-3.5 pt-4 transition-all duration-300 ${
-              hasChanges ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"
+            className={`sticky bottom-0 border-t border-mm-border/80 pt-4 md:pb-4 mt-6 z-20 flex items-center justify-end gap-3.5 transition-all duration-300 ${
+              hasChanges ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"
             }`}
           >
             <button
