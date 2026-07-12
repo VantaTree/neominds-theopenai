@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import React, { useState, useEffect, useRef } from "react";
-import { Sparkles, ArrowRight, CheckCircle2, Lock, Mail, Eye, EyeOff } from "lucide-react";
+import { ArrowRight, Lock, Mail, Eye, EyeOff, X } from "lucide-react";
 import { questions } from "@/data/questions";
 
 export const Route = createFileRoute("/assessment")({
@@ -106,7 +106,7 @@ function IndustryDropdown({ value, onChange, placeholder, required }: IndustryDr
 
 function AssessmentPage() {
   const navigate = useNavigate();
-  
+
   // Assessment Form States
   const [formData, setFormData] = useState<Record<string, string>>(() => {
     return questions.reduce((acc, q) => {
@@ -124,6 +124,13 @@ function AssessmentPage() {
   // Confirmation Panel States
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [confirmationAction, setConfirmationAction] = useState<"analyze" | "google_signup" | "email_signup" | null>(null);
+  const [isConfirmed, setIsConfirmed] = useState(false);
+
+  useEffect(() => {
+    if (!showConfirmation) {
+      setIsConfirmed(false);
+    }
+  }, [showConfirmation]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -135,7 +142,7 @@ function AssessmentPage() {
 
   const handleAnalyzeClick = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Save assessment data and proceed straight to the teaser signup card
     const assessmentData = {
       businessName: formData.businessName || "",
@@ -157,7 +164,7 @@ function AssessmentPage() {
 
   const handleConfirmAction = () => {
     setShowConfirmation(false);
-    
+
     const assessmentData = {
       businessName: formData.businessName || "",
       industry: formData.industry || "",
@@ -183,20 +190,23 @@ function AssessmentPage() {
       localStorage.setItem("assessment_data", JSON.stringify(assessmentData));
       localStorage.setItem("signup_data", JSON.stringify(mockSignupInfo));
       localStorage.setItem("combined_assessment_data", JSON.stringify(combinedData));
-      
+
       // Mock unlock state
       localStorage.setItem("audit_unlocked", "true");
-
-      alert(confirmationAction === "email_signup" 
-        ? "Account created successfully!" 
-        : "Account created successfully with Google!"
-      );
 
       // Redirect to dashboard
       navigate({ to: "/dashboard" });
     } catch (err) {
       console.error("Failed to execute mock signup flow:", err);
     }
+  };
+
+  const triggerConfirm = () => {
+    if (isConfirmed) return;
+    setIsConfirmed(true);
+    setTimeout(() => {
+      handleConfirmAction();
+    }, 450);
   };
 
   return (
@@ -207,7 +217,7 @@ function AssessmentPage() {
       >
         ← Back
       </Link>
-      
+
       {/* Decorative ambient background glows */}
       <div className="absolute top-1/4 left-10 w-96 h-96 bg-mm-blue/5 rounded-full blur-3xl -z-10 pointer-events-none"></div>
       <div className="absolute bottom-1/4 right-10 w-80 h-80 bg-mm-pink/5 rounded-full blur-3xl -z-10 pointer-events-none"></div>
@@ -216,9 +226,13 @@ function AssessmentPage() {
       {showConfirmation && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-fadeIn">
           <div className="bg-white border border-mm-border shadow-2xl rounded-3xl p-6 sm:p-10 max-w-sm w-full text-center space-y-6 animate-scaleIn relative">
-            <div className="p-4 bg-mm-orange/10 rounded-full text-mm-orange mx-auto w-fit">
-              <Sparkles className="h-10 w-10 animate-pulse" />
-            </div>
+            <button
+              type="button"
+              onClick={() => setShowConfirmation(false)}
+              className="absolute top-4 right-4 text-mm-gray/40 hover:text-mm-dark transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
             <div className="space-y-2">
               <h3 className="font-serif text-xl sm:text-2xl font-bold text-mm-dark">
                 Confirm Details
@@ -227,14 +241,42 @@ function AssessmentPage() {
                 Are you sure all the information is correct?
               </p>
             </div>
-            <div className="flex flex-col sm:flex-row gap-3 w-full justify-center">
+            
+            <div className="flex flex-col items-center space-y-4">
+              {/* Checkbox Banner - Government Declaration style */}
               <button
-                onClick={handleConfirmAction}
-                className="w-full py-3 bg-gradient-to-r from-mm-orange to-mm-pink hover:opacity-95 text-white font-bold rounded-xl shadow-md transition-all active:scale-[0.98] cursor-pointer text-sm"
+                type="button"
+                onClick={triggerConfirm}
+                className="flex items-center gap-3 p-3.5 rounded-2xl bg-mm-subtle/10 border border-mm-border hover:bg-mm-subtle/25 active:scale-[0.99] transition-all cursor-pointer w-full text-left"
               >
-                Ok
+                <div
+                  className={`w-7 h-7 flex-shrink-0 flex items-center justify-center rounded-[8px] transition-all duration-200 border-2 ${
+                    isConfirmed
+                      ? "bg-[#2563eb] border-[#2563eb]"
+                      : "bg-white border-gray-300"
+                  }`}
+                >
+                  {isConfirmed && (
+                    <svg
+                      className="w-4 h-4 text-white animate-scaleIn"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={4.5}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  )}
+                </div>
+                <span className="text-xs font-semibold text-mm-dark select-none leading-snug">
+                  I confirm that all the information provided is correct.
+                </span>
               </button>
+
               <button
+                type="button"
                 onClick={() => setShowConfirmation(false)}
                 className="w-full py-3 bg-mm-dark/5 hover:bg-mm-dark/10 text-mm-dark font-bold rounded-xl transition-all cursor-pointer text-sm"
               >
@@ -267,15 +309,13 @@ function AssessmentPage() {
           <div className="absolute -inset-1.5 bg-gradient-to-r from-mm-orange to-mm-pink rounded-3xl blur opacity-15 -z-10"></div>
 
           <div className="relative bg-white/85 backdrop-blur-xl border border-mm-border shadow-2xl rounded-3xl p-6 sm:p-10 min-h-[500px] flex flex-col justify-between">
-            
+
             {/* Progress Lines inside Card */}
             <div className="flex gap-2.5 w-full mb-6">
-              <div className={`h-1 flex-1 transition-all duration-500 ${
-                showTeaser || showConfirmation ? 'bg-mm-orange shadow-[0_0_8px_rgba(255,89,36,0.3)]' : 'bg-gray-200/80'
-              }`}></div>
-              <div className={`h-1 flex-1 transition-all duration-500 ${
-                showConfirmation ? 'bg-mm-orange shadow-[0_0_8px_rgba(255,89,36,0.3)]' : 'bg-gray-200/80'
-              }`}></div>
+              <div className={`h-1 flex-1 transition-all duration-500 ${showTeaser || showConfirmation ? 'bg-mm-orange shadow-[0_0_8px_rgba(255,89,36,0.3)]' : 'bg-gray-200/80'
+                }`}></div>
+              <div className={`h-1 flex-1 transition-all duration-500 ${showConfirmation ? 'bg-mm-orange shadow-[0_0_8px_rgba(255,89,36,0.3)]' : 'bg-gray-200/80'
+                }`}></div>
             </div>
 
             {showTeaser ? (
@@ -327,12 +367,12 @@ function AssessmentPage() {
                   </div>
 
                   {/* Email Form */}
-                  <form 
+                  <form
                     onSubmit={(e) => {
                       e.preventDefault();
                       setConfirmationAction("email_signup");
                       setShowConfirmation(true);
-                    }} 
+                    }}
                     className="space-y-4 text-left"
                   >
                     <div>
@@ -420,7 +460,6 @@ function AssessmentPage() {
 
                 <div className="mb-8">
                   <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-mm-dark flex items-center gap-2">
-                    <Sparkles className="h-6 w-6 text-mm-orange animate-pulse" />
                     AI Business Assessment
                   </h2>
                   <p className="mt-2 text-sm text-mm-gray">
