@@ -885,7 +885,8 @@ export const submitAssessmentFn = createServerFn({ method: "POST" })
     const result = await response.json();
 
     // 4. Create and save new Business document in Firestore
-    const businessId = `biz_${Date.now()}`;
+    const firestoreDb = await getAdminDb();
+    const businessId = firestoreDb.collection("businesses").doc().id;
     const newBusiness: Business = {
       id: businessId,
       userId: decoded.uid,
@@ -903,7 +904,7 @@ export const submitAssessmentFn = createServerFn({ method: "POST" })
     await db.saveBusiness(newBusiness);
 
     // 5. Create and save new Report document in Firestore
-    const reportId = `rpt_${Date.now()}`;
+    const reportId = firestoreDb.collection("reports").doc().id;
     const newReport: any = {
       id: reportId,
       businessId: businessId,
