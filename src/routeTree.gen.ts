@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as WhyRouteImport } from './routes/why'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as PlansRouteImport } from './routes/plans'
+import { Route as LogoutRouteImport } from './routes/logout'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as HowRouteImport } from './routes/how'
 import { Route as BlogsRouteImport } from './routes/blogs'
@@ -57,6 +58,11 @@ const SignupRoute = SignupRouteImport.update({
 const PlansRoute = PlansRouteImport.update({
   id: '/plans',
   path: '/plans',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LogoutRoute = LogoutRouteImport.update({
+  id: '/logout',
+  path: '/logout',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -219,6 +225,7 @@ export interface FileRoutesByFullPath {
   '/blogs': typeof BlogsRouteWithChildren
   '/how': typeof HowRoute
   '/login': typeof LoginRoute
+  '/logout': typeof LogoutRoute
   '/plans': typeof PlansRoute
   '/signup': typeof SignupRoute
   '/why': typeof WhyRoute
@@ -252,6 +259,7 @@ export interface FileRoutesByTo {
   '/assessment': typeof AssessmentRoute
   '/how': typeof HowRoute
   '/login': typeof LoginRoute
+  '/logout': typeof LogoutRoute
   '/plans': typeof PlansRoute
   '/signup': typeof SignupRoute
   '/why': typeof WhyRoute
@@ -288,6 +296,7 @@ export interface FileRoutesById {
   '/blogs': typeof BlogsRouteWithChildren
   '/how': typeof HowRoute
   '/login': typeof LoginRoute
+  '/logout': typeof LogoutRoute
   '/plans': typeof PlansRoute
   '/signup': typeof SignupRoute
   '/why': typeof WhyRoute
@@ -324,6 +333,7 @@ export interface FileRouteTypes {
     | '/blogs'
     | '/how'
     | '/login'
+    | '/logout'
     | '/plans'
     | '/signup'
     | '/why'
@@ -357,6 +367,7 @@ export interface FileRouteTypes {
     | '/assessment'
     | '/how'
     | '/login'
+    | '/logout'
     | '/plans'
     | '/signup'
     | '/why'
@@ -392,6 +403,7 @@ export interface FileRouteTypes {
     | '/blogs'
     | '/how'
     | '/login'
+    | '/logout'
     | '/plans'
     | '/signup'
     | '/why'
@@ -429,6 +441,7 @@ export interface RootRouteChildren {
   BlogsRoute: typeof BlogsRouteWithChildren
   HowRoute: typeof HowRoute
   LoginRoute: typeof LoginRoute
+  LogoutRoute: typeof LogoutRoute
   PlansRoute: typeof PlansRoute
   SignupRoute: typeof SignupRoute
   WhyRoute: typeof WhyRoute
@@ -455,6 +468,13 @@ declare module '@tanstack/react-router' {
       path: '/plans'
       fullPath: '/plans'
       preLoaderRoute: typeof PlansRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/logout': {
+      id: '/logout'
+      path: '/logout'
+      fullPath: '/logout'
+      preLoaderRoute: typeof LogoutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -771,6 +791,7 @@ const rootRouteChildren: RootRouteChildren = {
   BlogsRoute: BlogsRouteWithChildren,
   HowRoute: HowRoute,
   LoginRoute: LoginRoute,
+  LogoutRoute: LogoutRoute,
   PlansRoute: PlansRoute,
   SignupRoute: SignupRoute,
   WhyRoute: WhyRoute,
