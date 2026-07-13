@@ -165,7 +165,7 @@ function RouteComponent() {
     localStorage.setItem("projects_last_tab", id);
   };
 
-  const reportData = reports && reports.length > 0 ? reports[0] : undefined;
+  const reportData = reports && reports.length > 0 ? reports[0]?.data : undefined;
 
   return (
     <div className="flex-1 w-full px-4.5 py-6 min-[769px]:px-8 min-[769px]:py-10 space-y-8 min-[769px]:space-y-10 font-sans text-mm-dark relative pb-24">
