@@ -47,7 +47,7 @@ const ScorecardCircularProgress = ({ score }: { score: number }) => {
       {/* Score Text */}
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
         <span className="text-base font-black text-mm-dark leading-none">{score}</span>
-        <span className="text-[7px] font-bold text-[#748297] uppercase tracking-wider mt-0.5">/ 100</span>
+        <span className="text-[7px] font-bold text-[#748297] uppercase tracking-wider mt-0.5">/ 10</span>
       </div>
     </div>
   );
@@ -56,7 +56,7 @@ const ScorecardCircularProgress = ({ score }: { score: number }) => {
 // Fallback dummy audit report data matching fallback_audit_report.json
 const DUMMY_REPORT = {
   "executive_summary": {
-    "overall_score": 55,
+    "overall_score": 5,
     "summary": "This report provides a general assessment of a business's digital presence based on common industry best practices. It identifies typical strengths, challenges, and opportunities that influence online visibility, customer engagement, and long-term business growth.",
     "top_strength": "The business has an existing foundation that can be improved through structured digital optimization.",
     "biggest_challenge": "Limited digital optimization across website, SEO, branding, marketing, and customer engagement.",
@@ -78,12 +78,12 @@ const DUMMY_REPORT = {
     ]
   },
   "business_scorecard": {
-    "overall": 55,
-    "website": 55,
-    "branding": 60,
-    "marketing": 55,
-    "social_media": 55,
-    "growth_readiness": 60
+    "overall": 5,
+    "website": 5,
+    "branding": 6,
+    "marketing": 5,
+    "social_media": 5,
+    "growth_readiness": 6
   },
   "current_status": {
     "website": {
@@ -130,7 +130,7 @@ const DUMMY_REPORT = {
   },
   "risk_assessment": {
     "overall_risk": "Medium",
-    "risk_score": 60,
+    "risk_score": 6,
     "top_risks": [
       "Low search visibility",
       "Inconsistent marketing",
@@ -139,7 +139,7 @@ const DUMMY_REPORT = {
     ]
   },
   "competitor_analysis": {
-    "competitive_score": 55,
+    "competitive_score": 5,
     "major_competitors": [
       "Local Competitors",
       "Regional Competitors",
@@ -223,9 +223,7 @@ const DUMMY_REPORT = {
       "Increased customer inquiries"
     ]
   },
-  "add_ons": {
-    "service": ""
-  }
+  "add_ons": [],
 };
 
 interface ReportProps {
@@ -414,7 +412,7 @@ export default function Report({ initialData }: ReportProps) {
 
   const scoreChartData = [
     { name: "Score", value: executive_summary.overall_score },
-    { name: "Remaining", value: 100 - executive_summary.overall_score }
+    { name: "Remaining", value: 10 - executive_summary.overall_score }
   ];
 
   const scorecardChartData = [
@@ -635,8 +633,8 @@ export default function Report({ initialData }: ReportProps) {
                     />
                     <YAxis
                       type="number"
-                      domain={[10, 100]}
-                      ticks={[10, 20, 30, 40, 50, 60, 70, 80, 90, 100]}
+                      domain={[1, 10]}
+                      ticks={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
                       interval={0}
                       axisLine={false}
                       tickLine={false}
@@ -970,7 +968,7 @@ export default function Report({ initialData }: ReportProps) {
           <div className="space-y-4">
             <div className="flex justify-between items-center text-sm pb-2 border-b border-[#F1F4F9]">
               <span className="font-semibold text-[#748297]">Competitive Index</span>
-              <span className="font-bold text-mm-orange">{competitor_analysis.competitive_score} / 100</span>
+              <span className="font-bold text-mm-orange">{competitor_analysis.competitive_score} / 10</span>
             </div>
 
             <div className="space-y-2">
@@ -1015,7 +1013,7 @@ export default function Report({ initialData }: ReportProps) {
 
             <div className="flex justify-between items-center text-sm pb-2 border-b border-[#F1F4F9]">
               <span className="font-semibold text-[#748297]">Risk Rating Score</span>
-              <span className="font-bold text-[#111418]">{risk_assessment.risk_score} / 100</span>
+              <span className="font-bold text-[#111418]">{risk_assessment.risk_score} / 10</span>
             </div>
 
             <div className="space-y-2">
