@@ -31,6 +31,7 @@ interface ProjectDashboardProps {
   onActiveProjectChange?: (id: string) => void;
   onUpgradeTrigger?: () => void;
   apiUrl?: string;
+  initialReportData?: any;
 }
 
 const TABS = [
@@ -86,6 +87,7 @@ export function ProjectDashboard({
   onActiveProjectChange,
   onUpgradeTrigger,
   apiUrl,
+  initialReportData,
 }: ProjectDashboardProps) {
   const { activeBusiness } = useBusiness();
   const activeTab = activeProjectId;
@@ -630,7 +632,7 @@ export function ProjectDashboard({
     <div className="w-full flex flex-col gap-8 relative">
       {renderTabSwitcher()}
 
-      {activeTab === "report" && <Report apiUrl={apiUrl} />}
+      {activeTab === "report" && <Report apiUrl={apiUrl} initialData={initialReportData} />}
 
       {activeTab === "Automation" && (
         <PlanGate requiredPlan="Pro" fallback={planGateFallback}>

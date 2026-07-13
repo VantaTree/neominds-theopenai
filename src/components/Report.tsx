@@ -230,10 +230,11 @@ const DUMMY_REPORT = {
 
 interface ReportProps {
   apiUrl?: string;
+  initialData?: typeof DUMMY_REPORT;
 }
 
-export default function Report({ apiUrl }: ReportProps) {
-  const [data, setData] = useState<typeof DUMMY_REPORT>(DUMMY_REPORT);
+export default function Report({ apiUrl, initialData }: ReportProps) {
+  const [data, setData] = useState<typeof DUMMY_REPORT>(initialData || DUMMY_REPORT);
   const [loading, setLoading] = useState(false);
 
   // States for slide dot indicators
@@ -253,6 +254,10 @@ export default function Report({ apiUrl }: ReportProps) {
 
   // Fetch report data if apiUrl is provided
   useEffect(() => {
+    if (initialData) {
+      setData(initialData);
+      return;
+    }
     if (!apiUrl) return;
 
     setLoading(true);
@@ -271,7 +276,7 @@ export default function Report({ apiUrl }: ReportProps) {
       .finally(() => {
         setLoading(false);
       });
-  }, [apiUrl]);
+  }, [apiUrl, initialData]);
 
   // Keep refs in sync with state updates
   useEffect(() => {
@@ -649,7 +654,7 @@ export default function Report({ apiUrl }: ReportProps) {
                     <XAxis
                       dataKey="name"
                       type="category"
-                      tick={{ angle: -45, textAnchor: 'end', fontSize: 10, fill: '#748297', fontWeight: 700 }}
+                      tick={{ angle: -45, textAnchor: 'end', fontSize: 10, fill: '#748297', fontWeight: 700 } as any}
                       height={30}
                       interval={0}
                       axisLine={false}

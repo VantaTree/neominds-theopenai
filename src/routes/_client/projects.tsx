@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { ProjectDashboard } from "@/components/client/ProjectDashboard";
 import UpgradeCard from "@/components/client/UpgradeCard";
 import { X, Loader2 } from "lucide-react";
 import { useBusiness } from "@/hooks/use-business";
-import { getProjectsByBusinessFn } from "@/lib/server-functions";
+import { getProjectsByBusinessFn, getReportsByBusinessFn, getMyBusinessesFn } from "@/lib/server-functions";
 import { type Project } from "@/lib/schemas";
 
 export const Route = createFileRoute("/_client/projects")({
@@ -16,16 +16,100 @@ export const Route = createFileRoute("/_client/projects")({
         typeof search.activeCard === "string" ? search.activeCard : undefined,
     };
   },
+  loader: async () => {
+    try {
+      // Fetch businesses and default active business data for SSR pre-rendering
+      const businesses = await getMyBusinessesFn();
+      const defaultActiveId = businesses.length > 0 ? businesses[0].id : null;
+      
+      let initialProjects: Project[] = [];
+      let initialReports: any[] = [];
+      
+      if (defaultActiveId) {
+        const [projects, reports] = await Promise.all([
+          getProjectsByBusinessFn({ data: defaultActiveId }),
+          getReportsByBusinessFn({ data: defaultActiveId }),
+        ]);
+        initialProjects = projects;
+        initialReports = reports;
+      }
+      
+      return {
+        defaultActiveId,
+        initialProjects,
+        initialReports,
+      };
+    } catch (err) {
+      console.error("Loader failed in /projects:", err);
+      return {
+        defaultActiveId: null,
+        initialProjects: [],
+        initialReports: [],
+      };
+    }
+  },
   component: RouteComponent,
 });
 
 function RouteComponent() {
   const { activeCard } = Route.useSearch();
+  const { defaultActiveId, initialProjects, initialReports } = Route.useLoaderData();
   const { activeBusiness } = useBusiness();
-  const navigate = useNavigate();
+  const navigate = Route.useNavigate();
 
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [projects, setProjects] = useState<Project[]>(initialProjects);
+  const [reports, setReports] = useState<any[]>(initialReports);
   const [loading, setLoading] = useState(false);
+  const [showUpgrade, setShowUpgrade] = useState(false);
+  const [loadedBusinessId, setLoadedBusinessId] = useState<string | null>(defaultActiveId);
+
+  // Sync projects and reports whenever activeBusiness changes
+  useEffect(() => {
+    const businessId = activeBusiness?.id;
+    if (!businessId) {
+      setProjects([]);
+      setReports([]);
+      setLoadedBusinessId(null);
+      return;
+    }
+
+    // If activeBusiness matches the business we currently have in state, skip fetching
+    if (businessId === loadedBusinessId) {
+      return;
+    }
+
+    let active = true;
+    async function loadData() {
+      setLoading(true);
+      try {
+        const [fetchedProjects, fetchedReports] = await Promise.all([
+          getProjectsByBusinessFn({ data: businessId }),
+          getReportsByBusinessFn({ data: businessId }),
+        ]);
+        if (active) {
+          setProjects(fetchedProjects);
+          setReports(fetchedReports);
+          setLoadedBusinessId(businessId);
+        }
+      } catch (err) {
+        console.error("Failed to load projects/reports:", err);
+        if (active) {
+          setProjects([]);
+          setReports([]);
+          setLoadedBusinessId(null);
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadData();
+    return () => {
+      active = false;
+    };
+  }, [activeBusiness?.id, loadedBusinessId]);
 
   // Retrieve initial tab from query parameter, fallback to localStorage, fallback to 'report'
   const getInitialTab = () => {
@@ -42,41 +126,6 @@ function RouteComponent() {
   };
 
   const [activeProjectId, setActiveProjectId] = useState<string>(getInitialTab);
-  const [showUpgrade, setShowUpgrade] = useState(false);
-
-  // Load projects dynamically when activeBusiness changes
-  useEffect(() => {
-    const businessId = activeBusiness?.id;
-    if (!businessId) {
-      setProjects([]);
-      return;
-    }
-
-    let active = true;
-    async function loadProjects() {
-      setLoading(true);
-      try {
-        const fetchedProjects = await getProjectsByBusinessFn({ data: businessId });
-        if (active) {
-          setProjects(fetchedProjects);
-        }
-      } catch (err) {
-        console.error("Failed to load projects:", err);
-        if (active) {
-          setProjects([]);
-        }
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    }
-
-    loadProjects();
-    return () => {
-      active = false;
-    };
-  }, [activeBusiness?.id]);
 
   // Handle activeCard parameter from URL navigation (e.g. from dashboard widgets)
   useEffect(() => {
@@ -104,8 +153,8 @@ function RouteComponent() {
   // Reset active card query parameter to keep URL clean
   const handleResetActiveCard = () => {
     navigate({
-      to: "/projects",
-      search: () => ({
+      search: (prev: any) => ({
+        ...prev,
         activeCard: undefined,
       }),
     });
@@ -116,12 +165,14 @@ function RouteComponent() {
     localStorage.setItem("projects_last_tab", id);
   };
 
+  const reportData = reports && reports.length > 0 ? reports[0] : undefined;
+
   return (
     <div className="flex-1 w-full px-4.5 py-6 min-[769px]:px-8 min-[769px]:py-10 space-y-8 min-[769px]:space-y-10 font-sans text-mm-dark relative pb-24">
       {loading ? (
         <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
           <Loader2 className="w-8 h-8 text-mm-orange animate-spin" />
-          <p className="text-sm font-semibold text-mm-gray">Loading projects...</p>
+          <p className="text-sm font-semibold text-mm-gray">Loading details...</p>
         </div>
       ) : (
         <ProjectDashboard
@@ -129,7 +180,7 @@ function RouteComponent() {
           activeProjectId={activeProjectId}
           onActiveProjectChange={handleTabChange}
           onUpgradeTrigger={() => setShowUpgrade(true)}
-          apiUrl="/api/projects"
+          initialReportData={reportData}
         />
       )}
 
