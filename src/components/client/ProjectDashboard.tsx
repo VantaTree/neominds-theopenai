@@ -521,7 +521,7 @@ export function ProjectDashboard({
                   {/* Task item card container */}
                   <div
                     style={{ "--hover-color": projectTheme.primary } as React.CSSProperties}
-                    className="cursor-pointer flex-1 flex flex-col lg:flex-row gap-6 bg-white p-4 sm:p-5 rounded-2xl border border-mm-border hover:border-(--hover-color) hover:shadow-[0_6px_20px_rgba(0,0,0,0.035)] hover:-translate-y-0.5 transition-all duration-300 select-none group"
+                    className="cursor-pointer flex-1 flex flex-col lg:flex-row gap-6 bg-white p-4 sm:p-5 rounded-2xl border border-mm-border hover:border-(--hover-color) hover:shadow-[0_6px_20px_rgba(0,0,0,0.035)] hover:-translate-y-0.5 transition-all duration-300 group"
                     onClick={() => setActiveDrawerProject(project)}
                   >
                     {/* Main Info */}
@@ -627,7 +627,7 @@ export function ProjectDashboard({
   };
 
   return (
-    <div className="w-full flex flex-col gap-8 select-none relative">
+    <div className="w-full flex flex-col gap-8 relative">
       {renderTabSwitcher()}
 
       {activeTab === "report" && <Report apiUrl={apiUrl} />}

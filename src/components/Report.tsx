@@ -1,12 +1,57 @@
 import React, { useState, useEffect, useRef } from "react";
-import { 
-  Sparkles, TrendingUp, AlertTriangle, CheckCircle2, Target, 
-  ShieldAlert, ListTodo, Briefcase, MapPin, Activity, Calendar, 
-  Award, ArrowRight
+import {
+  Sparkles, TrendingUp, AlertTriangle, CheckCircle2, Target,
+  ShieldAlert, ListTodo, Briefcase, MapPin, Activity, Calendar,
+  Award, ArrowRight, ChevronDown
 } from "lucide-react";
-import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import AnimatedPlanCard from "./AnimatedPlanCard";
 import PLANS from "@/data/plans";
+
+const ScorecardCircularProgress = ({ score }: { score: number }) => {
+  const radius = 30;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (score / 100) * circumference;
+
+  // Color coding matching user specifications
+  let strokeColor = "#FF5924"; // default orange
+  if (score >= 80) strokeColor = "#10B981"; // green
+  else if (score < 50) strokeColor = "#EF4444"; // red
+
+  return (
+    <div className="relative w-20 h-20 flex items-center justify-center">
+      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 80 80">
+        {/* Track */}
+        <circle
+          cx="40"
+          cy="40"
+          r={radius}
+          fill="transparent"
+          stroke="#F1F4F9"
+          strokeWidth="6"
+        />
+        {/* Progress Arc */}
+        <circle
+          cx="40"
+          cy="40"
+          r={radius}
+          fill="transparent"
+          stroke={strokeColor}
+          strokeWidth="6"
+          strokeDasharray={circumference}
+          strokeDashoffset={strokeDashoffset}
+          strokeLinecap="round"
+          className="transition-all duration-500 ease-out"
+        />
+      </svg>
+      {/* Score Text */}
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+        <span className="text-base font-black text-mm-dark leading-none">{score}</span>
+        <span className="text-[7px] font-bold text-[#748297] uppercase tracking-wider mt-0.5">/ 100</span>
+      </div>
+    </div>
+  );
+};
 
 // Fallback dummy audit report data matching fallback_audit_report.json
 const DUMMY_REPORT = {
@@ -198,6 +243,14 @@ export default function Report({ apiUrl }: ReportProps) {
   const swotScrollRef = useRef<HTMLDivElement>(null);
   const roadmapScrollRef = useRef<HTMLDivElement>(null);
 
+  // States for scroll indicators
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const [mounted, setMounted] = useState(false);
+
+  // Refs for tracking current indices inside useEffect timers
+  const activeSwotIndexRef = useRef(0);
+  const activeRoadmapIndexRef = useRef(0);
+
   // Fetch report data if apiUrl is provided
   useEffect(() => {
     if (!apiUrl) return;
@@ -219,6 +272,82 @@ export default function Report({ apiUrl }: ReportProps) {
         setLoading(false);
       });
   }, [apiUrl]);
+
+  // Keep refs in sync with state updates
+  useEffect(() => {
+    activeSwotIndexRef.current = activeSwotIndex;
+  }, [activeSwotIndex]);
+
+  useEffect(() => {
+    activeRoadmapIndexRef.current = activeRoadmapIndex;
+  }, [activeRoadmapIndex]);
+
+  // Page Scroll Listener for Progress
+  useEffect(() => {
+    setMounted(true);
+
+    const handleScroll = (e?: Event) => {
+      const docEl = document.documentElement;
+      const body = document.body;
+
+      // Let's get scroll values from window/document
+      let scrollTop = window.pageYOffset || docEl.scrollTop || body.scrollTop;
+      let scrollHeight = docEl.scrollHeight || body.scrollHeight;
+      let clientHeight = docEl.clientHeight || window.innerHeight;
+
+      // Check if there is a vertical scrollable container in the DOM (e.g. template container)
+      if (scrollTop === 0) {
+        const scrollableDivs = document.querySelectorAll('.overflow-y-auto, [class*="layout"], [class*="main"]');
+        for (let i = 0; i < scrollableDivs.length; i++) {
+          const div = scrollableDivs[i];
+          if (div.scrollTop > 0) {
+            scrollTop = div.scrollTop;
+            scrollHeight = div.scrollHeight;
+            clientHeight = div.clientHeight;
+            break;
+          }
+        }
+      }
+
+      const totalHeight = scrollHeight - clientHeight;
+      if (totalHeight > 0) {
+        const progress = (scrollTop / totalHeight) * 100;
+        setScrollProgress(progress);
+      } else {
+        setScrollProgress(0);
+      }
+    };
+
+    // Use capturing phase so we capture scroll events from ANY scrollable container
+    window.addEventListener("scroll", handleScroll, true);
+    window.addEventListener("resize", handleScroll, true);
+
+    // Initial check
+    handleScroll();
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll, true);
+      window.removeEventListener("resize", handleScroll, true);
+    };
+  }, []);
+
+  // Auto sliding carousel triggers
+  useEffect(() => {
+    const swotInterval = setInterval(() => {
+      const next = (activeSwotIndexRef.current + 1) % 4;
+      scrollToSwot(next);
+    }, 5000);
+
+    const roadmapInterval = setInterval(() => {
+      const next = (activeRoadmapIndexRef.current + 1) % 3;
+      scrollToRoadmap(next);
+    }, 5000);
+
+    return () => {
+      clearInterval(swotInterval);
+      clearInterval(roadmapInterval);
+    };
+  }, []);
 
   const handleSwotScroll = () => {
     if (swotScrollRef.current) {
@@ -310,32 +439,73 @@ export default function Report({ apiUrl }: ReportProps) {
     { name: "Remaining", value: 100 - executive_summary.overall_score }
   ];
 
+  const scorecardChartData = [
+    { name: "Website Usability", score: business_scorecard.website },
+    { name: "Branding & Visuals", score: business_scorecard.branding },
+    { name: "Marketing Strategy", score: business_scorecard.marketing },
+    { name: "Social Media", score: business_scorecard.social_media },
+    { name: "Growth Readiness", score: business_scorecard.growth_readiness }
+  ];
+
+  const renderYAxisTick = (props: any) => {
+    const { x, y, payload } = props;
+    const words = payload.value.split(" ");
+    const yOffset = -((words.length - 1) * 10) / 2 + 3;
+    return (
+      <g transform={`translate(${x},${y})`}>
+        <text
+          x={-8}
+          y={yOffset}
+          textAnchor="end"
+          fill="#748297"
+          fontSize={10}
+          fontWeight={700}
+        >
+          {words.map((word: string, idx: number) => (
+            <tspan x={-8} dy={idx > 0 ? 10 : 0} key={idx}>
+              {word}
+            </tspan>
+          ))}
+        </text>
+      </g>
+    );
+  };
+
   return (
-    <div className="w-full space-y-12 text-mm-dark font-sans select-none animate-fadeIn pb-12">
-      
+    <div className="w-full space-y-12 text-mm-dark font-sans animate-fadeIn pb-12">
+      {/* Right-side Green Scroll Progress Line */}
+      <div className="fixed top-0 right-0 w-2 h-full bg-gray-100/30 z-[9999] pointer-events-none rounded-l-md overflow-hidden">
+        <div
+          className="w-full bg-[#10B981] rounded-l-md transition-all duration-75"
+          style={{ height: `${scrollProgress}%` }}
+        />
+      </div>
+
       {/* 1. Executive Summary Panel (No wrapper card, direct layout with Donut Chart) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-        
+
         {/* Left Side: Score Donut Chart (Kept) */}
         <div className="lg:col-span-4 flex flex-col items-center justify-center relative bg-white border border-[#E2E6EE] rounded-3xl p-6 shadow-xs h-60 w-full">
           <div className="relative w-44 h-44">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={scoreChartData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={65}
-                  outerRadius={80}
-                  startAngle={90}
-                  endAngle={-270}
-                  dataKey="value"
-                >
-                  <Cell fill="#FF5924" stroke="none" />
-                  <Cell fill="#F1F4F9" stroke="none" />
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
+            {mounted && (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={scoreChartData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={65}
+                    outerRadius={80}
+                    startAngle={90}
+                    endAngle={-270}
+                    dataKey="value"
+                  >
+                    <Cell fill="#FF5924" stroke="none" />
+                    <Cell fill="#F1F4F9" stroke="none" />
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+            )}
             <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
               <span className="text-4.5xl font-black text-[#111418] leading-none">
                 {executive_summary.overall_score}
@@ -350,8 +520,7 @@ export default function Report({ apiUrl }: ReportProps) {
         {/* Right Side: Quick Highlights */}
         <div className="lg:col-span-8 space-y-5 px-4.5 sm:px-6 lg:px-0">
           <div>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-mm-orange/10 text-mm-orange mb-3">
-              <Sparkles className="w-3.5 h-3.5" />
+            <span className="inline-flex items-center gap-1.5 pb-1 border-b-2 border-mm-orange text-[10px] font-bold uppercase tracking-wider text-mm-orange mb-3">
               Executive Audit Summary
             </span>
             <p className="text-base sm:text-lg text-mm-gray leading-relaxed font-semibold">
@@ -361,9 +530,6 @@ export default function Report({ apiUrl }: ReportProps) {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="p-5 rounded-3xl bg-white border border-[#E2E6EE] flex items-start gap-4 shadow-xs">
-              <div className="p-2.5 bg-emerald-500 rounded-xl text-white">
-                <CheckCircle2 className="w-5 h-5" />
-              </div>
               <div>
                 <span className="text-xs font-bold text-emerald-800 uppercase tracking-wide block">Top Strength</span>
                 <span className="text-sm text-emerald-950 font-semibold leading-relaxed block mt-1">{executive_summary.top_strength}</span>
@@ -371,9 +537,6 @@ export default function Report({ apiUrl }: ReportProps) {
             </div>
 
             <div className="p-5 rounded-3xl bg-white border border-[#E2E6EE] flex items-start gap-4 shadow-xs">
-              <div className="p-2.5 bg-rose-500 rounded-xl text-white">
-                <ShieldAlert className="w-5 h-5" />
-              </div>
               <div>
                 <span className="text-xs font-bold text-rose-800 uppercase tracking-wide block">Key Challenge</span>
                 <span className="text-sm text-rose-950 font-semibold leading-relaxed block mt-1">{executive_summary.biggest_challenge}</span>
@@ -385,11 +548,10 @@ export default function Report({ apiUrl }: ReportProps) {
 
       {/* 2. Side-by-Side: Business Profile & Scorecard on Desktop/Large Screen */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-        
+
         {/* Left Side: Business Profile Card */}
         <div className="space-y-4">
           <h3 className="text-xl font-bold text-[#111418] flex items-center gap-2">
-            <Briefcase className="w-5 h-5 text-mm-orange" />
             Business Profile
           </h3>
           <div className="bg-white border border-[#E2E6EE] rounded-3xl p-6 sm:p-8 shadow-xs space-y-4 w-full">
@@ -409,7 +571,7 @@ export default function Report({ apiUrl }: ReportProps) {
               <span className="font-semibold text-[#748297]">Business Model</span>
               <span className="font-bold text-[#111418]">{business_profile.business_model}</span>
             </div>
-            
+
             {/* Target Audience Row */}
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center text-sm border-b border-[#F1F4F9] pb-3 gap-2">
               <span className="font-semibold text-[#748297]">Target Audience</span>
@@ -436,69 +598,94 @@ export default function Report({ apiUrl }: ReportProps) {
           </div>
         </div>
 
-        {/* Right Side: Digital Performance Scorecard Card (Horizontal Progress Bars stacked vertically) */}
+        {/* Right Side: Digital Performance Scorecard Card */}
         <div className="space-y-4">
           <h3 className="text-xl font-bold text-[#111418] flex items-center gap-2">
-            <Activity className="w-5 h-5 text-mm-orange" />
             Digital Performance Scorecard
           </h3>
-          <div className="bg-white border border-[#E2E6EE] rounded-3xl p-6 sm:p-8 shadow-xs w-full space-y-5">
-            
-            {/* Website Usability */}
-            <div className="space-y-2">
-              <div className="flex justify-between items-center text-sm font-semibold">
-                <span className="text-[#748297]">Website Usability</span>
-                <span className="text-mm-dark font-black">{business_scorecard.website} / 100</span>
-              </div>
-              <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
-                <div className="h-full bg-mm-orange rounded-full transition-all duration-500" style={{ width: `${business_scorecard.website}%` }} />
-              </div>
-            </div>
 
-            {/* Branding */}
-            <div className="space-y-2">
-              <div className="flex justify-between items-center text-sm font-semibold">
-                <span className="text-[#748297]">Branding & Visuals</span>
-                <span className="text-mm-dark font-black">{business_scorecard.branding} / 100</span>
-              </div>
-              <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
-                <div className="h-full bg-mm-orange rounded-full transition-all duration-500" style={{ width: `${business_scorecard.branding}%` }} />
-              </div>
+          {/* Mobile View: Single card containing all 5 metrics listed one by one */}
+          <div className="block md:hidden bg-white border border-[#E2E6EE] rounded-3xl p-6 shadow-xs w-full">
+            <div className="divide-y divide-[#F1F4F9]">
+              {scorecardChartData.map((item, idx) => (
+                <div key={idx} className="flex justify-between items-center gap-4 py-4.5 first:pt-0 last:pb-0">
+                  <span className="text-xs sm:text-sm font-bold text-mm-dark leading-snug">
+                    {item.name}
+                  </span>
+                  <div className="shrink-0">
+                    <ScorecardCircularProgress score={item.score} />
+                  </div>
+                </div>
+              ))}
             </div>
+          </div>
 
-            {/* Marketing */}
-            <div className="space-y-2">
-              <div className="flex justify-between items-center text-sm font-semibold">
-                <span className="text-[#748297]">Marketing Strategy</span>
-                <span className="text-mm-dark font-black">{business_scorecard.marketing} / 100</span>
-              </div>
-              <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
-                <div className="h-full bg-mm-orange rounded-full transition-all duration-500" style={{ width: `${business_scorecard.marketing}%` }} />
-              </div>
+          {/* Laptop/Desktop View: Vertical Bar Graph (Recharts) */}
+          <div className="hidden md:flex flex-col justify-center bg-white border border-[#E2E6EE] rounded-3xl p-6 sm:p-8 shadow-xs w-full min-h-[350px] relative">
+            <div className="h-72 w-full min-w-0">
+              {mounted && (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={scorecardChartData}
+                    layout="horizontal"
+                    barCategoryGap="5%"
+                    margin={{ top: 15, right: 15, left: 15, bottom: 40 }}
+                  >
+                    <defs>
+                      <linearGradient id="excellentGrad" x1="0" y1="1" x2="0" y2="0">
+                        <stop offset="0%" stopColor="#10B981" />
+                        <stop offset="100%" stopColor="#34D399" />
+                      </linearGradient>
+                      <linearGradient id="developingGrad" x1="0" y1="1" x2="0" y2="0">
+                        <stop offset="0%" stopColor="#FF8559" />
+                        <stop offset="100%" stopColor="#FF3D00" />
+                      </linearGradient>
+                      <linearGradient id="criticalGrad" x1="0" y1="1" x2="0" y2="0">
+                        <stop offset="0%" stopColor="#EF4444" />
+                        <stop offset="100%" stopColor="#F87171" />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid vertical={false} stroke="#F1F4F9" strokeDasharray="3 3" />
+                    <XAxis
+                      dataKey="name"
+                      type="category"
+                      tick={{ angle: -45, textAnchor: 'end', fontSize: 10, fill: '#748297', fontWeight: 700 }}
+                      height={30}
+                      interval={0}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      type="number"
+                      domain={[10, 100]}
+                      ticks={[10, 20, 30, 40, 50, 60, 70, 80, 90, 100]}
+                      interval={0}
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: "#748297", fontSize: 10, fontWeight: 700 }}
+                    />
+                    <Tooltip
+                      cursor={{ fill: 'rgba(0, 0, 0, 0.02)', radius: 6 }}
+                      contentStyle={{ background: '#FFF', borderRadius: '12px', border: '1px solid #E2E6EE', fontSize: '11px', fontWeight: 'bold' }}
+                    />
+                    <Bar
+                      dataKey="score"
+                      radius={[6, 6, 0, 0]}
+                      barSize={50}
+                      background={{ fill: '#F1F4F9', radius: 6 }}
+                    >
+                      {scorecardChartData.map((entry, index) => {
+                        const score = entry.score;
+                        let fill = "url(#developingGrad)";
+                        if (score >= 80) fill = "url(#excellentGrad)";
+                        else if (score < 50) fill = "url(#criticalGrad)";
+                        return <Cell key={`cell-${index}`} fill={fill} />;
+                      })}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </div>
-
-            {/* Social Media */}
-            <div className="space-y-2">
-              <div className="flex justify-between items-center text-sm font-semibold">
-                <span className="text-[#748297]">Social Media Presence</span>
-                <span className="text-mm-dark font-black">{business_scorecard.social_media} / 100</span>
-              </div>
-              <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
-                <div className="h-full bg-mm-orange rounded-full transition-all duration-500" style={{ width: `${business_scorecard.social_media}%` }} />
-              </div>
-            </div>
-
-            {/* Growth Readiness */}
-            <div className="space-y-2">
-              <div className="flex justify-between items-center text-sm font-semibold">
-                <span className="text-[#748297]">Growth Readiness</span>
-                <span className="text-mm-dark font-black">{business_scorecard.growth_readiness} / 100</span>
-              </div>
-              <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
-                <div className="h-full bg-mm-orange rounded-full transition-all duration-500" style={{ width: `${business_scorecard.growth_readiness}%` }} />
-              </div>
-            </div>
-
           </div>
         </div>
       </div>
@@ -506,13 +693,12 @@ export default function Report({ apiUrl }: ReportProps) {
       {/* 3. SWOT Matrix (Horizontal Scroll on Mobile, Grid/Side-by-Side on Desktop/Laptop) */}
       <div className="space-y-4">
         <h3 className="text-xl font-bold text-[#111418] flex items-center gap-2">
-          <Award className="w-5 h-5 text-mm-orange" />
           SWOT Key Findings
         </h3>
 
         {/* Mobile View: Scroll Slider Container with dots */}
         <div className="block md:hidden space-y-4">
-          <div 
+          <div
             ref={swotScrollRef}
             onScroll={handleSwotScroll}
             className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-none pb-2"
@@ -526,7 +712,7 @@ export default function Report({ apiUrl }: ReportProps) {
               <ul className="space-y-3">
                 {key_findings.strengths.map((item: string, idx: number) => (
                   <li key={idx} className="text-sm text-emerald-950 font-semibold flex gap-2.5 items-start">
-                    <span className="text-emerald-500 font-bold select-none">•</span>
+                    <span className="text-emerald-500 font-bold">•</span>
                     <span>{item}</span>
                   </li>
                 ))}
@@ -542,7 +728,7 @@ export default function Report({ apiUrl }: ReportProps) {
               <ul className="space-y-3">
                 {key_findings.weaknesses.map((item: string, idx: number) => (
                   <li key={idx} className="text-sm text-rose-950 font-semibold flex gap-2.5 items-start">
-                    <span className="text-rose-500 font-bold select-none">•</span>
+                    <span className="text-rose-500 font-bold">•</span>
                     <span>{item}</span>
                   </li>
                 ))}
@@ -558,7 +744,7 @@ export default function Report({ apiUrl }: ReportProps) {
               <ul className="space-y-3">
                 {key_findings.opportunities.map((item: string, idx: number) => (
                   <li key={idx} className="text-sm text-blue-950 font-semibold flex gap-2.5 items-start">
-                    <span className="text-blue-500 font-bold select-none">•</span>
+                    <span className="text-blue-500 font-bold">•</span>
                     <span>{item}</span>
                   </li>
                 ))}
@@ -574,7 +760,7 @@ export default function Report({ apiUrl }: ReportProps) {
               <ul className="space-y-3">
                 {key_findings.threats.map((item: string, idx: number) => (
                   <li key={idx} className="text-sm text-amber-950 font-semibold flex gap-2.5 items-start">
-                    <span className="text-amber-500 font-bold select-none">•</span>
+                    <span className="text-amber-500 font-bold">•</span>
                     <span>{item}</span>
                   </li>
                 ))}
@@ -588,9 +774,8 @@ export default function Report({ apiUrl }: ReportProps) {
               <button
                 key={idx}
                 onClick={() => scrollToSwot(idx)}
-                className={`h-2 rounded-full transition-all duration-300 ${
-                  activeSwotIndex === idx ? 'bg-mm-orange w-5' : 'bg-gray-300 w-2 hover:bg-gray-400'
-                }`}
+                className={`h-2 rounded-full transition-all duration-300 ${activeSwotIndex === idx ? 'bg-mm-orange w-5' : 'bg-gray-300 w-2 hover:bg-gray-400'
+                  }`}
                 aria-label={`Go to slide ${idx + 1}`}
               />
             ))}
@@ -608,7 +793,7 @@ export default function Report({ apiUrl }: ReportProps) {
             <ul className="space-y-2">
               {key_findings.strengths.map((item: string, idx: number) => (
                 <li key={idx} className="text-xs sm:text-sm text-emerald-950 font-medium flex gap-2 items-start leading-relaxed">
-                  <span className="text-emerald-500 font-bold select-none">•</span>
+                  <span className="text-emerald-500 font-bold">•</span>
                   <span>{item}</span>
                 </li>
               ))}
@@ -624,7 +809,7 @@ export default function Report({ apiUrl }: ReportProps) {
             <ul className="space-y-2">
               {key_findings.weaknesses.map((item: string, idx: number) => (
                 <li key={idx} className="text-xs sm:text-sm text-rose-950 font-medium flex gap-2 items-start leading-relaxed">
-                  <span className="text-rose-500 font-bold select-none">•</span>
+                  <span className="text-rose-500 font-bold">•</span>
                   <span>{item}</span>
                 </li>
               ))}
@@ -640,7 +825,7 @@ export default function Report({ apiUrl }: ReportProps) {
             <ul className="space-y-2">
               {key_findings.opportunities.map((item: string, idx: number) => (
                 <li key={idx} className="text-xs sm:text-sm text-blue-950 font-medium flex gap-2 items-start leading-relaxed">
-                  <span className="text-blue-500 font-bold select-none">•</span>
+                  <span className="text-blue-500 font-bold">•</span>
                   <span>{item}</span>
                 </li>
               ))}
@@ -656,7 +841,7 @@ export default function Report({ apiUrl }: ReportProps) {
             <ul className="space-y-2">
               {key_findings.threats.map((item: string, idx: number) => (
                 <li key={idx} className="text-xs sm:text-sm text-amber-950 font-medium flex gap-2 items-start leading-relaxed">
-                  <span className="text-amber-500 font-bold select-none">•</span>
+                  <span className="text-amber-500 font-bold">•</span>
                   <span>{item}</span>
                 </li>
               ))}
@@ -668,11 +853,80 @@ export default function Report({ apiUrl }: ReportProps) {
       {/* 4. Priority Actions List (Rendered directly on background, no wrapper card) */}
       <div className="space-y-6">
         <h3 className="text-xl font-bold text-[#111418] flex items-center gap-2">
-          <ListTodo className="w-5 h-5 text-mm-orange" />
           Recommended Priority Action Checklist
         </h3>
 
-        <div className="overflow-x-auto bg-white border border-[#E2E6EE] rounded-3xl p-6 shadow-xs">
+        {/* Mobile View: Vertical list of cards (one for each action item) stacked one by one below */}
+        <div className="block md:hidden space-y-4">
+          {priority_actions.map((act: any) => (
+            <div
+              key={act.priority}
+              className="w-full bg-white border border-[#E2E6EE] rounded-3xl p-6 shadow-xs flex flex-col justify-between min-h-[160px]"
+            >
+              <div className="space-y-4">
+                {/* Top Row: Priority # */}
+                <div className="flex justify-between items-center border-b border-[#F1F4F9] pb-3">
+                  <span className="text-[10px] font-bold text-[#748297] uppercase tracking-wider">
+                    Priority Action #{act.priority}
+                  </span>
+                </div>
+
+                {/* Title */}
+                <h4 className="text-sm font-bold text-mm-dark leading-snug">
+                  {act.title}
+                </h4>
+
+                {/* Rating Details: Impact & Difficulty */}
+                <div className="grid grid-cols-2 gap-4 pt-2 border-t border-[#F1F4F9]">
+                  {/* Business Impact */}
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-bold text-[#748297] uppercase tracking-wider block">
+                      Business Impact
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <div
+                        className="w-3.5 h-3.5 rounded-full border border-gray-150 flex-shrink-0"
+                        style={{
+                          background: `conic-gradient(${act.impact === "High" ? "#10B981" : act.impact === "Medium" ? "#F59E0B" : "#EF4444"
+                            } ${act.impact === "High" ? "100%" : act.impact === "Medium" ? "66%" : "33%"
+                            }, #F1F4F9 0)`
+                        }}
+                      />
+                      <span className={`inline-flex px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider ${act.impact === "High" ? "bg-emerald-50 text-emerald-700" : act.impact === "Medium" ? "bg-amber-50 text-amber-700" : "bg-rose-50 text-rose-700"
+                        }`}>
+                        {act.impact}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Difficulty */}
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-bold text-[#748297] uppercase tracking-wider block">
+                      Difficulty
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <div
+                        className="w-3.5 h-3.5 rounded-full border border-gray-150 flex-shrink-0"
+                        style={{
+                          background: `conic-gradient(${act.difficulty === "Easy" ? "#10B981" : act.difficulty === "Medium" ? "#F59E0B" : "#EF4444"
+                            } ${act.difficulty === "Easy" ? "100%" : act.difficulty === "Medium" ? "66%" : "33%"
+                            }, #F1F4F9 0)`
+                        }}
+                      />
+                      <span className={`inline-flex px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider ${act.difficulty === "Easy" ? "bg-emerald-50 text-emerald-700" : act.difficulty === "Medium" ? "bg-amber-50 text-amber-700" : "bg-rose-50 text-rose-700"
+                        }`}>
+                        {act.difficulty}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Laptop/Desktop View: Full Width Table */}
+        <div className="hidden md:block overflow-x-auto bg-white border border-[#E2E6EE] rounded-3xl p-6 shadow-xs">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-[#E2E6EE] text-[10px] font-bold text-[#748297] uppercase tracking-wider">
@@ -688,18 +942,36 @@ export default function Report({ apiUrl }: ReportProps) {
                   <td className="py-4 text-center font-bold text-[#748297]">{act.priority}</td>
                   <td className="py-4 font-bold text-mm-dark">{act.title}</td>
                   <td className="py-4">
-                    <span className={`inline-flex px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${
-                      act.impact === "High" ? "bg-emerald-50 text-emerald-700" : "bg-blue-50 text-blue-700"
-                    }`}>
-                      {act.impact}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="w-4 h-4 rounded-full border border-gray-150 flex-shrink-0"
+                        style={{
+                          background: `conic-gradient(${act.impact === "High" ? "#10B981" : act.impact === "Medium" ? "#F59E0B" : "#EF4444"
+                            } ${act.impact === "High" ? "100%" : act.impact === "Medium" ? "66%" : "33%"
+                            }, #F1F4F9 0)`
+                        }}
+                      />
+                      <span className={`inline-flex px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${act.impact === "High" ? "bg-emerald-50 text-emerald-700" : act.impact === "Medium" ? "bg-amber-50 text-amber-700" : "bg-rose-50 text-rose-700"
+                        }`}>
+                        {act.impact}
+                      </span>
+                    </div>
                   </td>
                   <td className="py-4">
-                    <span className={`inline-flex px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${
-                      act.difficulty === "Easy" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"
-                    }`}>
-                      {act.difficulty}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="w-4 h-4 rounded-full border border-gray-150 flex-shrink-0"
+                        style={{
+                          background: `conic-gradient(${act.difficulty === "Easy" ? "#10B981" : act.difficulty === "Medium" ? "#F59E0B" : "#EF4444"
+                            } ${act.difficulty === "Easy" ? "100%" : act.difficulty === "Medium" ? "66%" : "33%"
+                            }, #F1F4F9 0)`
+                        }}
+                      />
+                      <span className={`inline-flex px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${act.difficulty === "Easy" ? "bg-emerald-50 text-emerald-700" : act.difficulty === "Medium" ? "bg-amber-50 text-amber-700" : "bg-rose-50 text-rose-700"
+                        }`}>
+                        {act.difficulty}
+                      </span>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -710,20 +982,19 @@ export default function Report({ apiUrl }: ReportProps) {
 
       {/* 5. Competitors & Risk Ratings (Rendered directly on background, no wrapper card) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        
+
         {/* Competitor Grid */}
         <div className="bg-white border border-[#E2E6EE] rounded-3xl p-6 sm:p-8 shadow-xs space-y-6">
           <h3 className="text-lg font-bold text-[#111418] border-b border-[#E2E6EE] pb-4 flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-mm-orange" />
             Competitive Overview
           </h3>
-          
+
           <div className="space-y-4">
             <div className="flex justify-between items-center text-sm pb-2 border-b border-[#F1F4F9]">
               <span className="font-semibold text-[#748297]">Competitive Index</span>
               <span className="font-bold text-mm-orange">{competitor_analysis.competitive_score} / 100</span>
             </div>
-            
+
             <div className="space-y-2">
               <span className="text-[11px] font-bold text-[#748297] uppercase tracking-wider block">Competitor Focus</span>
               <div className="flex flex-wrap gap-2">
@@ -741,7 +1012,7 @@ export default function Report({ apiUrl }: ReportProps) {
                 {competitor_analysis.key_advantage}
               </p>
             </div>
-            
+
             <div className="space-y-1 pt-2 border-t border-[#F1F4F9]">
               <span className="text-[11px] font-bold text-[#748297] uppercase tracking-wider block">Largest Identified Gap</span>
               <p className="text-xs text-[#EA4335] leading-relaxed font-bold">
@@ -754,16 +1025,14 @@ export default function Report({ apiUrl }: ReportProps) {
         {/* Risk Grid */}
         <div className="bg-white border border-[#E2E6EE] rounded-3xl p-6 sm:p-8 shadow-xs space-y-6">
           <h3 className="text-lg font-bold text-[#111418] border-b border-[#E2E6EE] pb-4 flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-mm-orange" />
             Risk Assessment
           </h3>
 
           <div className="space-y-4">
             <div className="flex justify-between items-center text-sm pb-2 border-b border-[#F1F4F9]">
               <span className="font-semibold text-[#748297]">Overall Risk Level</span>
-              <span className={`font-bold ${
-                risk_assessment.overall_risk === "High" ? "text-[#EA4335]" : "text-amber-500"
-              }`}>{risk_assessment.overall_risk}</span>
+              <span className={`font-bold ${risk_assessment.overall_risk === "High" ? "text-[#EA4335]" : "text-amber-500"
+                }`}>{risk_assessment.overall_risk}</span>
             </div>
 
             <div className="flex justify-between items-center text-sm pb-2 border-b border-[#F1F4F9]">
@@ -789,13 +1058,13 @@ export default function Report({ apiUrl }: ReportProps) {
       {/* 6. Growth & Optimization Roadmap (Horizontal Scroll on Mobile, 3 columns on Laptop/Desktop) */}
       <div className="space-y-4">
         <h3 className="text-xl font-bold text-[#111418] flex items-center gap-2">
-          <Calendar className="w-5 h-5 text-mm-orange" />
+          {/* <Calendar className="w-5 h-5 text-mm-orange" /> */}
           Growth Roadmap Implementation Plan
         </h3>
 
         {/* Mobile View: Scroll Slider Container with dots */}
         <div className="block md:hidden space-y-4">
-          <div 
+          <div
             ref={roadmapScrollRef}
             onScroll={handleRoadmapScroll}
             className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-none pb-2"
@@ -810,7 +1079,7 @@ export default function Report({ apiUrl }: ReportProps) {
                 <ul className="space-y-2.5">
                   {roadmap["30_days"].map((item: string, idx: number) => (
                     <li key={idx} className="text-sm text-mm-gray font-semibold flex gap-2.5 items-start leading-relaxed">
-                      <span className="text-mm-orange select-none">✓</span>
+                      <span className="text-mm-orange">✓</span>
                       <span>{item}</span>
                     </li>
                   ))}
@@ -828,7 +1097,7 @@ export default function Report({ apiUrl }: ReportProps) {
                 <ul className="space-y-2.5">
                   {roadmap["60_days"].map((item: string, idx: number) => (
                     <li key={idx} className="text-sm text-mm-gray font-semibold flex gap-2.5 items-start leading-relaxed">
-                      <span className="text-mm-orange select-none">✓</span>
+                      <span className="text-mm-orange">✓</span>
                       <span>{item}</span>
                     </li>
                   ))}
@@ -846,7 +1115,7 @@ export default function Report({ apiUrl }: ReportProps) {
                 <ul className="space-y-2.5">
                   {roadmap["90_days"].map((item: string, idx: number) => (
                     <li key={idx} className="text-sm text-mm-gray font-semibold flex gap-2.5 items-start leading-relaxed">
-                      <span className="text-mm-orange select-none">✓</span>
+                      <span className="text-mm-orange">✓</span>
                       <span>{item}</span>
                     </li>
                   ))}
@@ -861,9 +1130,8 @@ export default function Report({ apiUrl }: ReportProps) {
               <button
                 key={idx}
                 onClick={() => scrollToRoadmap(idx)}
-                className={`h-2 rounded-full transition-all duration-300 ${
-                  activeRoadmapIndex === idx ? 'bg-mm-orange w-5' : 'bg-gray-300 w-2 hover:bg-gray-400'
-                }`}
+                className={`h-2 rounded-full transition-all duration-300 ${activeRoadmapIndex === idx ? 'bg-mm-orange w-5' : 'bg-gray-300 w-2 hover:bg-gray-400'
+                  }`}
                 aria-label={`Go to slide ${idx + 1}`}
               />
             ))}
@@ -882,7 +1150,7 @@ export default function Report({ apiUrl }: ReportProps) {
               <ul className="space-y-2">
                 {roadmap["30_days"].map((item: string, idx: number) => (
                   <li key={idx} className="text-xs sm:text-sm text-mm-gray font-medium flex gap-2 items-start leading-relaxed">
-                    <span className="text-mm-orange select-none">✓</span>
+                    <span className="text-mm-orange">✓</span>
                     <span>{item}</span>
                   </li>
                 ))}
@@ -900,7 +1168,7 @@ export default function Report({ apiUrl }: ReportProps) {
               <ul className="space-y-2">
                 {roadmap["60_days"].map((item: string, idx: number) => (
                   <li key={idx} className="text-xs sm:text-sm text-mm-gray font-medium flex gap-2 items-start leading-relaxed">
-                    <span className="text-mm-orange select-none">✓</span>
+                    <span className="text-mm-orange">✓</span>
                     <span>{item}</span>
                   </li>
                 ))}
@@ -918,7 +1186,7 @@ export default function Report({ apiUrl }: ReportProps) {
               <ul className="space-y-2">
                 {roadmap["90_days"].map((item: string, idx: number) => (
                   <li key={idx} className="text-xs sm:text-sm text-mm-gray font-medium flex gap-2 items-start leading-relaxed">
-                    <span className="text-mm-orange select-none">✓</span>
+                    <span className="text-mm-orange">✓</span>
                     <span>{item}</span>
                   </li>
                 ))}
@@ -931,8 +1199,8 @@ export default function Report({ apiUrl }: ReportProps) {
       {/* 7. Recommended Business Plan / CTA Box */}
       <div className="space-y-6">
         <div>
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-mm-orange/10 text-mm-orange mb-3">
-            <Sparkles className="w-3.5 h-3.5" />
+          <span className="inline-flex items-center gap-1.5 pb-1 border-b-2 border-mm-orange text-[10px] font-bold uppercase tracking-wider text-mm-orange mb-3">
+            {/* <Sparkles className="w-3.5 h-3.5" /> */}
             Recommended Action Plan
           </span>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-[#111418] tracking-tight">
@@ -953,10 +1221,10 @@ export default function Report({ apiUrl }: ReportProps) {
 
           {/* Details & Confidence Score */}
           <div className="lg:col-span-8 flex flex-col justify-between space-y-6 bg-white border border-[#E2E6EE] rounded-3xl p-6 sm:p-8 shadow-xs">
-            
+
             {/* Top Row: Title, Reason & Confidence Chart */}
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-              
+
               {/* Reason / Analysis */}
               <div className="md:col-span-8 space-y-3 order-2 md:order-1">
                 <h3 className="text-lg font-bold text-mm-dark">
@@ -1014,7 +1282,7 @@ export default function Report({ apiUrl }: ReportProps) {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 {(recommended_plan?.expected_results || []).map((result: string, idx: number) => (
                   <div key={idx} className="flex items-start gap-2.5 p-3 rounded-2xl bg-gray-50 border border-gray-100 hover:border-mm-orange/20 transition-colors duration-200">
-                    <span className="text-mm-orange font-bold text-sm select-none mt-0.5">✓</span>
+                    <span className="text-mm-orange font-bold text-sm mt-0.5">✓</span>
                     <span className="text-xs sm:text-sm text-mm-gray font-semibold leading-relaxed">
                       {result}
                     </span>
@@ -1022,11 +1290,11 @@ export default function Report({ apiUrl }: ReportProps) {
                 ))}
               </div>
             </div>
-            
+
           </div>
         </div>
       </div>
-      
+
     </div>
   );
 }

@@ -23,7 +23,6 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as BlogsIndexRouteImport } from './routes/blogs.index'
 import { Route as BlogsSlugRouteImport } from './routes/blogs.$slug'
 import { Route as ClientSettingsRouteImport } from './routes/_client/settings'
-import { Route as ClientReportRouteImport } from './routes/_client/report'
 import { Route as ClientProjectsRouteImport } from './routes/_client/projects'
 import { Route as ClientProfileRouteImport } from './routes/_client/profile'
 import { Route as ClientPlanRouteImport } from './routes/_client/plan'
@@ -111,11 +110,6 @@ const BlogsSlugRoute = BlogsSlugRouteImport.update({
 const ClientSettingsRoute = ClientSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
-  getParentRoute: () => ClientRouteRoute,
-} as any)
-const ClientReportRoute = ClientReportRouteImport.update({
-  id: '/report',
-  path: '/report',
   getParentRoute: () => ClientRouteRoute,
 } as any)
 const ClientProjectsRoute = ClientProjectsRouteImport.update({
@@ -235,7 +229,6 @@ export interface FileRoutesByFullPath {
   '/plan': typeof ClientPlanRoute
   '/profile': typeof ClientProfileRoute
   '/projects': typeof ClientProjectsRoute
-  '/report': typeof ClientReportRoute
   '/settings': typeof ClientSettingsRoute
   '/blogs/$slug': typeof BlogsSlugRoute
   '/blogs/': typeof BlogsIndexRoute
@@ -268,7 +261,6 @@ export interface FileRoutesByTo {
   '/plan': typeof ClientPlanRoute
   '/profile': typeof ClientProfileRoute
   '/projects': typeof ClientProjectsRoute
-  '/report': typeof ClientReportRoute
   '/settings': typeof ClientSettingsRoute
   '/blogs/$slug': typeof BlogsSlugRoute
   '/blogs': typeof BlogsIndexRoute
@@ -306,7 +298,6 @@ export interface FileRoutesById {
   '/_client/plan': typeof ClientPlanRoute
   '/_client/profile': typeof ClientProfileRoute
   '/_client/projects': typeof ClientProjectsRoute
-  '/_client/report': typeof ClientReportRoute
   '/_client/settings': typeof ClientSettingsRoute
   '/blogs/$slug': typeof BlogsSlugRoute
   '/blogs/': typeof BlogsIndexRoute
@@ -343,7 +334,6 @@ export interface FileRouteTypes {
     | '/plan'
     | '/profile'
     | '/projects'
-    | '/report'
     | '/settings'
     | '/blogs/$slug'
     | '/blogs/'
@@ -376,7 +366,6 @@ export interface FileRouteTypes {
     | '/plan'
     | '/profile'
     | '/projects'
-    | '/report'
     | '/settings'
     | '/blogs/$slug'
     | '/blogs'
@@ -413,7 +402,6 @@ export interface FileRouteTypes {
     | '/_client/plan'
     | '/_client/profile'
     | '/_client/projects'
-    | '/_client/report'
     | '/_client/settings'
     | '/blogs/$slug'
     | '/blogs/'
@@ -545,13 +533,6 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof ClientSettingsRouteImport
-      parentRoute: typeof ClientRouteRoute
-    }
-    '/_client/report': {
-      id: '/_client/report'
-      path: '/report'
-      fullPath: '/report'
-      preLoaderRoute: typeof ClientReportRouteImport
       parentRoute: typeof ClientRouteRoute
     }
     '/_client/projects': {
@@ -752,7 +733,6 @@ interface ClientRouteRouteChildren {
   ClientPlanRoute: typeof ClientPlanRoute
   ClientProfileRoute: typeof ClientProfileRoute
   ClientProjectsRoute: typeof ClientProjectsRoute
-  ClientReportRoute: typeof ClientReportRoute
   ClientSettingsRoute: typeof ClientSettingsRoute
 }
 
@@ -763,7 +743,6 @@ const ClientRouteRouteChildren: ClientRouteRouteChildren = {
   ClientPlanRoute: ClientPlanRoute,
   ClientProfileRoute: ClientProfileRoute,
   ClientProjectsRoute: ClientProjectsRoute,
-  ClientReportRoute: ClientReportRoute,
   ClientSettingsRoute: ClientSettingsRoute,
 }
 

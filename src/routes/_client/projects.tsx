@@ -117,7 +117,7 @@ function RouteComponent() {
   };
 
   return (
-    <div className="flex-1 w-full px-4.5 py-6 min-[769px]:px-8 min-[769px]:py-10 space-y-8 min-[769px]:space-y-10 select-none font-sans text-mm-dark relative pb-24">
+    <div className="flex-1 w-full px-4.5 py-6 min-[769px]:px-8 min-[769px]:py-10 space-y-8 min-[769px]:space-y-10 font-sans text-mm-dark relative pb-24">
       {loading ? (
         <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
           <Loader2 className="w-8 h-8 text-mm-orange animate-spin" />
