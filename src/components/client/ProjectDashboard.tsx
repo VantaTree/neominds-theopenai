@@ -86,7 +86,6 @@ export function ProjectDashboard({
   activeProjectId = "report",
   onActiveProjectChange,
   onUpgradeTrigger,
-  apiUrl,
   initialReportData,
 }: ProjectDashboardProps) {
   const { activeBusiness } = useBusiness();
@@ -632,7 +631,7 @@ export function ProjectDashboard({
     <div className="w-full flex flex-col gap-8 relative">
       {renderTabSwitcher()}
 
-      {activeTab === "report" && <Report apiUrl={apiUrl} initialData={initialReportData} />}
+      {activeTab === "report" && <Report initialData={initialReportData} />}
 
       {activeTab === "Automation" && (
         <PlanGate requiredPlan="Pro" fallback={planGateFallback}>

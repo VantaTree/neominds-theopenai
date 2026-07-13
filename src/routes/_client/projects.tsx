@@ -65,7 +65,7 @@ function RouteComponent() {
 
   // Sync projects and reports whenever activeBusiness changes
   useEffect(() => {
-    const businessId = activeBusiness?.id;
+    const businessId = activeBusiness && activeBusiness.id;
     if (!businessId) {
       setProjects([]);
       setReports([]);

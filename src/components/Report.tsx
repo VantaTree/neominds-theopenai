@@ -229,11 +229,10 @@ const DUMMY_REPORT = {
 };
 
 interface ReportProps {
-  apiUrl?: string;
   initialData?: typeof DUMMY_REPORT;
 }
 
-export default function Report({ apiUrl, initialData }: ReportProps) {
+export default function Report({ initialData }: ReportProps) {
   const [data, setData] = useState<typeof DUMMY_REPORT>(initialData || DUMMY_REPORT);
   const [loading, setLoading] = useState(false);
 
@@ -251,32 +250,6 @@ export default function Report({ apiUrl, initialData }: ReportProps) {
   // Refs for tracking current indices inside useEffect timers
   const activeSwotIndexRef = useRef(0);
   const activeRoadmapIndexRef = useRef(0);
-
-  // Fetch report data if apiUrl is provided
-  useEffect(() => {
-    if (initialData) {
-      setData(initialData);
-      return;
-    }
-    if (!apiUrl) return;
-
-    setLoading(true);
-    fetch(apiUrl)
-      .then((res) => res.json())
-      .then((json) => {
-        if (json && json.data) {
-          setData(json.data);
-        } else if (json) {
-          setData(json);
-        }
-      })
-      .catch((err) => {
-        console.error("Error fetching report from apiUrl:", err);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  }, [apiUrl, initialData]);
 
   // Keep refs in sync with state updates
   useEffect(() => {
