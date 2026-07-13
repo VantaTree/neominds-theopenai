@@ -13,6 +13,7 @@ import {
   type Business,
   type Payment,
 } from "./schemas";
+import PLANS from "../data/plans";
 
 // Dynamic Import Helpers to prevent client-side leaks
 async function getDb() {
@@ -946,54 +947,48 @@ export const createRazorpayOrderFn = createServerFn({ method: "POST" })
       throw new Error("Unauthorized: You do not own this business.");
     }
 
-    // Determine plan pricing in INR Kaise
-    let amountInPaise = 0;
-    if (data.planName === "Basic") {
-      // amountInPaise = 249900; // ₹2,499.00
-      amountInPaise = 200; // ₹2,499.00
-    } else if (data.planName === "Plus") {
-      // amountInPaise = 499900; // ₹4,999.00
-      amountInPaise = 200; // ₹4,999.00
-    } else if (data.planName === "Pro") {
-      amountInPaise = 749900; // ₹7,499.00
-    } else {
-      throw new Error("Invalid plan selection.");
+    // Find the plan in plans.ts dynamically
+    const plan = PLANS.find((p) => p.name.toLowerCase() === data.planName.toLowerCase());
+    if (!plan) {
+      throw new Error(`Plan ${data.planName} not found in plans configuration.`);
     }
 
-    const keyId = process.env.VITE_RAZORPAY_KEY_ID!;
-    const keySecret = process.env.RAZORPAY_KEY_SECRET!;
-   
-    const basicAuth = Buffer.from(`${keyId}:${keySecret}`).toString("base64");
+    // Parse price value (e.g. "$0.99" -> 0.99)
+    const priceValue = parseFloat(plan.price.replace(/[^0-9.]/g, ""));
+    if (isNaN(priceValue)) {
+      throw new Error(`Invalid plan price format for ${data.planName}: ${plan.price}`);
+    }
+
+    // Convert USD to INR (Razorpay test key uses INR currency)
+    // Using a conversion rate of 1 USD = 83 INR
+    const USD_TO_INR = 83;
+    const amountInInr = priceValue * USD_TO_INR;
+    const amountInPaise = Math.round(amountInInr * 100);
+
+    const keyId = (import.meta.env.VITE_RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID).trim();
+    const keySecret = ((import.meta.env as any).RAZORPAY_KEY_SECRET || process.env.RAZORPAY_KEY_SECRET).trim();
 
     try {
-      const res = await fetch("https://api.razorpay.com/v1/orders", {
-        method: "POST",
-        headers: {
-          Authorization: `Basic ${basicAuth}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          amount: amountInPaise,
-          currency: "INR",
-          receipt: `rcpt_${data.businessId.substring(0, 10)}_${Date.now()}`,
-        }),
+      const { default: Razorpay } = await import("razorpay");
+      const razorpay = new Razorpay({
+        key_id: keyId,
+        key_secret: keySecret,
       });
 
-      if (!res.ok) {
-        const errText = await res.text();
-        console.error("Razorpay Order API error response:", errText);
-        throw new Error(`Razorpay returned status ${res.status}: ${res.statusText}`);
-      }
+      const order = await razorpay.orders.create({
+        amount: amountInPaise,
+        currency: "INR",
+        receipt: `rcpt_${data.businessId.substring(0, 10)}_${Date.now()}`,
+      });
 
-      const order = (await res.json()) as { id: string; amount: number; currency: string };
       return {
         orderId: order.id,
-        amount: order.amount,
+        amount: order.amount as number,
         currency: order.currency,
       };
     } catch (err: any) {
       console.error("Failed to create Razorpay order:", err);
-      throw new Error(err.message || "Failed to create order on Razorpay");
+      throw new Error(err.description || err.message || "Failed to create order on Razorpay");
     }
   });
 
@@ -1021,14 +1016,18 @@ export const verifyRazorpayPaymentFn = createServerFn({ method: "POST" })
       throw new Error("Unauthorized: You do not own this business.");
     }
 
-    // Verify signature using Crypto HMAC-SHA256
-    const keySecret = process.env.RAZORPAY_KEY_SECRET!;
-    const { createHmac } = await import("crypto");
-    const generatedSig = createHmac("sha256", keySecret)
-      .update(`${data.razorpayOrderId}|${data.razorpayPaymentId}`)
-      .digest("hex");
+    const keyId = (import.meta.env.VITE_RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID).trim();
+    const keySecret = ((import.meta.env as any).RAZORPAY_KEY_SECRET || process.env.RAZORPAY_KEY_SECRET).trim();
 
-    if (generatedSig !== data.razorpaySignature) {
+    // Verify signature using official Razorpay static utility method
+    const { default: Razorpay } = await import("razorpay");
+    const isValid = Razorpay.validatePaymentVerification(
+      { order_id: data.razorpayOrderId, payment_id: data.razorpayPaymentId },
+      data.razorpaySignature,
+      keySecret
+    );
+
+    if (!isValid) {
       throw new Error("Payment verification failed: Invalid signature.");
     }
 
@@ -1038,9 +1037,35 @@ export const verifyRazorpayPaymentFn = createServerFn({ method: "POST" })
     biz.updatedAt = new Date();
     await db.saveBusiness(biz);
 
-    // Save payment record
-    const amountInInr =
-      data.planName === "Basic" ? 2499 : data.planName === "Plus" ? 4999 : 7499;
+    // Save payment record - fetch actual payment details from Razorpay to record actual amount credited
+    let amountInInr = 0;
+    let paymentMethod: any = "Other";
+    let currency = "INR";
+
+    try {
+      const razorpay = new Razorpay({
+        key_id: keyId,
+        key_secret: keySecret,
+      });
+      const paymentDetails = await razorpay.payments.fetch(data.razorpayPaymentId);
+      amountInInr = (paymentDetails.amount as number) / 100;
+      if (paymentDetails.currency) {
+        currency = paymentDetails.currency;
+      }
+      if (paymentDetails.method) {
+        const rzpMethod = paymentDetails.method.toLowerCase();
+        if (rzpMethod === "card") paymentMethod = "Card";
+        else if (rzpMethod === "upi") paymentMethod = "UPI";
+        else if (rzpMethod === "netbanking") paymentMethod = "Netbanking";
+        else if (rzpMethod === "wallet") paymentMethod = "Wallet";
+        else if (rzpMethod === "bank_transfer") paymentMethod = "BankTransfer";
+      }
+    } catch (fetchErr) {
+      console.error("Error fetching payment details from Razorpay, falling back to static calculation:", fetchErr);
+      const plan = PLANS.find((p) => p.name.toLowerCase() === data.planName.toLowerCase());
+      const usdPrice = plan ? parseFloat(plan.price.replace(/[^0-9.]/g, "")) : 0;
+      amountInInr = isNaN(usdPrice) ? 0 : usdPrice * 83;
+    }
 
     const paymentEntry: Payment = {
       id: data.razorpayPaymentId,
@@ -1048,8 +1073,8 @@ export const verifyRazorpayPaymentFn = createServerFn({ method: "POST" })
       businessId: data.businessId,
       status: "Paid",
       amount: amountInInr,
-      currency: "INR",
-      paymentMethod: "Other",
+      currency: currency,
+      paymentMethod: paymentMethod,
       gateway: "Razorpay",
       gatewayInfo: {
         orderId: data.razorpayOrderId,

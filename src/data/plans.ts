@@ -11,7 +11,7 @@ export interface Plan {
 const PLANS: Plan[] = [
   {
     name: "Basic",
-    price: "$0.99",
+    price: "$0.1",
     period: "/mo",
     action: "GET STARTED",
     features: [

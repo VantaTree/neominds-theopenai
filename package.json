@@ -34,6 +34,7 @@
     "lottie-web": "^5.13.0",
     "lucide-react": "^0.575.0",
     "nitro": "3.0.260603-beta",
+    "razorpay": "^2.9.6",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-hook-form": "^7.71.2",
