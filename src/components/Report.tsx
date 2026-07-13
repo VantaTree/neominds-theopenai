@@ -237,7 +237,18 @@ const DUMMY_REPORT = {
       "Increased customer inquiries"
     ]
   },
-  "add_ons": [],
+  "add_ons": [
+    {
+      "service": "Advanced SEO Booster Pack",
+      "priority": "High",
+      "reason": "Includes detailed keyword targeting and indexing fixes to boost organic traffic faster."
+    },
+    {
+      "service": "AI Customer Support Agent",
+      "priority": "Medium",
+      "reason": "Automates responses to customer queries 24/7, improving lead conversion rate."
+    }
+  ],
 };
 
 interface ReportProps {
@@ -403,7 +414,8 @@ export default function Report({ initialData }: ReportProps) {
     competitor_analysis,
     priority_actions,
     roadmap,
-    recommended_plan
+    recommended_plan,
+    add_ons
   } = data;
 
   // Find recommended plan from PLANS matching recommended_plan.plan_name
@@ -1262,6 +1274,53 @@ export default function Report({ initialData }: ReportProps) {
 
             {/* Divider */}
             <div className="border-t border-[#E2E6EE] w-full" />
+
+            {/* Recommended Add-ons Section */}
+            {add_ons && add_ons.length > 0 && (
+              <>
+                <div className="space-y-4">
+                  <h3 className="text-base font-bold text-mm-dark flex items-center gap-2">
+                    Recommended Add-ons for Extra Growth
+                  </h3>
+                  <div className="grid grid-cols-1 gap-3">
+                    {add_ons.map((addon: any, idx: number) => (
+                      <div 
+                        key={idx} 
+                        className="p-4 rounded-2xl bg-amber-50/20 border border-amber-100/60 hover:border-amber-200/80 transition-colors duration-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                      >
+                        <div className="space-y-1.5">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-sm font-bold text-mm-dark">
+                              {addon.service}
+                            </span>
+                            {addon.priority && (
+                              <span className={`inline-flex px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider ${
+                                addon.priority.toLowerCase() === "high" 
+                                  ? "bg-rose-50 text-rose-700" 
+                                  : addon.priority.toLowerCase() === "medium" 
+                                  ? "bg-amber-50 text-amber-700" 
+                                  : "bg-emerald-50 text-emerald-700"
+                              }`}>
+                                {addon.priority} Priority
+                              </span>
+                            )}
+                          </div>
+                          {addon.reason && (
+                            <p className="text-xs text-mm-gray font-medium leading-relaxed">
+                              {addon.reason}
+                            </p>
+                          )}
+                        </div>
+                        <span className="text-xs font-bold text-amber-600 bg-amber-50 px-3 py-1.5 rounded-xl border border-amber-100 shrink-0 self-start sm:self-center">
+                          Optional Add-on
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="border-t border-[#E2E6EE] w-full" />
+              </>
+            )}
 
             {/* Bottom Section: Expected Results */}
             <div className="space-y-4">
