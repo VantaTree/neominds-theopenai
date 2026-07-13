@@ -569,7 +569,7 @@ marketing_agent = Agent(
     ==================================================
 
     Every numeric score must be an INTEGER
-    between 0 and 10.
+    between 0 and 10, expect confidence(use percentage - 0 to 100). 
 
     Do not use decimals.
 
@@ -704,9 +704,13 @@ marketing_agent = Agent(
         "reason": "",
         "expected_results": [],
     },
-    "add_ons": {
-        "service": "" 
-    } 
+    "add_ons": [
+        {
+            "service": "",
+            "reason": "",
+            "priority": "",
+        }
+    ]
     }
 
     ==================================================
