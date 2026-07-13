@@ -9,45 +9,59 @@ import AnimatedPlanCard from "./AnimatedPlanCard";
 import PLANS from "@/data/plans";
 
 const ScorecardCircularProgress = ({ score }: { score: number }) => {
-  const radius = 30;
-  const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (score / 100) * circumference;
+  const radius = 45;
+  const circumference = 2 * Math.PI * radius; // ~282.74
+
+  // Total arc angle is exactly 120 degrees
+  const arcLength = (120 / 360) * circumference; // ~94.25
+  const emptyLength = circumference - arcLength; // ~188.49
+
+  // If the score is out of 10, scale it to 100 for color coding
+  const normalizedScore = score <= 10 ? score * 10 : score;
+
+  // Calculate progress filled length dynamically to prevent dash offset wrapping quirks
+  const scorePercent = score <= 10 ? score / 10 : score / 100;
+  const filledLength = scorePercent * arcLength;
+  const remainingLength = circumference - filledLength;
 
   // Color coding matching user specifications
   let strokeColor = "#FF5924"; // default orange
-  if (score >= 80) strokeColor = "#10B981"; // green
-  else if (score < 50) strokeColor = "#EF4444"; // red
+  if (normalizedScore >= 80) strokeColor = "#10B981"; // green
+  else if (normalizedScore < 50) strokeColor = "#EF4444"; // red
 
   return (
-    <div className="relative w-20 h-20 flex items-center justify-center">
-      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 80 80">
-        {/* Track */}
+    <div className="relative w-28 h-16 flex items-center justify-center overflow-hidden">
+      <svg className="w-full h-full" viewBox="0 10 120 55">
+        {/* Track Arc (Always 120 degrees total) */}
         <circle
-          cx="40"
-          cy="40"
+          cx="60"
+          cy="60"
           r={radius}
           fill="transparent"
           stroke="#F1F4F9"
-          strokeWidth="6"
+          strokeWidth="7"
+          strokeDasharray={`${arcLength} ${emptyLength}`}
+          strokeLinecap="round"
+          transform="rotate(-150 60 60)"
         />
-        {/* Progress Arc */}
+        {/* Progress Arc (Length is proportional to the percentage of 120 degrees) */}
         <circle
-          cx="40"
-          cy="40"
+          cx="60"
+          cy="60"
           r={radius}
           fill="transparent"
           stroke={strokeColor}
-          strokeWidth="6"
-          strokeDasharray={circumference}
-          strokeDashoffset={strokeDashoffset}
+          strokeWidth="7"
+          strokeDasharray={`${filledLength} ${remainingLength}`}
           strokeLinecap="round"
+          transform="rotate(-150 60 60)"
           className="transition-all duration-500 ease-out"
         />
       </svg>
       {/* Score Text */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-        <span className="text-base font-black text-mm-dark leading-none">{score}</span>
-        <span className="text-[7px] font-bold text-[#748297] uppercase tracking-wider mt-0.5">/ 10</span>
+      <div className="absolute bottom-1.5 flex flex-col items-center">
+        <span className="text-lg font-black text-mm-dark leading-none">{score}</span>
+        <span className="text-[8px] font-bold text-[#748297] uppercase tracking-wider mt-0.5">/ 10</span>
       </div>
     </div>
   );
