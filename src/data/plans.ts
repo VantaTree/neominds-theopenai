@@ -8,10 +8,10 @@ export interface Plan {
   buttonText: string;
 }
 
-const PLANS:Plan[] = [
+const PLANS: Plan[] = [
   {
     name: "Basic",
-    price: "$29.99",
+    price: "$0.99",
     period: "/mo",
     action: "GET STARTED",
     features: [

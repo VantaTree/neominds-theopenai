@@ -4,9 +4,10 @@ type Props = {
   plan: Plan;
   buttonRef: React.RefObject<HTMLAnchorElement | null>;
   buttonCanvasRef: React.RefObject<HTMLCanvasElement | null>;
+  onSelectPlan?: (planName: string) => void;
 }
 
-const PlanCard = ({ plan, buttonRef, buttonCanvasRef }: Props) => {
+const PlanCard = ({ plan, buttonRef, buttonCanvasRef, onSelectPlan }: Props) => {
   return (
     <div className="p-6 sm:p-7 flex flex-col flex-1 relative z-10">
         <p
@@ -65,6 +66,10 @@ const PlanCard = ({ plan, buttonRef, buttonCanvasRef }: Props) => {
         <a
           ref={buttonRef}
           href="#"
+          onClick={(e) => {
+            e.preventDefault();
+            if (onSelectPlan) onSelectPlan(plan.name);
+          }}
           className="flex items-center justify-center rounded-full py-3 text-xs font-bold uppercase tracking-widest transition-all duration-200 hover:opacity-90 relative overflow-hidden"
           style={{
             background: plan.highlight ? "#fff" : "#FF5924",

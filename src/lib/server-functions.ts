@@ -11,6 +11,7 @@ import {
   ReportSchema,
   type User,
   type Business,
+  type Payment,
 } from "./schemas";
 
 // Dynamic Import Helpers to prevent client-side leaks
@@ -35,7 +36,7 @@ export async function verifyServerSession() {
   if (typeof window !== "undefined") {
     throw new Error("verifyServerSession can only be called on the server.");
   }
-  
+
   const { getStartContext } = await import("@tanstack/start-storage-context");
   const ctx = getStartContext({ throwIfNotFound: false });
   const req = ctx?.request;
@@ -98,7 +99,7 @@ export const setAdminClaimFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const decoded = await verifyServerSession();
     const adminAuth = await getAdminAuth();
-    
+
     // Safety check: only allow admins to assign claims, OR the first user to bootstrap development
     if (decoded.admin !== true) {
       const db = await getDb();
@@ -108,16 +109,16 @@ export const setAdminClaimFn = createServerFn({ method: "POST" })
         throw new Error("Unauthorized: Only existing admins can assign admin claims.");
       }
     }
-    
+
     await adminAuth.setCustomUserClaims(data.uid, { admin: data.isAdmin });
-    
+
     const db = await getDb();
     const userDoc = await db.getUser(data.uid);
     if (userDoc) {
       userDoc.role = data.isAdmin ? "admin" : "client";
       await db.saveUser(userDoc);
     }
-    
+
     return { success: true };
   });
 
@@ -166,12 +167,12 @@ export const saveUserFn = createServerFn({ method: "POST" })
   .validator((d: unknown) => UserSchema.parse(d))
   .handler(async ({ data }) => {
     const decoded = await verifyServerSession();
-    
+
     // Security check: only allow updating own profile, unless it is an admin
     if (decoded.uid !== data.id && decoded.admin !== true) {
       throw new Error("Unauthorized: You can only update your own user document.");
     }
-    
+
     // Security check: ignore or throw on attempts to change account email
     if (decoded.admin !== true && data.email !== decoded.email) {
       throw new Error("BadRequest: You cannot change your account email address.");
@@ -437,12 +438,12 @@ export const saveProfileFn = createServerFn({ method: "POST" })
   .validator((d: { uid: string; data: any }) => d)
   .handler(async ({ data }) => {
     const decoded = await verifyServerSession();
-    
+
     // Security check: only allow updating own profile, unless it is an admin
     if (decoded.uid !== data.uid && decoded.admin !== true) {
       throw new Error("Unauthorized: You can only update your own profile.");
     }
-    
+
     // Security check: reject if attempting to change account email
     if (decoded.admin !== true && data.data?.email && data.data.email !== decoded.email) {
       throw new Error("BadRequest: You cannot change your account email address.");
@@ -669,7 +670,7 @@ export const seedDatabaseFn = createServerFn({ method: "POST" })
     if (decoded.admin !== true) {
       throw new Error("Unauthorized: Admin privilege required to seed database.");
     }
-    
+
     const adDb = await getAdminDb();
     if (!adDb) {
       throw new Error("Firebase Admin Firestore is not initialized.");
@@ -812,7 +813,7 @@ export const getClientStreamCredentialsFn = createServerFn({ method: "GET" })
 
     const { StreamChat: NodeStreamChat } = await import("stream-chat");
     const serverClient = NodeStreamChat.getInstance(apiKey, apiSecret);
-    
+
     // Ensure both client and admin users exist in Stream to prevent watch channel failures
     await serverClient.upsertUsers([
       {
@@ -925,6 +926,157 @@ export const submitAssessmentFn = createServerFn({ method: "POST" })
     }
 
     return { result, businessId, reportId };
+  });
+
+// ==================== RAZORPAY PAYMENTS ====================
+
+export const createRazorpayOrderFn = createServerFn({ method: "POST" })
+  .validator((d: { businessId: string; planName: "Basic" | "Plus" | "Pro" }) => d)
+  .handler(async ({ data }) => {
+    const decoded = await verifyServerSession();
+    const db = await getDb();
+
+    // Fetch business and verify ownership
+    const biz = await db.getBusiness(data.businessId);
+    if (!biz) {
+      throw new Error("Business not found.");
+    }
+    const bizUserId = typeof biz.userId === "string" ? biz.userId : biz.userId?.id;
+    if (bizUserId !== decoded.uid && decoded.admin !== true) {
+      throw new Error("Unauthorized: You do not own this business.");
+    }
+
+    // Determine plan pricing in INR Kaise
+    let amountInPaise = 0;
+    if (data.planName === "Basic") {
+      // amountInPaise = 249900; // ₹2,499.00
+      amountInPaise = 200; // ₹2,499.00
+    } else if (data.planName === "Plus") {
+      // amountInPaise = 499900; // ₹4,999.00
+      amountInPaise = 200; // ₹4,999.00
+    } else if (data.planName === "Pro") {
+      amountInPaise = 749900; // ₹7,499.00
+    } else {
+      throw new Error("Invalid plan selection.");
+    }
+
+    const keyId = process.env.VITE_RAZORPAY_KEY_ID!;
+    const keySecret = process.env.RAZORPAY_KEY_SECRET!;
+   
+    const basicAuth = Buffer.from(`${keyId}:${keySecret}`).toString("base64");
+
+    try {
+      const res = await fetch("https://api.razorpay.com/v1/orders", {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${basicAuth}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          amount: amountInPaise,
+          currency: "INR",
+          receipt: `rcpt_${data.businessId.substring(0, 10)}_${Date.now()}`,
+        }),
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        console.error("Razorpay Order API error response:", errText);
+        throw new Error(`Razorpay returned status ${res.status}: ${res.statusText}`);
+      }
+
+      const order = (await res.json()) as { id: string; amount: number; currency: string };
+      return {
+        orderId: order.id,
+        amount: order.amount,
+        currency: order.currency,
+      };
+    } catch (err: any) {
+      console.error("Failed to create Razorpay order:", err);
+      throw new Error(err.message || "Failed to create order on Razorpay");
+    }
+  });
+
+export const verifyRazorpayPaymentFn = createServerFn({ method: "POST" })
+  .validator(
+    (d: {
+      businessId: string;
+      planName: "Basic" | "Plus" | "Pro";
+      razorpayOrderId: string;
+      razorpayPaymentId: string;
+      razorpaySignature: string;
+    }) => d
+  )
+  .handler(async ({ data }) => {
+    const decoded = await verifyServerSession();
+    const db = await getDb();
+
+    // Fetch business and verify ownership
+    const biz = await db.getBusiness(data.businessId);
+    if (!biz) {
+      throw new Error("Business not found.");
+    }
+    const bizUserId = typeof biz.userId === "string" ? biz.userId : biz.userId?.id;
+    if (bizUserId !== decoded.uid && decoded.admin !== true) {
+      throw new Error("Unauthorized: You do not own this business.");
+    }
+
+    // Verify signature using Crypto HMAC-SHA256
+    const keySecret = process.env.RAZORPAY_KEY_SECRET!;
+    const { createHmac } = await import("crypto");
+    const generatedSig = createHmac("sha256", keySecret)
+      .update(`${data.razorpayOrderId}|${data.razorpayPaymentId}`)
+      .digest("hex");
+
+    if (generatedSig !== data.razorpaySignature) {
+      throw new Error("Payment verification failed: Invalid signature.");
+    }
+
+    // Update business document
+    biz.plan = data.planName;
+    biz.paymentStatus = "Paid";
+    biz.updatedAt = new Date();
+    await db.saveBusiness(biz);
+
+    // Save payment record
+    const amountInInr =
+      data.planName === "Basic" ? 2499 : data.planName === "Plus" ? 4999 : 7499;
+
+    const paymentEntry: Payment = {
+      id: data.razorpayPaymentId,
+      userId: decoded.uid,
+      businessId: data.businessId,
+      status: "Paid",
+      amount: amountInInr,
+      currency: "INR",
+      paymentMethod: "Other",
+      gateway: "Razorpay",
+      gatewayInfo: {
+        orderId: data.razorpayOrderId,
+        paymentId: data.razorpayPaymentId,
+        signature: data.razorpaySignature,
+      },
+      purchaseItem: `${data.planName} Plan Subscription`,
+      timestamp: new Date(),
+    };
+
+    await db.savePayments([paymentEntry]);
+
+    // Log Audit Event
+    await db.logAuditEvent(
+      decoded.uid,
+      "subscription_payment_verified",
+      {
+        businessId: data.businessId,
+        planName: data.planName,
+        razorpayOrderId: data.razorpayOrderId,
+        razorpayPaymentId: data.razorpayPaymentId,
+        amount: amountInInr,
+      },
+      decoded.name || decoded.email || "Client"
+    );
+
+    return { success: true, plan: data.planName };
   });
 
 
