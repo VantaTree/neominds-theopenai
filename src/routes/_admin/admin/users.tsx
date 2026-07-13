@@ -2303,8 +2303,8 @@ function UsersPage() {
                   >
                     Type / Industry
                   </label>
-                  <select
-                    value={editBusinessForm.businessType || "Consulting"}
+                  <input
+                    value={editBusinessForm.businessType}
                     onChange={(e) =>
                       setEditBusinessForm({
                         ...editBusinessForm,
@@ -2320,16 +2320,7 @@ function UsersPage() {
                       width: "100%",
                       outline: "none",
                     }}
-                  >
-                    <option>Consulting</option>
-                    <option>E-commerce</option>
-                    <option>Retail</option>
-                    <option>Healthcare</option>
-                    <option>Agency</option>
-                    <option>Real Estate</option>
-                    <option>Technology</option>
-                    <option>Other</option>
-                  </select>
+                  />
                 </div>
 
                 <div>
