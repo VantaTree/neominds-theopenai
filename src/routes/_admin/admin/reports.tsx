@@ -118,7 +118,7 @@ function ReportsPage() {
   const formatDate = (ts: number) => new Date(ts).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });
 
   return (
-    <div className="space-y-6 font-sans text-mm-dark select-none">
+    <div className="space-y-6 font-sans text-mm-dark">
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-mm-orange/10">
           <FileText size={20} className="text-mm-orange" />
@@ -136,7 +136,7 @@ function ReportsPage() {
           { label: "Processing", value: reports.filter(r => r.status === "processing").length, color: "var(--color-mm-blue)" },
           { label: "Failed", value: reports.filter(r => r.status === "failed").length, color: "var(--color-mm-red)" },
         ].map(s => (
-          <div key={s.label} className="bg-white border border-mm-border rounded-[24px] p-5 shadow-[0_4px_20px_rgba(0,0,0,0.015)] flex flex-col justify-between select-none">
+          <div key={s.label} className="bg-white border border-mm-border rounded-[24px] p-5 shadow-[0_4px_20px_rgba(0,0,0,0.015)] flex flex-col justify-between">
             <div className="text-xs font-bold text-mm-gray uppercase tracking-wider truncate">{s.label}</div>
             <div className="text-2xl font-black text-mm-dark tracking-tight mt-2 truncate" style={{ color: s.color }}>{s.value}</div>
           </div>
@@ -156,7 +156,7 @@ function ReportsPage() {
         <div className="relative">
           <button 
             onClick={() => setIsStatusOpen(v => !v)} 
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold border border-mm-border bg-white text-mm-dark hover:bg-mm-subtle/50 transition-all cursor-pointer select-none"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold border border-mm-border bg-white text-mm-dark hover:bg-mm-subtle/50 transition-all cursor-pointer"
           >
             {statusFilter} <ChevronDown size={14} className="text-mm-gray" />
           </button>
@@ -191,7 +191,7 @@ function ReportsPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-mm-border/60 bg-mm-subtle/20 select-none">
+              <tr className="border-b border-mm-border/60 bg-mm-subtle/20">
                 {["Title", "User ID", "Status", "Tokens Used", "Duration", "Created At", "Actions"].map(h => (
                   <th key={h} className="text-left font-extrabold px-4 py-3 whitespace-nowrap text-xs text-mm-dark uppercase tracking-wider">{h}</th>
                 ))}
