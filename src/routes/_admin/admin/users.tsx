@@ -71,7 +71,8 @@ interface MappedUser {
 }
 
 function UsersPage() {
-  const { users: initialUsers, businesses: initialBusinesses } = Route.useLoaderData();
+  const { users: initialUsers, businesses: initialBusinesses } =
+    Route.useLoaderData();
   const [users, setUsers] = useState<DBUser[]>(initialUsers);
   const [businesses, setBusinesses] = useState<DBBusiness[]>(initialBusinesses);
 
@@ -92,7 +93,12 @@ function UsersPage() {
     if (file && editingUser) {
       setIsUploadingUserAvatar(true);
       try {
-        const url = await uploadFileToStorage(file, "users", editingUser.id, "profileImg");
+        const url = await uploadFileToStorage(
+          file,
+          "users",
+          editingUser.id,
+          "profileImg",
+        );
         setEditForm((prev: any) => ({ ...prev, image: url }));
       } catch (err: any) {
         console.error("Failed to upload avatar:", err);
@@ -103,15 +109,21 @@ function UsersPage() {
     }
   };
 
-  const [expandedUserIds, setExpandedUserIds] = useState<Set<string>>(new Set());
+  const [expandedUserIds, setExpandedUserIds] = useState<Set<string>>(
+    new Set(),
+  );
   const [selectedUser, setSelectedUser] = useState<MappedUser | null>(null);
   const [activeTab, setActiveTab] = useState("Profile");
   const [roleTab, setRoleTab] = useState<"clients" | "admins">("clients");
 
   const [editingUser, setEditingUser] = useState<MappedUser | null>(null);
-  const [editingBusiness, setEditingBusiness] = useState<DBBusiness | null>(null);
+  const [editingBusiness, setEditingBusiness] = useState<DBBusiness | null>(
+    null,
+  );
   const [editBusinessForm, setEditBusinessForm] = useState<any>({});
-  const [editBusinessErrors, setEditBusinessErrors] = useState<Record<string, string>>({});
+  const [editBusinessErrors, setEditBusinessErrors] = useState<
+    Record<string, string>
+  >({});
   const [isSavingBusiness, setIsSavingBusiness] = useState(false);
   const businessFileInputRef = useRef<HTMLInputElement>(null);
   const [isUploadingBusinessLogo, setIsUploadingBusinessLogo] = useState(false);
@@ -120,12 +132,19 @@ function UsersPage() {
     businessFileInputRef.current?.click();
   };
 
-  const handleBusinessFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleBusinessFileChange = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = e.target.files?.[0];
     if (file && editingBusiness) {
       setIsUploadingBusinessLogo(true);
       try {
-        const url = await uploadFileToStorage(file, "businesses", editingBusiness.id, "businessImg");
+        const url = await uploadFileToStorage(
+          file,
+          "businesses",
+          editingBusiness.id,
+          "businessImg",
+        );
         setEditBusinessForm((prev: any) => ({ ...prev, image: url }));
       } catch (err: any) {
         console.error("Failed to upload logo:", err);
@@ -143,20 +162,9 @@ function UsersPage() {
   };
   const [editErrors, setEditErrors] = useState<Record<string, string>>({});
   const [editForm, setEditForm] = useState<any>({});
-  const [toast, setToast] = useState<{ title: string; sub?: string } | null>(null);
-
-  const [isAddUserOpen, setIsAddUserOpen] = useState(false);
-  const [addForm, setAddForm] = useState({
-    name: "",
-    business: "",
-    email: "",
-    phone: "",
-    password: "",
-    confirmPassword: "",
-  });
-  const [addErrors, setAddErrors] = useState<Record<string, string>>({});
-  const [confirmClose, setConfirmClose] = useState(false);
-  const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const [toast, setToast] = useState<{ title: string; sub?: string } | null>(
+    null,
+  );
 
   const [searchQuery, setSearchQuery] = useState("");
   const [planFilter, setPlanFilter] = useState("All Plans");
@@ -192,7 +200,8 @@ function UsersPage() {
   const mappedUsers = useMemo<MappedUser[]>(() => {
     return users.map((u) => {
       const userBizs = businesses.filter(
-        (b) => (typeof b.userId === "string" ? b.userId : b.userId?.id) === u.id
+        (b) =>
+          (typeof b.userId === "string" ? b.userId : b.userId?.id) === u.id,
       );
       const mainBiz = userBizs[0];
       const plan = mainBiz ? `${mainBiz.plan || "Basic"} Plan` : "Basic Plan";
@@ -223,8 +232,11 @@ function UsersPage() {
 
   const filteredUsers = useMemo(() => {
     return mappedUsers.filter((u) => {
-      const rawUser = users.find(ru => ru.id === u.id);
-      const isRoleMatch = roleTab === "admins" ? (rawUser?.role === "admin") : (rawUser?.role !== "admin");
+      const rawUser = users.find((ru) => ru.id === u.id);
+      const isRoleMatch =
+        roleTab === "admins"
+          ? rawUser?.role === "admin"
+          : rawUser?.role !== "admin";
       if (!isRoleMatch) return false;
 
       const normalizedUserPlan = u.plan.endsWith(" Plan")
@@ -252,7 +264,10 @@ function UsersPage() {
     return filteredUsers.slice(start, start + itemsPerPage);
   }, [filteredUsers, currentPage]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / itemsPerPage));
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredUsers.length / itemsPerPage),
+  );
 
   useEffect(() => {
     setCurrentPage(1);
@@ -287,89 +302,6 @@ function UsersPage() {
   const hasActiveFilters =
     searchQuery || planFilter !== "All Plans" || statusFilter !== "All Status";
 
-  const handleAddSubmit = () => {
-    const errs: Record<string, string> = {};
-    if (!addForm.name.trim()) errs.name = "Full name is required";
-    if (!addForm.business.trim()) errs.business = "Business name is required";
-    if (!addForm.email.trim()) errs.email = "Email address is required";
-    else if (!/^\S+@\S+\.\S+$/.test(addForm.email))
-      errs.email = "Please enter a valid email";
-    else if (users.some((u) => u.email.toLowerCase() === addForm.email.toLowerCase()))
-      errs.email = "This email is already registered";
-
-    if (!addForm.phone.trim()) errs.phone = "Phone number is required";
-    if (!addForm.password) errs.password = "Password is required";
-    else if (addForm.password.length < 8)
-      errs.password = "Password must be at least 8 characters";
-    if (!addForm.confirmPassword)
-      errs.confirmPassword = "Please confirm your password";
-    else if (addForm.password !== addForm.confirmPassword)
-      errs.confirmPassword = "Passwords do not match";
-
-    if (Object.keys(errs).length > 0) {
-      setAddErrors(errs);
-      return;
-    }
-
-    setIsCreatingUser(true);
-    const userId = `usr_${Date.now()}`;
-    const newUserSchema: DBUser = {
-      id: userId,
-      fullName: addForm.name,
-      email: addForm.email,
-      phone: addForm.phone,
-      role: "client",
-      status: "Active",
-      businessCount: 1,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    const newBusinessSchema: DBBusiness = {
-      id: `biz_${userId}`,
-      userId: userId,
-      plan: "Basic",
-      addons: [],
-      businessName: addForm.business,
-      businessType: "Consulting",
-      contactEmail: addForm.email,
-      contactPhone: addForm.phone,
-      websiteUrl: "",
-      paymentStatus: "Paid",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    Promise.all([
-      saveUserFn({ data: newUserSchema }),
-      saveBusinessFn({ data: newBusinessSchema }),
-    ]).then(() => {
-      setIsCreatingUser(false);
-      setIsAddUserOpen(false);
-      setUsers((prev) => [newUserSchema, ...prev]);
-      setBusinesses((prev) => [newBusinessSchema, ...prev]);
-      setAddForm({
-        name: "",
-        business: "",
-        email: "",
-        phone: "",
-        password: "",
-        confirmPassword: "",
-      });
-      setToast({
-        title: "✓ User created successfully!",
-        sub: `${addForm.name} has been added to the platform.`,
-      });
-    });
-  };
-
-  const handleAddClose = () => {
-    if (Object.values(addForm).some((v) => v.trim() !== "")) {
-      setConfirmClose(true);
-    } else {
-      setIsAddUserOpen(false);
-    }
-  };
-
   const handleEditClick = (u: MappedUser) => {
     setEditingUser(u);
     const normalizedPlan = u.plan.endsWith(" Plan")
@@ -378,8 +310,6 @@ function UsersPage() {
     setEditForm({
       ...u,
       plan: normalizedPlan,
-      newPassword: "",
-      confirmPassword: "",
     });
     setEditErrors({});
   };
@@ -418,7 +348,8 @@ function UsersPage() {
     };
 
     const matchedBiz = businesses.find(
-      (b) => (typeof b.userId === "string" ? b.userId : b.userId?.id) === userId
+      (b) =>
+        (typeof b.userId === "string" ? b.userId : b.userId?.id) === userId,
     );
     const bizId = matchedBiz ? matchedBiz.id : `biz_${userId}`;
     const parsedPlan = editForm.plan.replace(" Plan", "") as any;
@@ -441,9 +372,11 @@ function UsersPage() {
       saveUserFn({ data: userSchemaData }),
       saveBusinessFn({ data: businessSchemaData }),
     ]).then(() => {
-      setUsers((prev) => prev.map((u) => (u.id === userId ? userSchemaData : u)));
+      setUsers((prev) =>
+        prev.map((u) => (u.id === userId ? userSchemaData : u)),
+      );
       setBusinesses((prev) =>
-        prev.map((b) => (b.id === bizId ? businessSchemaData : b))
+        prev.map((b) => (b.id === bizId ? businessSchemaData : b)),
       );
       if (selectedUser?.id === userId) {
         setSelectedUser({
@@ -470,7 +403,10 @@ function UsersPage() {
     if (!editBusinessForm.businessName?.trim()) {
       errs.businessName = "Business name is required";
     }
-    if (editBusinessForm.contactEmail && !/^\S+@\S+\.\S+$/.test(editBusinessForm.contactEmail)) {
+    if (
+      editBusinessForm.contactEmail &&
+      !/^\S+@\S+\.\S+$/.test(editBusinessForm.contactEmail)
+    ) {
       errs.contactEmail = "Please enter a valid email";
     }
 
@@ -498,14 +434,16 @@ function UsersPage() {
         setIsSavingBusiness(false);
         setEditingBusiness(null);
         setBusinesses((prev) =>
-          prev.map((b) => (b.id === updatedBiz.id ? updatedBiz : b))
+          prev.map((b) => (b.id === updatedBiz.id ? updatedBiz : b)),
         );
         if (selectedUser) {
           const updatedBizs = selectedUser.associatedBusinesses.map((b) =>
-            b.id === updatedBiz.id ? updatedBiz : b
+            b.id === updatedBiz.id ? updatedBiz : b,
           );
           const primaryBiz = updatedBizs[0];
-          const newPlan = primaryBiz ? `${primaryBiz.plan || "Basic"} Plan` : "Basic Plan";
+          const newPlan = primaryBiz
+            ? `${primaryBiz.plan || "Basic"} Plan`
+            : "Basic Plan";
           setSelectedUser({
             ...selectedUser,
             business: primaryBiz ? primaryBiz.businessName : "No business",
@@ -529,7 +467,11 @@ function UsersPage() {
       deleteUserFn({ data: userId }).then(() => {
         setUsers((prev) => prev.filter((u) => u.id !== userId));
         setBusinesses((prev) =>
-          prev.filter((b) => (typeof b.userId === "string" ? b.userId : b.userId?.id) !== userId)
+          prev.filter(
+            (b) =>
+              (typeof b.userId === "string" ? b.userId : b.userId?.id) !==
+              userId,
+          ),
         );
         if (selectedUser?.id === userId) {
           setSelectedUser(null);
@@ -566,7 +508,7 @@ function UsersPage() {
     if (!selectedUser) return;
     if (
       window.confirm(
-        `Are you sure you want to send a password reset link to ${selectedUser.email}?`
+        `Are you sure you want to send a password reset link to ${selectedUser.email}?`,
       )
     ) {
       setToast({
@@ -580,7 +522,8 @@ function UsersPage() {
     if (!selectedUser) return;
     const userObj = users.find((u) => u.id === selectedUser.id);
     if (!userObj) return;
-    const isSuspended = userObj.status === "Inactive" || userObj.status === "Suspended";
+    const isSuspended =
+      userObj.status === "Inactive" || userObj.status === "Suspended";
     const actionText = isSuspended ? "reactivate" : "suspend";
     const confirmMsg = `Are you sure you want to ${actionText} ${selectedUser.name}'s account?`;
 
@@ -593,11 +536,15 @@ function UsersPage() {
       };
       saveUserFn({ data: updatedUser }).then(() => {
         setUsers((list) =>
-          list.map((u) => (u.id === selectedUser.id ? updatedUser : u))
+          list.map((u) => (u.id === selectedUser.id ? updatedUser : u)),
         );
-        setSelectedUser((prev) => (prev ? { ...prev, status: newStatus } : null));
+        setSelectedUser((prev) =>
+          prev ? { ...prev, status: newStatus } : null,
+        );
         setToast({
-          title: isSuspended ? "✓ Account Reactivated!" : "✓ Account Suspended!",
+          title: isSuspended
+            ? "✓ Account Reactivated!"
+            : "✓ Account Suspended!",
           sub: `${selectedUser.name}'s account status has been updated to ${newStatus}.`,
         });
       });
@@ -635,7 +582,8 @@ function UsersPage() {
             User Management
           </h1>
           <p className="text-sm mt-1" style={{ color: "var(--color-mm-gray)" }}>
-            Review and manage platform users and their associated business ventures.
+            Review and manage platform users and their associated business
+            ventures.
           </p>
         </div>
 
@@ -672,7 +620,10 @@ function UsersPage() {
           >
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-4">
-                {selectedUser.image && selectedUser.image.trim() !== "" && selectedUser.image !== "undefined" && selectedUser.image !== "null" ? (
+                {selectedUser.image &&
+                selectedUser.image.trim() !== "" &&
+                selectedUser.image !== "undefined" &&
+                selectedUser.image !== "null" ? (
                   <img
                     src={selectedUser.image}
                     alt={selectedUser.name}
@@ -841,7 +792,9 @@ function UsersPage() {
                       >
                         Current Plan
                       </span>
-                      <PlanBadge plan={selectedUser.plan.replace(" Plan", "")} />
+                      <PlanBadge
+                        plan={selectedUser.plan.replace(" Plan", "")}
+                      />
                     </div>
                     <div
                       className="h-px my-3"
@@ -981,21 +934,25 @@ function UsersPage() {
                   className="w-full text-left p-5 rounded-xl border hover:opacity-80 transition-opacity cursor-pointer"
                   style={{
                     borderColor:
-                      selectedUser.status === "Inactive" || selectedUser.status === "Suspended"
+                      selectedUser.status === "Inactive" ||
+                      selectedUser.status === "Suspended"
                         ? "var(--color-mm-green)"
                         : "var(--color-mm-red)",
                     background:
-                      selectedUser.status === "Inactive" || selectedUser.status === "Suspended"
+                      selectedUser.status === "Inactive" ||
+                      selectedUser.status === "Suspended"
                         ? "rgba(92, 177, 62, 0.1)"
                         : "rgba(224, 86, 36, 0.1)",
                     color:
-                      selectedUser.status === "Inactive" || selectedUser.status === "Suspended"
+                      selectedUser.status === "Inactive" ||
+                      selectedUser.status === "Suspended"
                         ? "var(--color-mm-green)"
                         : "var(--color-mm-red)",
                     fontWeight: 600,
                   }}
                 >
-                  {selectedUser.status === "Inactive" || selectedUser.status === "Suspended"
+                  {selectedUser.status === "Inactive" ||
+                  selectedUser.status === "Suspended"
                     ? "Reactivate Account"
                     : "Suspend Account"}
                 </button>
@@ -1015,21 +972,33 @@ function UsersPage() {
               onClick={() => setRoleTab("clients")}
               className="pb-3 text-sm font-semibold px-2 transition-all cursor-pointer"
               style={{
-                color: roleTab === "clients" ? "var(--color-mm-orange)" : "var(--color-mm-gray)",
-                borderBottom: roleTab === "clients" ? "2px solid var(--color-mm-orange)" : "2px solid transparent",
+                color:
+                  roleTab === "clients"
+                    ? "var(--color-mm-orange)"
+                    : "var(--color-mm-gray)",
+                borderBottom:
+                  roleTab === "clients"
+                    ? "2px solid var(--color-mm-orange)"
+                    : "2px solid transparent",
               }}
             >
-              Clients ({users.filter(u => u.role !== "admin").length})
+              Clients ({users.filter((u) => u.role !== "admin").length})
             </button>
             <button
               onClick={() => setRoleTab("admins")}
               className="pb-3 text-sm font-semibold px-2 transition-all cursor-pointer"
               style={{
-                color: roleTab === "admins" ? "var(--color-mm-orange)" : "var(--color-mm-gray)",
-                borderBottom: roleTab === "admins" ? "2px solid var(--color-mm-orange)" : "2px solid transparent",
+                color:
+                  roleTab === "admins"
+                    ? "var(--color-mm-orange)"
+                    : "var(--color-mm-gray)",
+                borderBottom:
+                  roleTab === "admins"
+                    ? "2px solid var(--color-mm-orange)"
+                    : "2px solid transparent",
               }}
             >
-              Administrators ({users.filter(u => u.role === "admin").length})
+              Administrators ({users.filter((u) => u.role === "admin").length})
             </button>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1386,12 +1355,6 @@ function UsersPage() {
                   Clear all filters
                 </button>
               )}
-              <button
-                onClick={() => setIsAddUserOpen(true)}
-                className="px-4 py-2 bg-mm-orange hover:bg-mm-orange/95 text-white font-semibold rounded-xl transition-colors inline-flex items-center gap-2 cursor-pointer"
-              >
-                <Plus size={16} /> Add User
-              </button>
             </div>
           </div>
 
@@ -1408,10 +1371,7 @@ function UsersPage() {
                       "No. of Businesses",
                       "Actions",
                     ].map((h) => (
-                      <th
-                        key={h}
-                        className="text-left font-semibold px-5 py-3"
-                      >
+                      <th key={h} className="text-left font-semibold px-5 py-3">
                         {h}
                       </th>
                     ))}
@@ -1426,14 +1386,18 @@ function UsersPage() {
                           <tr
                             className="transition-colors hover:bg-mm-subtle cursor-pointer"
                             onClick={() => toggleUserExpanded(u.id)}
-                            style={{ borderTop: "1px solid var(--color-mm-border)" }}
+                            style={{
+                              borderTop: "1px solid var(--color-mm-border)",
+                            }}
                           >
                             <td className="pl-4 py-4 text-center">
                               <span className="text-mm-gray hover:text-mm-orange transition-colors">
                                 <ChevronDown
                                   size={18}
                                   style={{
-                                    transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
+                                    transform: isExpanded
+                                      ? "rotate(180deg)"
+                                      : "rotate(0deg)",
                                     transition: "transform 150ms ease",
                                   }}
                                 />
@@ -1441,7 +1405,10 @@ function UsersPage() {
                             </td>
                             <td className="px-5 py-4">
                               <div className="flex items-center gap-3">
-                                {u.image && u.image.trim() !== "" && u.image !== "undefined" && u.image !== "null" ? (
+                                {u.image &&
+                                u.image.trim() !== "" &&
+                                u.image !== "undefined" &&
+                                u.image !== "null" ? (
                                   <img
                                     src={u.image}
                                     alt={u.name}
@@ -1452,9 +1419,7 @@ function UsersPage() {
                                   <Avatar name={u.name} size={36} />
                                 )}
                                 <div>
-                                  <div
-                                    className="font-semibold text-mm-dark"
-                                  >
+                                  <div className="font-semibold text-mm-dark">
                                     {u.name}
                                   </div>
                                   <a
@@ -1467,7 +1432,10 @@ function UsersPage() {
                                 </div>
                               </div>
                             </td>
-                            <td className="px-5 py-4 text-mm-gray" onClick={(e) => e.stopPropagation()}>
+                            <td
+                              className="px-5 py-4 text-mm-gray"
+                              onClick={(e) => e.stopPropagation()}
+                            >
                               {u.phone ? (
                                 <a
                                   href={`tel:${u.phone}`}
@@ -1483,9 +1451,15 @@ function UsersPage() {
                               <StatusBadge status={u.status} />
                             </td>
                             <td className="px-5 py-4 font-semibold text-mm-dark">
-                              {u.associatedBusinesses.length} {u.associatedBusinesses.length === 1 ? "Business" : "Businesses"}
+                              {u.associatedBusinesses.length}{" "}
+                              {u.associatedBusinesses.length === 1
+                                ? "Business"
+                                : "Businesses"}
                             </td>
-                            <td className="px-5 py-4" onClick={(e) => e.stopPropagation()}>
+                            <td
+                              className="px-5 py-4"
+                              onClick={(e) => e.stopPropagation()}
+                            >
                               <div className="flex items-center gap-3">
                                 <button
                                   onClick={() => {
@@ -1522,65 +1496,118 @@ function UsersPage() {
                           </tr>
                           {isExpanded && (
                             <tr>
-                              <td colSpan={6} className="bg-[#FAF9F6] px-10 py-5" style={{ borderTop: "1px solid var(--color-mm-border)" }}>
+                              <td
+                                colSpan={6}
+                                className="bg-[#FAF9F6] px-10 py-5"
+                                style={{
+                                  borderTop: "1px solid var(--color-mm-border)",
+                                }}
+                              >
                                 <div className="space-y-3">
-                                  <h4 className="text-sm font-bold text-mm-dark">Associated Businesses</h4>
+                                  <h4 className="text-sm font-bold text-mm-dark">
+                                    Associated Businesses
+                                  </h4>
                                   {u.associatedBusinesses.length === 0 ? (
-                                    <div className="text-xs text-mm-gray">No business accounts associated with this user.</div>
+                                    <div className="text-xs text-mm-gray">
+                                      No business accounts associated with this
+                                      user.
+                                    </div>
                                   ) : (
                                     <div className="overflow-x-auto">
                                       <table className="w-full text-xs min-w-[700px]">
                                         <thead>
                                           <tr className="text-mm-gray border-b border-mm-border pb-2 text-left font-semibold">
-                                            <th className="pb-2 font-semibold">BUSINESS NAME</th>
-                                            <th className="pb-2 font-semibold">TYPE / INDUSTRY</th>
-                                            <th className="pb-2 font-semibold">WEBSITE</th>
-                                            <th className="pb-2 font-semibold">CONTACT PHONE</th>
-                                            <th className="pb-2 font-semibold">PLAN</th>
-                                            <th className="pb-2 font-semibold">PAYMENT STATUS</th>
-                                            <th className="pb-2 font-semibold text-right">ACTIONS</th>
+                                            <th className="pb-2 font-semibold">
+                                              BUSINESS NAME
+                                            </th>
+                                            <th className="pb-2 font-semibold">
+                                              TYPE / INDUSTRY
+                                            </th>
+                                            <th className="pb-2 font-semibold">
+                                              WEBSITE
+                                            </th>
+                                            <th className="pb-2 font-semibold">
+                                              CONTACT PHONE
+                                            </th>
+                                            <th className="pb-2 font-semibold">
+                                              PLAN
+                                            </th>
+                                            <th className="pb-2 font-semibold">
+                                              PAYMENT STATUS
+                                            </th>
+                                            <th className="pb-2 font-semibold text-right">
+                                              ACTIONS
+                                            </th>
                                           </tr>
                                         </thead>
                                         <tbody>
                                           {u.associatedBusinesses.map((b) => (
-                                            <tr key={b.id} className="text-mm-dark border-b border-mm-subtle last:border-0">
+                                            <tr
+                                              key={b.id}
+                                              className="text-mm-dark border-b border-mm-subtle last:border-0"
+                                            >
                                               <td className="py-2.5 font-medium">
                                                 <div className="flex items-center gap-2.5">
-                                                  {b.image && b.image.trim() !== "" && b.image !== "undefined" && b.image !== "null" ? (
+                                                  {b.image &&
+                                                  b.image.trim() !== "" &&
+                                                  b.image !== "undefined" &&
+                                                  b.image !== "null" ? (
                                                     <img
                                                       src={b.image}
                                                       alt={b.businessName}
                                                       className="rounded-full object-cover aspect-square shrink-0"
-                                                      style={{ width: 32, height: 32 }}
+                                                      style={{
+                                                        width: 32,
+                                                        height: 32,
+                                                      }}
                                                     />
                                                   ) : (
-                                                    <Avatar name={b.businessName} size={32} />
+                                                    <Avatar
+                                                      name={b.businessName}
+                                                      size={32}
+                                                    />
                                                   )}
                                                   <div>
-                                                    <div className="font-semibold text-mm-dark">{b.businessName}</div>
+                                                    <div className="font-semibold text-mm-dark">
+                                                      {b.businessName}
+                                                    </div>
                                                     {b.contactEmail ? (
                                                       <a
                                                         href={`mailto:${b.contactEmail}`}
                                                         className="text-[10px] text-mm-gray hover:text-mm-orange hover:underline block"
-                                                        onClick={(e) => e.stopPropagation()}
+                                                        onClick={(e) =>
+                                                          e.stopPropagation()
+                                                        }
                                                       >
                                                         {b.contactEmail}
                                                       </a>
                                                     ) : (
-                                                      <div className="text-[10px] text-mm-gray">No email</div>
+                                                      <div className="text-[10px] text-mm-gray">
+                                                        No email
+                                                      </div>
                                                     )}
                                                   </div>
                                                 </div>
                                               </td>
-                                              <td className="py-2.5 text-mm-gray">{b.businessType || "Consulting"}</td>
+                                              <td className="py-2.5 text-mm-gray">
+                                                {b.businessType || "Consulting"}
+                                              </td>
                                               <td className="py-2.5 text-mm-gray">
                                                 {b.websiteUrl ? (
                                                   <a
-                                                    href={b.websiteUrl.startsWith("http") ? b.websiteUrl : `https://${b.websiteUrl}`}
+                                                    href={
+                                                      b.websiteUrl.startsWith(
+                                                        "http",
+                                                      )
+                                                        ? b.websiteUrl
+                                                        : `https://${b.websiteUrl}`
+                                                    }
                                                     target="_blank"
                                                     rel="noopener noreferrer"
                                                     className="text-mm-orange hover:underline"
-                                                    onClick={(e) => e.stopPropagation()}
+                                                    onClick={(e) =>
+                                                      e.stopPropagation()
+                                                    }
                                                   >
                                                     {b.websiteUrl}
                                                   </a>
@@ -1588,7 +1615,12 @@ function UsersPage() {
                                                   "N/A"
                                                 )}
                                               </td>
-                                              <td className="py-2.5 text-mm-gray" onClick={(e) => e.stopPropagation()}>
+                                              <td
+                                                className="py-2.5 text-mm-gray"
+                                                onClick={(e) =>
+                                                  e.stopPropagation()
+                                                }
+                                              >
                                                 {b.contactPhone ? (
                                                   <a
                                                     href={`tel:${b.contactPhone}`}
@@ -1604,14 +1636,20 @@ function UsersPage() {
                                                 <PlanBadge plan={b.plan} />
                                               </td>
                                               <td className="py-2.5">
-                                                <StatusBadge status={b.paymentStatus} />
+                                                <StatusBadge
+                                                  status={b.paymentStatus}
+                                                />
                                               </td>
                                               <td className="py-2.5 text-right">
                                                 <div className="flex items-center justify-end gap-2">
                                                   <Link
                                                     to="/admin/chat"
                                                     search={{
-                                                      user: typeof b.userId === "string" ? b.userId : b.userId?.id || "",
+                                                      user:
+                                                        typeof b.userId ===
+                                                        "string"
+                                                          ? b.userId
+                                                          : b.userId?.id || "",
                                                       business: b.id,
                                                     }}
                                                     className="hover:text-mm-orange transition-colors cursor-pointer inline-flex items-center"
@@ -1619,16 +1657,24 @@ function UsersPage() {
                                                   >
                                                     <MessageSquare
                                                       size={14}
-                                                      style={{ color: "var(--color-mm-gray)" }}
+                                                      style={{
+                                                        color:
+                                                          "var(--color-mm-gray)",
+                                                      }}
                                                     />
                                                   </Link>
                                                   <button
-                                                    onClick={() => handleEditBusinessClick(b)}
+                                                    onClick={() =>
+                                                      handleEditBusinessClick(b)
+                                                    }
                                                     className="hover:text-mm-orange transition-colors cursor-pointer inline-flex items-center"
                                                   >
                                                     <Edit2
                                                       size={14}
-                                                      style={{ color: "var(--color-mm-gray)" }}
+                                                      style={{
+                                                        color:
+                                                          "var(--color-mm-gray)",
+                                                      }}
                                                     />
                                                   </button>
                                                 </div>
@@ -1733,7 +1779,7 @@ function UsersPage() {
                     >
                       {p}
                     </button>
-                  )
+                  ),
                 )}
                 <button
                   onClick={() =>
@@ -1755,244 +1801,6 @@ function UsersPage() {
             </div>
           </div>
         </>
-      )}
-
-      {/* ── ADD USER MODAL ── */}
-      {isAddUserOpen && (
-        <div
-          className="fixed inset-0 z-100 flex items-center justify-center p-4 transition-opacity duration-300"
-          style={{ background: "rgba(0,0,0,0.2)", backdropFilter: "blur(4px)" }}
-          onClick={handleAddClose}
-        >
-          <div
-            className="w-full relative transition-all duration-300"
-            style={{
-              background: "white",
-              borderRadius: "24px",
-              border: "1px solid var(--color-mm-border)",
-              maxWidth: "600px",
-              boxShadow: "0 20px 60px rgba(0,0,0,0.15)",
-              transform: "translateY(0)",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div
-              className="p-6 border-b flex justify-between items-center"
-              style={{ borderColor: "var(--color-mm-border)" }}
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center"
-                  style={{ background: "rgba(224, 86, 36, 0.1)" }}
-                >
-                  <Plus size={20} style={{ color: "var(--color-mm-orange)" }} />
-                </div>
-                <h2
-                  className="text-xl font-bold"
-                  style={{ color: "var(--color-mm-dark)" }}
-                >
-                  Add New User
-                </h2>
-              </div>
-              <button onClick={handleAddClose} className="hover:opacity-70 cursor-pointer">
-                <X size={20} style={{ color: "var(--color-mm-gray)" }} />
-              </button>
-            </div>
-
-            {confirmClose && (
-              <div
-                className="m-6 p-4 rounded-xl border flex flex-col gap-3"
-                style={{
-                  background: "rgba(224, 86, 36, 0.1)",
-                  borderColor: "var(--color-mm-orange)",
-                }}
-              >
-                <div>
-                  <div
-                    className="font-semibold text-[14px]"
-                    style={{ color: "var(--color-mm-dark)" }}
-                  >
-                    Discard changes?
-                  </div>
-                  <div
-                    className="text-[12px]"
-                    style={{ color: "var(--color-mm-gray)" }}
-                  >
-                    You have unsaved changes that will be lost.
-                  </div>
-                </div>
-                <div className="flex gap-2 justify-end">
-                  <button
-                    onClick={() => setConfirmClose(false)}
-                    className="text-xs font-semibold px-3 py-1.5 rounded-lg hover:opacity-80 transition-opacity cursor-pointer"
-                    style={{
-                      color: "var(--color-mm-gray)",
-                      background: "white",
-                      border: "1px solid var(--color-mm-border)",
-                    }}
-                  >
-                    Keep Editing
-                  </button>
-                  <button
-                    onClick={() => {
-                      setConfirmClose(false);
-                      setIsAddUserOpen(false);
-                    }}
-                    className="text-xs font-semibold px-3 py-1.5 rounded-lg text-white hover:opacity-90 transition-opacity cursor-pointer"
-                    style={{ background: "var(--color-mm-red)" }}
-                  >
-                    Discard
-                  </button>
-                </div>
-              </div>
-            )}
-
-            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
-              {[
-                {
-                  label: "Full Name",
-                  key: "name",
-                  placeholder: "e.g. John Doe",
-                },
-                {
-                  label: "Business Name",
-                  key: "business",
-                  placeholder: "Business Inc.",
-                },
-                {
-                  label: "Email Address",
-                  key: "email",
-                  placeholder: "john@example.com",
-                },
-                {
-                  label: "Phone Number",
-                  key: "phone",
-                  placeholder: "+1 (555) 000-0000",
-                },
-                {
-                  label: "Password",
-                  key: "password",
-                  placeholder: "Min. 8 characters",
-                  type: "password",
-                },
-                {
-                  label: "Confirm Password",
-                  key: "confirmPassword",
-                  placeholder: "Confirm password",
-                  type: "password",
-                },
-              ].map((f) => (
-                <div key={f.key} className="space-y-1.5">
-                  <label
-                    className="text-[13px] font-semibold block"
-                    style={{ color: "var(--color-mm-gray)" }}
-                  >
-                    {f.label}
-                  </label>
-                  <input
-                    type={f.type || "text"}
-                    value={(addForm as any)[f.key]}
-                    onChange={(e) =>
-                      setAddForm({ ...addForm, [f.key]: e.target.value })
-                    }
-                    className="w-full rounded-xl px-3.5 py-2.5 text-sm outline-none transition-colors"
-                    placeholder={f.placeholder}
-                    style={{
-                      background: "white",
-                      border: addErrors[f.key]
-                        ? "1px solid var(--color-mm-red)"
-                        : "1px solid var(--color-mm-border)",
-                      color: "var(--color-mm-dark)",
-                    }}
-                    onFocus={(e) => {
-                      if (addErrors[f.key]) {
-                        const newErrs = { ...addErrors };
-                        delete newErrs[f.key];
-                        setAddErrors(newErrs);
-                      }
-                      e.target.style.borderColor = addErrors[f.key]
-                        ? "var(--color-mm-red)"
-                        : "var(--color-mm-orange)";
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = addErrors[f.key]
-                        ? "var(--color-mm-red)"
-                        : "var(--color-mm-border)";
-                    }}
-                  />
-                  {addErrors[f.key] && (
-                    <div
-                      style={{
-                        color: "var(--color-mm-red)",
-                        fontSize: "12px",
-                        marginTop: "4px",
-                      }}
-                    >
-                      {addErrors[f.key]}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-            <div
-              className="p-6 border-t flex items-center justify-end gap-3"
-              style={{
-                borderColor: "var(--color-mm-border)",
-                background: "white",
-                borderBottomLeftRadius: "24px",
-                borderBottomRightRadius: "24px",
-              }}
-            >
-              <button
-                onClick={handleAddClose}
-                className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors hover:opacity-80 cursor-pointer"
-                style={{
-                  background: "white",
-                  border: "1px solid var(--color-mm-border)",
-                  color: "var(--color-mm-gray)",
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAddSubmit}
-                disabled={isCreatingUser}
-                className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer"
-                style={{
-                  background: "var(--color-mm-orange)",
-                  color: "white",
-                  cursor: isCreatingUser ? "not-allowed" : "pointer",
-                  opacity: isCreatingUser ? 0.7 : 1,
-                  minWidth: "120px",
-                }}
-              >
-                {isCreatingUser && (
-                  <svg
-                    className="animate-spin h-4 w-4 text-white"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
-                )}
-                {isCreatingUser ? "Creating User..." : "Add User"}
-              </button>
-            </div>
-          </div>
-        </div>
       )}
 
       {/* ── EDIT USER MODAL ── */}
@@ -2045,8 +1853,8 @@ function UsersPage() {
             </div>
 
             <div className="flex flex-col items-center mb-6">
-              <div 
-                className="relative group cursor-pointer" 
+              <div
+                className="relative group cursor-pointer"
                 onClick={handleAvatarClick}
                 style={{
                   width: "96px",
@@ -2064,12 +1872,19 @@ function UsersPage() {
                   <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
                     <Loader2 className="w-6 h-6 text-mm-orange animate-spin" />
                   </div>
-                ) : editForm.image && editForm.image.trim() !== "" && editForm.image !== "undefined" && editForm.image !== "null" ? (
-                  <img src={editForm.image} alt="Profile" className="w-full h-full object-cover aspect-square" />
+                ) : editForm.image &&
+                  editForm.image.trim() !== "" &&
+                  editForm.image !== "undefined" &&
+                  editForm.image !== "null" ? (
+                  <img
+                    src={editForm.image}
+                    alt="Profile"
+                    className="w-full h-full object-cover aspect-square"
+                  />
                 ) : (
                   <User className="w-12 h-12 text-mm-gray" />
                 )}
-                <div 
+                <div
                   className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                   style={{ borderRadius: "50%" }}
                 >
@@ -2083,7 +1898,9 @@ function UsersPage() {
                 accept="image/*"
                 className="hidden"
               />
-              <p className="text-xs text-mm-gray mt-2">Click to change profile picture</p>
+              <p className="text-xs text-mm-gray mt-2">
+                Click to change profile picture
+              </p>
             </div>
 
             <div className="space-y-4">
@@ -2097,7 +1914,7 @@ function UsersPage() {
                     marginBottom: "4px",
                   }}
                 >
-                  Full Name*
+                  Full Name
                 </label>
                 <input
                   value={editForm.name}
@@ -2146,7 +1963,7 @@ function UsersPage() {
                     marginBottom: "4px",
                   }}
                 >
-                  Business Name*
+                  Business Name
                 </label>
                 <input
                   value={editForm.business}
@@ -2195,44 +2012,22 @@ function UsersPage() {
                     marginBottom: "4px",
                   }}
                 >
-                  Email Address*
+                  Email Address
                 </label>
                 <input
+                  disabled
                   value={editForm.email}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, email: e.target.value })
-                  }
+                  className="cursor-not-allowed text-mm-gray bg-mm-subtle/30"
                   style={{
-                    background: "white",
                     border: editErrors.email
                       ? "1px solid var(--color-mm-red)"
                       : "1px solid var(--color-mm-border)",
                     borderRadius: "12px",
                     padding: "10px 14px",
-                    color: "var(--color-mm-dark)",
                     width: "100%",
                     outline: "none",
                   }}
-                  onFocus={(e) => {
-                    if (!editErrors.email)
-                      e.target.style.borderColor = "var(--color-mm-orange)";
-                  }}
-                  onBlur={(e) => {
-                    if (!editErrors.email)
-                      e.target.style.borderColor = "var(--color-mm-border)";
-                  }}
                 />
-                {editErrors.email && (
-                  <div
-                    style={{
-                      color: "var(--color-mm-red)",
-                      fontSize: "12px",
-                      marginTop: "4px",
-                    }}
-                  >
-                    {editErrors.email}
-                  </div>
-                )}
               </div>
               <div>
                 <label
@@ -2244,7 +2039,7 @@ function UsersPage() {
                     marginBottom: "4px",
                   }}
                 >
-                  Phone Number*
+                  Phone Number
                 </label>
                 <input
                   value={editForm.phone}
@@ -2283,8 +2078,6 @@ function UsersPage() {
                   </div>
                 )}
               </div>
-
-
 
               <div>
                 <label
@@ -2401,8 +2194,8 @@ function UsersPage() {
 
             {/* Business Avatar picture upload */}
             <div className="flex flex-col items-center mb-6">
-              <div 
-                className="relative group cursor-pointer" 
+              <div
+                className="relative group cursor-pointer"
                 onClick={handleBusinessAvatarClick}
                 style={{
                   width: "96px",
@@ -2420,12 +2213,19 @@ function UsersPage() {
                   <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
                     <Loader2 className="w-6 h-6 text-mm-orange animate-spin" />
                   </div>
-                ) : editBusinessForm.image && editBusinessForm.image.trim() !== "" && editBusinessForm.image !== "undefined" && editBusinessForm.image !== "null" ? (
-                  <img src={editBusinessForm.image} alt="Business Avatar" className="w-full h-full object-cover aspect-square" />
+                ) : editBusinessForm.image &&
+                  editBusinessForm.image.trim() !== "" &&
+                  editBusinessForm.image !== "undefined" &&
+                  editBusinessForm.image !== "null" ? (
+                  <img
+                    src={editBusinessForm.image}
+                    alt="Business Avatar"
+                    className="w-full h-full object-cover aspect-square"
+                  />
                 ) : (
                   <User className="w-12 h-12 text-mm-gray" />
                 )}
-                <div 
+                <div
                   className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                   style={{ borderRadius: "50%" }}
                 >
@@ -2439,7 +2239,9 @@ function UsersPage() {
                 accept="image/*"
                 className="hidden"
               />
-              <p className="text-xs text-mm-gray mt-2">Click to change business logo</p>
+              <p className="text-xs text-mm-gray mt-2">
+                Click to change business logo
+              </p>
             </div>
 
             <div className="space-y-4">
@@ -2458,7 +2260,10 @@ function UsersPage() {
                 <input
                   value={editBusinessForm.businessName || ""}
                   onChange={(e) =>
-                    setEditBusinessForm({ ...editBusinessForm, businessName: e.target.value })
+                    setEditBusinessForm({
+                      ...editBusinessForm,
+                      businessName: e.target.value,
+                    })
                   }
                   style={{
                     background: "white",
@@ -2473,7 +2278,13 @@ function UsersPage() {
                   }}
                 />
                 {editBusinessErrors.businessName && (
-                  <div style={{ color: "var(--color-mm-red)", fontSize: "12px", marginTop: "4px" }}>
+                  <div
+                    style={{
+                      color: "var(--color-mm-red)",
+                      fontSize: "12px",
+                      marginTop: "4px",
+                    }}
+                  >
                     {editBusinessErrors.businessName}
                   </div>
                 )}
@@ -2495,7 +2306,10 @@ function UsersPage() {
                   <select
                     value={editBusinessForm.businessType || "Consulting"}
                     onChange={(e) =>
-                      setEditBusinessForm({ ...editBusinessForm, businessType: e.target.value })
+                      setEditBusinessForm({
+                        ...editBusinessForm,
+                        businessType: e.target.value,
+                      })
                     }
                     style={{
                       background: "white",
@@ -2533,7 +2347,10 @@ function UsersPage() {
                   <select
                     value={editBusinessForm.plan || "None"}
                     onChange={(e) =>
-                      setEditBusinessForm({ ...editBusinessForm, plan: e.target.value })
+                      setEditBusinessForm({
+                        ...editBusinessForm,
+                        plan: e.target.value,
+                      })
                     }
                     style={{
                       background: "white",
@@ -2569,7 +2386,10 @@ function UsersPage() {
                   value={editBusinessForm.websiteUrl || ""}
                   placeholder="https://"
                   onChange={(e) =>
-                    setEditBusinessForm({ ...editBusinessForm, websiteUrl: e.target.value })
+                    setEditBusinessForm({
+                      ...editBusinessForm,
+                      websiteUrl: e.target.value,
+                    })
                   }
                   style={{
                     background: "white",
@@ -2599,7 +2419,10 @@ function UsersPage() {
                   <input
                     value={editBusinessForm.contactPhone || ""}
                     onChange={(e) =>
-                      setEditBusinessForm({ ...editBusinessForm, contactPhone: e.target.value })
+                      setEditBusinessForm({
+                        ...editBusinessForm,
+                        contactPhone: e.target.value,
+                      })
                     }
                     style={{
                       background: "white",
@@ -2628,7 +2451,10 @@ function UsersPage() {
                   <input
                     value={editBusinessForm.contactEmail || ""}
                     onChange={(e) =>
-                      setEditBusinessForm({ ...editBusinessForm, contactEmail: e.target.value })
+                      setEditBusinessForm({
+                        ...editBusinessForm,
+                        contactEmail: e.target.value,
+                      })
                     }
                     style={{
                       background: "white",
@@ -2643,7 +2469,13 @@ function UsersPage() {
                     }}
                   />
                   {editBusinessErrors.contactEmail && (
-                    <div style={{ color: "var(--color-mm-red)", fontSize: "12px", marginTop: "4px" }}>
+                    <div
+                      style={{
+                        color: "var(--color-mm-red)",
+                        fontSize: "12px",
+                        marginTop: "4px",
+                      }}
+                    >
                       {editBusinessErrors.contactEmail}
                     </div>
                   )}
@@ -2665,7 +2497,10 @@ function UsersPage() {
                 <select
                   value={editBusinessForm.paymentStatus || "Pending"}
                   onChange={(e) =>
-                    setEditBusinessForm({ ...editBusinessForm, paymentStatus: e.target.value })
+                    setEditBusinessForm({
+                      ...editBusinessForm,
+                      paymentStatus: e.target.value,
+                    })
                   }
                   style={{
                     background: "white",
