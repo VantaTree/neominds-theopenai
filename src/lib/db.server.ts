@@ -286,19 +286,19 @@ export const saveNotificationSettings = async (
 
 // ==================== PROFILES REPOSITORY ====================
 
-export const getProfile = async (uid: string): Promise<Profile | null> => {
-  const db = getDb();
-  const snap = await db.collection("profiles").doc(uid).get();
-  return snap.exists ? ({ uid: snap.id, ...snap.data() } as Profile) : null;
-};
+// export const getProfile = async (uid: string): Promise<Profile | null> => {
+//   const db = getDb();
+//   const snap = await db.collection("profiles").doc(uid).get();
+//   return snap.exists ? ({ uid: snap.id, ...snap.data() } as Profile) : null;
+// };
 
-export const saveProfile = async (
-  uid: string,
-  data: Partial<Profile>
-): Promise<void> => {
-  const db = getDb();
-  await db.collection("profiles").doc(uid).set({ uid, ...data }, { merge: true });
-};
+// export const saveProfile = async (
+//   uid: string,
+//   data: Partial<Profile>
+// ): Promise<void> => {
+//   const db = getDb();
+//   await db.collection("profiles").doc(uid).set({ uid, ...data }, { merge: true });
+// };
 
 // ==================== PLANS REPOSITORY ====================
 

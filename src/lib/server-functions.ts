@@ -423,33 +423,33 @@ export const saveNotificationSettingsFn = createServerFn({ method: "POST" })
 
 // ==================== PROFILES ====================
 
-export const getProfileFn = createServerFn({ method: "GET" })
-  .validator((d: string) => d)
-  .handler(async ({ data }) => {
-    const decoded = await verifyServerSession();
-    if (decoded.uid !== data && decoded.admin !== true) {
-      throw new Error("Unauthorized: You cannot access another user's profile.");
-    }
-    return (await getDb()).getProfile(data);
-  });
+// export const getProfileFn = createServerFn({ method: "GET" })
+//   .validator((d: string) => d)
+//   .handler(async ({ data }) => {
+//     const decoded = await verifyServerSession();
+//     if (decoded.uid !== data && decoded.admin !== true) {
+//       throw new Error("Unauthorized: You cannot access another user's profile.");
+//     }
+//     return (await getDb()).getProfile(data);
+//   });
 
-export const saveProfileFn = createServerFn({ method: "POST" })
-  .validator((d: { uid: string; data: any }) => d)
-  .handler(async ({ data }) => {
-    const decoded = await verifyServerSession();
+// export const saveProfileFn = createServerFn({ method: "POST" })
+//   .validator((d: { uid: string; data: any }) => d)
+//   .handler(async ({ data }) => {
+//     const decoded = await verifyServerSession();
     
-    // Security check: only allow updating own profile, unless it is an admin
-    if (decoded.uid !== data.uid && decoded.admin !== true) {
-      throw new Error("Unauthorized: You can only update your own profile.");
-    }
+//     // Security check: only allow updating own profile, unless it is an admin
+//     if (decoded.uid !== data.uid && decoded.admin !== true) {
+//       throw new Error("Unauthorized: You can only update your own profile.");
+//     }
     
-    // Security check: reject if attempting to change account email
-    if (decoded.admin !== true && data.data?.email && data.data.email !== decoded.email) {
-      throw new Error("BadRequest: You cannot change your account email address.");
-    }
+//     // Security check: reject if attempting to change account email
+//     if (decoded.admin !== true && data.data?.email && data.data.email !== decoded.email) {
+//       throw new Error("BadRequest: You cannot change your account email address.");
+//     }
 
-    return (await getDb()).saveProfile(data.uid, data.data);
-  });
+//     return (await getDb()).saveProfile(data.uid, data.data);
+//   });
 
 // ==================== PLANS ====================
 
@@ -662,108 +662,6 @@ export const testFirestoreConnectionFn = createServerFn({ method: "POST" })
     }
   });
 
-export const seedDatabaseFn = createServerFn({ method: "POST" })
-  .validator((d: { emailNotif: boolean; smsNotif: boolean; auditNotif: boolean; weeklyNotif: boolean }) => d)
-  .handler(async ({ data }) => {
-    const decoded = await verifyServerSession();
-    if (decoded.admin !== true) {
-      throw new Error("Unauthorized: Admin privilege required to seed database.");
-    }
-    
-    const adDb = await getAdminDb();
-    if (!adDb) {
-      throw new Error("Firebase Admin Firestore is not initialized.");
-    }
-
-    // 1. Seed plans
-    const plans = await (await getDb()).getPlans();
-    for (const plan of plans) {
-      await (await getDb()).savePlan(plan);
-    }
-
-    // 2. Seed admin config
-    const config = await (await getDb()).getAdminConfig();
-    await (await getDb()).saveAdminConfig(config);
-
-    // 3. Seed notification settings
-    await (await getDb()).saveNotificationSettings({
-      emailNotif: data.emailNotif,
-      smsNotif: data.smsNotif,
-      auditNotif: data.auditNotif,
-      weeklyNotif: data.weeklyNotif,
-    });
-
-    // 4. Seed users if empty
-    const usersSnap = await (await getAdminDb()).collection("users").limit(1).get();
-    if (usersSnap.empty) {
-      for (const u of mockUsers) {
-        // Map legacy mock user structure to new UserSchema fields for database seed
-        const cleanUser: User = {
-          id: u.id,
-          fullName: u.name,
-          email: u.email,
-          phone: u.phone,
-          role: "client",
-          status: "Active",
-          businessCount: 1,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-        await (await getDb()).saveUser(cleanUser);
-
-        // Seed a corresponding business document for each user
-        const cleanBusiness: Business = {
-          id: `biz_${u.id}`,
-          userId: u.id,
-          businessName: u.business,
-          businessType: "Consulting",
-          contactEmail: u.email,
-          contactPhone: u.phone,
-          plan: (u.plan === "Growth" ? "Plus" : u.plan === "Plus" ? "Plus" : u.plan === "Basic" ? "Basic" : "None") as any,
-          addons: [],
-          websiteUrl: "",
-          paymentStatus: "Paid",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-        await (await getDb()).saveBusiness(cleanBusiness);
-      }
-    }
-
-    // 5. Seed blogs if empty
-    const blogsSnap = await (await getAdminDb()).collection("blogs").limit(1).get();
-    if (blogsSnap.empty) {
-      const defaultBlogs = [
-        {
-          title: "5 AI Strategies for Small Business Growth in 2026",
-          slug: "5-ai-strategies-for-small-business-growth-in-2026",
-          summary: "Learn how modern SMBs are leveraging artificial intelligence tools to automate workflows, capture leads, and scale consulting operations.",
-          content: "<p>Artificial Intelligence is no longer just for enterprise corporations...</p>",
-          coverImageUrl: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80",
-          author: "Admin Team",
-          status: "Published" as const,
-          featured: true,
-        },
-        {
-          title: "How to Build a Seamless Payment Flow for Consultants",
-          slug: "how-to-build-a-seamless-payment-flow-for-consultants",
-          summary: "Understanding invoicing, payment gateways, and recurring plan structures to keep business cashflow healthy.",
-          content: "<p>For independent consultants, late invoices and complex payment options are the biggest blockers...</p>",
-          coverImageUrl: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=800&q=80",
-          author: "Finance Dept",
-          status: "Published" as const,
-          featured: false,
-        }
-      ];
-      for (const b of defaultBlogs) {
-        await (await getDb()).createBlog(b);
-      }
-    }
-
-    await (await getDb()).logAuditEvent("admin", "db_seeded", { collections: ["plans", "adminSettings", "users", "blogs", "businesses"] }, "Admin");
-    return { success: true };
-  });
-
 export const getStreamCredentialsFn = createServerFn({ method: "GET" })
   .handler(async () => {
     const { verifyServerSession } = await import("@/lib/server-functions");
@@ -832,6 +730,8 @@ export const getClientStreamCredentialsFn = createServerFn({ method: "GET" })
 
     return { apiKey, token, uid, name };
   });
+
+// ==================== AI Assessment ====================
 
 export const submitAssessmentFn = createServerFn({ method: "POST" })
   .validator((d: {
@@ -926,5 +826,4 @@ export const submitAssessmentFn = createServerFn({ method: "POST" })
 
     return { result, businessId, reportId };
   });
-
 
