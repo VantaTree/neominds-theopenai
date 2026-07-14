@@ -33,7 +33,7 @@ export default function AdminAside() {
         client = StreamChat.getInstance(creds.apiKey);
         const userState = await client.connectUser(
           { id: "admin", name: "Admin Manager" },
-          creds.token
+          creds.token,
         );
         if (!active) return;
         setUnreadChatCount(userState.me.total_unread_count || 0);
@@ -262,7 +262,10 @@ export default function AdminAside() {
             <p className="text-sm font-bold text-mm-dark truncate">
               Super Admin
             </p>
-            <p className="text-xs text-mm-gray truncate">theOpenAI</p>
+            <p className="text-xs text-mm-gray truncate m-0 p-0">theOpenAI</p>
+            <Link to="/logout" className="text-xs text-mm-red truncate">
+              logout
+            </Link>
           </div>
         </div>
       </aside>
