@@ -24,7 +24,7 @@ export default function AnimatedPlanCard({ plan, i, cardType = "default", animat
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const displacementMapRef = useRef<SVGFEDisplacementMapElement | null>(null);
   const turbulenceRef = useRef<SVGFETurbulenceElement | null>(null);
-  const buttonRef = useRef<HTMLAnchorElement | null>(null);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
   const buttonCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const buffer1Ref = useRef(new Float32Array(size));

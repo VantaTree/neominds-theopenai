@@ -2,7 +2,7 @@ import { Plan } from "@/data/plans";
 
 type Props = {
   plan: Plan;
-  buttonRef: React.RefObject<HTMLAnchorElement | null>;
+  buttonRef: React.RefObject<HTMLButtonElement | null>;
   buttonCanvasRef: React.RefObject<HTMLCanvasElement | null>;
   onSelectPlan?: (planName: string) => void;
   isCurrent?: boolean;
@@ -64,7 +64,7 @@ const PlanCard = ({ plan, buttonRef, buttonCanvasRef, onSelectPlan, isCurrent }:
             </li>
           ))}
         </ul>
-        <div
+        <button
           ref={buttonRef}
           onClick={(e) => {
             e.preventDefault();
@@ -86,7 +86,7 @@ const PlanCard = ({ plan, buttonRef, buttonCanvasRef, onSelectPlan, isCurrent }:
             className="absolute inset-0 w-full h-full pointer-events-none rounded-[inherit]"
           />
           <span className="relative z-10">{isCurrent ? "Current Plan" : plan.action}</span>
-        </div>
+        </button>
       </div>
   )
 }

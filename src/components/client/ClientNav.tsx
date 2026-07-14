@@ -276,7 +276,7 @@ export default function ClientNav() {
         {/* Mobile Business Selector is hidden/removed */}
 
         <Link 
-        to="/plans  "
+        to="/plans"
         className="h-7 w-7 rounded-full bg-mm-orange/10 border border-mm-orange/20 flex items-center justify-center text-mm-orange cursor-pointer transition-all active:scale-95 md:inline-flex md:items-center md:gap-1.5 md:bg-mm-orange md:border-transparent md:text-white md:px-4 md:py-2 md:h-auto md:w-auto md:shadow-sm md:hover:opacity-95 md:rounded-xl">
           <Crown className="h-3.5 w-3.5 fill-mm-orange/10 md:fill-white" />
           <span className="hidden md:inline">Upgrade</span>

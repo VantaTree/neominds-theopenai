@@ -69,105 +69,110 @@ export const verifyRazorpayPaymentFn = createServerFn({ method: "POST" })
   )
   .middleware([businessOwnerMiddleware])
   .handler(async ({ data, context }) => {
-    const decoded = (context as any).user;
-    const biz = (context as any).business;
-
-    if (biz && biz.plan === data.planName) {
-      throw new Error(`BadRequest: You already have the ${data.planName} plan.`);
-    }
-
-    const { BusinessRepository } = await import("../server/repositories/business.repository");
-    const { PaymentRepository } = await import("../server/repositories/payment.repository");
-    const { AuditService } = await import("../server/services/audit.service");
-
-    const keyId = (import.meta.env.VITE_RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID || "").trim();
-    const keySecret = ((import.meta.env as any).RAZORPAY_KEY_SECRET || process.env.RAZORPAY_KEY_SECRET || "").trim();
-
-    // Verify signature using official Razorpay static utility method
-    const { default: Razorpay } = await import("razorpay");
-    const isValid = (Razorpay as any).validatePaymentVerification(
-      { order_id: data.razorpayOrderId, payment_id: data.razorpayPaymentId },
-      data.razorpaySignature,
-      keySecret
-    );
-
-    if (!isValid) {
-      throw new Error("Payment verification failed: Invalid signature.");
-    }
-
-    // Update business document
-    biz.plan = data.planName;
-    biz.paymentStatus = "Paid";
-    biz.updatedAt = new Date();
-    
-    const businessRepo = new BusinessRepository();
-    await businessRepo.saveBusiness(biz);
-
-    // Save payment record - fetch actual payment details from Razorpay to record actual amount credited
-    let amountInInr = 0;
-    let paymentMethod: any = "Other";
-    let currency = "INR";
-
     try {
-      const razorpay = new Razorpay({
-        key_id: keyId,
-        key_secret: keySecret,
-      });
-      const paymentDetails = await razorpay.payments.fetch(data.razorpayPaymentId);
-      amountInInr = (paymentDetails.amount as number) / 100;
-      if (paymentDetails.currency) {
-        currency = paymentDetails.currency;
+      const decoded = (context as any).user;
+      const biz = (context as any).business;
+
+      if (biz && biz.plan === data.planName) {
+        throw new Error(`BadRequest: You already have the ${data.planName} plan.`);
       }
-      if (paymentDetails.method) {
-        const rzpMethod = paymentDetails.method.toLowerCase();
-        if (rzpMethod === "card") paymentMethod = "Card";
-        else if (rzpMethod === "upi") paymentMethod = "UPI";
-        else if (rzpMethod === "netbanking") paymentMethod = "Netbanking";
-        else if (rzpMethod === "wallet") paymentMethod = "Wallet";
-        else if (rzpMethod === "bank_transfer") paymentMethod = "BankTransfer";
+
+      const { BusinessRepository } = await import("../server/repositories/business.repository");
+      const { PaymentRepository } = await import("../server/repositories/payment.repository");
+      const { AuditService } = await import("../server/services/audit.service");
+
+      const keyId = (import.meta.env.VITE_RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID || "").trim();
+      const keySecret = ((import.meta.env as any).RAZORPAY_KEY_SECRET || process.env.RAZORPAY_KEY_SECRET || "").trim();
+
+      // Verify signature using Crypto HMAC-SHA256
+      const { createHmac } = await import("crypto");
+      const generatedSig = createHmac("sha256", keySecret)
+        .update(`${data.razorpayOrderId}|${data.razorpayPaymentId}`)
+        .digest("hex");
+      const isValid = generatedSig === data.razorpaySignature;
+
+      if (!isValid) {
+        throw new Error("Payment verification failed: Invalid signature.");
       }
-    } catch (fetchErr) {
-      console.error("Error fetching payment details from Razorpay, falling back to static calculation:", fetchErr);
-      const plan = PLANS.find((p) => p.name.toLowerCase() === data.planName.toLowerCase());
-      const usdPrice = plan ? parseFloat(plan.price.replace(/[^0-9.]/g, "")) : 0;
-      amountInInr = isNaN(usdPrice) ? 0 : usdPrice * 83;
-    }
 
-    const paymentEntry: Payment = {
-      id: data.razorpayPaymentId,
-      userId: decoded.uid,
-      businessId: data.businessId,
-      status: "Paid",
-      amount: amountInInr,
-      currency: currency,
-      paymentMethod: paymentMethod,
-      gateway: "Razorpay",
-      gatewayInfo: {
-        orderId: data.razorpayOrderId,
-        paymentId: data.razorpayPaymentId,
-        signature: data.razorpaySignature,
-      },
-      purchaseItem: `${data.planName} Plan Subscription`,
-      timestamp: new Date(),
-    };
+      // Update business document
+      biz.plan = data.planName;
+      biz.paymentStatus = "Paid";
+      biz.updatedAt = new Date();
+      
+      const businessRepo = new BusinessRepository();
+      await businessRepo.saveBusiness(biz);
 
-    const paymentRepo = new PaymentRepository();
-    await paymentRepo.savePayments([paymentEntry]);
+      // Save payment record - fetch actual payment details from Razorpay to record actual amount credited
+      let amountInInr = 0;
+      let paymentMethod: any = "Other";
+      let currency = "INR";
 
-    // Log Audit Event
-    const auditService = new AuditService();
-    await auditService.logAuditEvent(
-      decoded.uid,
-      "subscription_payment_verified",
-      {
+      try {
+        const { default: Razorpay } = await import("razorpay");
+        const razorpay = new Razorpay({
+          key_id: keyId,
+          key_secret: keySecret,
+        });
+        const paymentDetails = await razorpay.payments.fetch(data.razorpayPaymentId);
+        amountInInr = (paymentDetails.amount as number) / 100;
+        if (paymentDetails.currency) {
+          currency = paymentDetails.currency;
+        }
+        if (paymentDetails.method) {
+          const rzpMethod = paymentDetails.method.toLowerCase();
+          if (rzpMethod === "card") paymentMethod = "Card";
+          else if (rzpMethod === "upi") paymentMethod = "UPI";
+          else if (rzpMethod === "netbanking") paymentMethod = "Netbanking";
+          else if (rzpMethod === "wallet") paymentMethod = "Wallet";
+          else if (rzpMethod === "bank_transfer") paymentMethod = "BankTransfer";
+        }
+      } catch (fetchErr) {
+        console.error("Error fetching payment details from Razorpay, falling back to static calculation:", fetchErr);
+        const plan = PLANS.find((p) => p.name.toLowerCase() === data.planName.toLowerCase());
+        const usdPrice = plan ? parseFloat(plan.price.replace(/[^0-9.]/g, "")) : 0;
+        amountInInr = isNaN(usdPrice) ? 0 : usdPrice * 83;
+      }
+
+      const paymentEntry: Payment = {
+        id: data.razorpayPaymentId,
+        userId: decoded.uid,
         businessId: data.businessId,
-        planName: data.planName,
-        razorpayOrderId: data.razorpayOrderId,
-        razorpayPaymentId: data.razorpayPaymentId,
+        status: "Paid",
         amount: amountInInr,
-      },
-      decoded.name || decoded.email || "Client"
-    );
+        currency: currency,
+        paymentMethod: paymentMethod,
+        gateway: "Razorpay",
+        gatewayInfo: {
+          orderId: data.razorpayOrderId,
+          paymentId: data.razorpayPaymentId,
+          signature: data.razorpaySignature,
+        },
+        purchaseItem: `${data.planName} Plan Subscription`,
+        timestamp: new Date(),
+      };
 
-    return { success: true, plan: data.planName };
+      const paymentRepo = new PaymentRepository();
+      await paymentRepo.savePayments([paymentEntry]);
+
+      // Log Audit Event
+      const auditService = new AuditService();
+      await auditService.logAuditEvent(
+        decoded.uid,
+        "subscription_payment_verified",
+        {
+          businessId: data.businessId,
+          planName: data.planName,
+          razorpayOrderId: data.razorpayOrderId,
+          razorpayPaymentId: data.razorpayPaymentId,
+          amount: amountInInr,
+        },
+        decoded.name || decoded.email || "Client"
+      );
+
+      return { success: true, plan: data.planName };
+    } catch (err: any) {
+      console.error("=== verifyRazorpayPaymentFn HANDLER ERROR ===", err);
+      throw err;
+    }
   });
