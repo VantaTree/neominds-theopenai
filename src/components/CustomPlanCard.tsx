@@ -4,7 +4,7 @@ import { ShoppingCart } from "lucide-react";
 
 type Props = {
   plan: Plan;
-  buttonRef: React.RefObject<HTMLAnchorElement | null>;
+  buttonRef: React.RefObject<HTMLButtonElement | null>;
   buttonCanvasRef: React.RefObject<HTMLCanvasElement | null>;
 }
 
@@ -271,9 +271,9 @@ const CustomPlanCard = ({ plan, buttonRef, buttonCanvasRef }: Props) => {
       )}
 
       {/* Action Button */}
-      <a
+      <button
         ref={buttonRef}
-        href="#"
+        // href="#"
         onClick={handleContactUs}
         className="flex items-center justify-center rounded-full py-3 text-xs font-bold uppercase tracking-widest transition-all duration-200 hover:opacity-95 hover:scale-[1.01] active:scale-[0.99] relative overflow-hidden mt-auto shadow-md"
         style={{
@@ -290,7 +290,7 @@ const CustomPlanCard = ({ plan, buttonRef, buttonCanvasRef }: Props) => {
         <span className="relative z-10">
           {showContactForm ? "SUBMIT REQUEST" : plan.action}
         </span>
-      </a>
+      </button>
     </div>
   );
 };

@@ -10,7 +10,7 @@ interface BusinessContextType {
   refetch: () => Promise<void>;
 }
 
-const BusinessContext = createContext<BusinessContextType | undefined>(undefined);
+export const BusinessContext = createContext<BusinessContextType | undefined>(undefined);
 
 export function BusinessProvider({
   children,

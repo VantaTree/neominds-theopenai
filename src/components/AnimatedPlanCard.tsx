@@ -9,20 +9,22 @@ type Props = {
   i: number;
   cardType: string;
   animate?: boolean;
+  onSelectPlan?: (planName: string) => void;
+  isCurrent?: boolean;
 };
 
 const simWidth = 96;
 const simHeight = 144;
 const size = simWidth * simHeight;
 
-export default function AnimatedPlanCard({ plan, i, cardType = "default", animate = true }: Props) {
+export default function AnimatedPlanCard({ plan, i, cardType = "default", animate = true, onSelectPlan, isCurrent }: Props) {
   const [isWarping, setIsWarping] = useState(false);
 
   const cardRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const displacementMapRef = useRef<SVGFEDisplacementMapElement | null>(null);
   const turbulenceRef = useRef<SVGFETurbulenceElement | null>(null);
-  const buttonRef = useRef<HTMLAnchorElement | null>(null);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
   const buttonCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const buffer1Ref = useRef(new Float32Array(size));
@@ -513,7 +515,7 @@ export default function AnimatedPlanCard({ plan, i, cardType = "default", animat
       {cardType === "custom" ?
         (<CustomPlanCard plan={plan} buttonRef={buttonRef} buttonCanvasRef={buttonCanvasRef} />)
         : (
-          <PlanCard plan={plan} buttonRef={buttonRef} buttonCanvasRef={buttonCanvasRef} />
+          <PlanCard plan={plan} buttonRef={buttonRef} buttonCanvasRef={buttonCanvasRef} onSelectPlan={onSelectPlan} isCurrent={isCurrent} />
         )
       }
 

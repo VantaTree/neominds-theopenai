@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import Lenis from "lenis";
 import { motion } from "framer-motion";
@@ -6,8 +6,17 @@ import { MymindNav } from "@/components/mymind/MymindNav";
 import { MymindFooter } from "@/components/mymind/MymindFooter";
 import PLANS from "@/data/plans";
 import AnimatedPlanCard from "@/components/AnimatedPlanCard";
+import { z } from "zod";
+import { useRazorpayCheckout } from "@/hooks/use-razorpay-checkout";
+import { useBusiness } from "@/hooks/use-business";
 
-export const Route = createFileRoute("/plans")({
+const plansSearchSchema = z.object({
+  businessId: z.string().optional(),
+  plan: z.string().optional(),
+});
+
+export const Route = createFileRoute("/_client/plans")({
+  validateSearch: plansSearchSchema,
   head: () => ({
     meta: [
       { title: "Pricing & Plans — mymind" },
@@ -28,6 +37,26 @@ export const Route = createFileRoute("/plans")({
 });
 
 function PlansPage() {
+  const navigate = useNavigate();
+  const search = Route.useSearch();
+  const { auth } = Route.useRouteContext();
+  const { handleSelectPlan, renderModals } = useRazorpayCheckout();
+  const { activeBusiness } = useBusiness();
+  const currentPlan = activeBusiness?.plan || "None";
+
+  // Handle plan auto-activation if coming from checkout flow with a pre-selected plan
+  useEffect(() => {
+    if (search.plan && auth.user) {
+      const planToSelect = search.plan;
+      // Clear plan parameter from URL so it doesn't trigger repeatedly
+      navigate({
+        search: (prev: any) => ({ ...prev, plan: undefined }),
+        replace: true,
+      } as any);
+      handleSelectPlan(planToSelect);
+    }
+  }, [search.plan, auth.user]);
+
   useEffect(() => {
     const lenis = new Lenis({
       duration: 1.1,
@@ -51,7 +80,7 @@ function PlansPage() {
   return (
     <div className="min-h-screen bg-(--color-mm-plans-bg)">
       {/* Global Navigation */}
-      <MymindNav />
+      {/* <MymindNav /> */}
 
       {/* Main Pricing Section */}
       <section className="w-full py-24 md:py-32">
@@ -88,10 +117,24 @@ function PlansPage() {
           {/* Pricing Grid */}
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-4 w-full mb-16">
             {PLANS.slice(0, 3).map((plan, i) => (
-              <AnimatedPlanCard key={plan.name} plan={plan} i={i} cardType="default" />
+              <AnimatedPlanCard
+                key={plan.name}
+                plan={plan}
+                i={i}
+                cardType="default"
+                onSelectPlan={handleSelectPlan}
+                isCurrent={plan.name === currentPlan}
+              />
             ))}
             {PLANS.slice(3, 4).map((plan, i) => (
-              <AnimatedPlanCard key={plan.name} plan={plan} i={i} cardType="custom" />
+              <AnimatedPlanCard
+                key={plan.name}
+                plan={plan}
+                i={i}
+                cardType="custom"
+                onSelectPlan={handleSelectPlan}
+                isCurrent={plan.name === currentPlan}
+              />
             ))}
           </div>
 
@@ -115,7 +158,10 @@ function PlansPage() {
       </section>
 
       {/* Global Footer */}
-      <MymindFooter />
+      {/* <MymindFooter /> */}
+
+      {/* Dynamic Checkout Modals */}
+      {renderModals()}
     </div>
   );
 }
