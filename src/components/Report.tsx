@@ -479,7 +479,7 @@ export default function Report({ initialData, businessId }: ReportProps) {
   return (
     <div className="w-full space-y-12 text-mm-dark font-sans animate-fadeIn pb-12">
       {/* Right-side Green Scroll Progress Line */}
-      <div className="fixed top-0 right-0 w-2 h-full bg-gray-100/30 z-[9999] pointer-events-none rounded-l-md overflow-hidden">
+      <div className="fixed top-0 right-0 w-2 h-full bg-gray-100/30 z-9999 pointer-events-none rounded-l-md overflow-hidden">
         <div
           className="w-full bg-[#10B981] rounded-l-md transition-all duration-75"
           style={{ height: `${scrollProgress}%` }}

@@ -149,13 +149,14 @@ export function useRazorpayCheckout(options?: { onPaymentSuccess?: () => void; a
       });
 
       const keyId = (import.meta.env.VITE_RAZORPAY_KEY_ID).trim();
+      
       const targetBiz = businesses.find((b) => b.id === businessId);
 
       const options = {
         key: keyId,
         amount: orderRes.amount,
         currency: orderRes.currency,
-        name: "GrowConsult AI",
+        name: "theOpenAI",
         description: `${planName} Plan Subscription`,
         image: "/logos/logo_mini.png",
         order_id: orderRes.orderId,
