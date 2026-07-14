@@ -19,9 +19,10 @@ export default defineConfig({
         "firebase-admin",
         "firebase-admin/auth",
         "firebase-admin/firestore",
-        "@google-cloud/firestore"
-      ]
-    }
+        "@google-cloud/firestore",
+        "razorpay",
+      ],
+    },
   } as any,
   vite: {
     server: {
@@ -36,9 +37,10 @@ export default defineConfig({
         "firebase-admin",
         "firebase-admin/auth",
         "firebase-admin/firestore",
-        "@google-cloud/firestore"
+        "@google-cloud/firestore",
+        "razorpay",
       ],
-      noExternal: ['firebase', '@firebase/*'],
-    }
+      noExternal: ["firebase", "@firebase/*"],
+    },
   },
 });

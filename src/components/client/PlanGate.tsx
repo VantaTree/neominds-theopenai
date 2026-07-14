@@ -2,6 +2,7 @@ import React from "react";
 import { Lock, Crown } from "lucide-react";
 import { useBusiness } from "@/hooks/use-business";
 import { type BusinessPlan } from "@/lib/schemas";
+import { useNavigate } from "@tanstack/react-router";
 
 const PLAN_HIERARCHY: Record<BusinessPlan, number> = {
   None: 0,
@@ -25,6 +26,7 @@ export function hasPlanAccess(currentPlan: BusinessPlan, requiredPlan: BusinessP
 export default function PlanGate({ requiredPlan, fallback, children }: PlanGateProps) {
   const { activeBusiness } = useBusiness();
   const currentPlan = activeBusiness?.plan || "None";
+  const navigate = useNavigate();
 
   if (!hasPlanAccess(currentPlan, requiredPlan)) {
     return (
@@ -53,7 +55,19 @@ export default function PlanGate({ requiredPlan, fallback, children }: PlanGateP
           </div>
 
           {/* Upgrade Button */}
-          <button className="w-full inline-flex items-center justify-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold py-3 px-5 rounded-2xl shadow-sm transition-all active:scale-95 cursor-pointer relative z-10">
+          <button 
+            onClick={() => {
+              if (activeBusiness) {
+                navigate({
+                  to: "/plans",
+                  search: { businessId: activeBusiness.id, plan: requiredPlan },
+                });
+              } else {
+                navigate({ to: "/plans" });
+              }
+            }}
+            className="w-full inline-flex items-center justify-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold py-3 px-5 rounded-2xl shadow-sm transition-all active:scale-95 cursor-pointer relative z-10"
+          >
             <Crown className="h-4 w-4 fill-white text-amber-500" />
             <span>Upgrade to {requiredPlan}</span>
           </button>

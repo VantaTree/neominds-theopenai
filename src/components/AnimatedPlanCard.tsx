@@ -9,13 +9,14 @@ type Props = {
   i: number;
   cardType: string;
   animate?: boolean;
+  onSelectPlan?: (planName: string) => void;
 };
 
 const simWidth = 96;
 const simHeight = 144;
 const size = simWidth * simHeight;
 
-export default function AnimatedPlanCard({ plan, i, cardType = "default", animate = true }: Props) {
+export default function AnimatedPlanCard({ plan, i, cardType = "default", animate = true, onSelectPlan }: Props) {
   const [isWarping, setIsWarping] = useState(false);
 
   const cardRef = useRef<HTMLDivElement | null>(null);
@@ -513,7 +514,7 @@ export default function AnimatedPlanCard({ plan, i, cardType = "default", animat
       {cardType === "custom" ?
         (<CustomPlanCard plan={plan} buttonRef={buttonRef} buttonCanvasRef={buttonCanvasRef} />)
         : (
-          <PlanCard plan={plan} buttonRef={buttonRef} buttonCanvasRef={buttonCanvasRef} />
+          <PlanCard plan={plan} buttonRef={buttonRef} buttonCanvasRef={buttonCanvasRef} onSelectPlan={onSelectPlan} />
         )
       }
 

@@ -7,6 +7,7 @@ import {
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import AnimatedPlanCard from "./AnimatedPlanCard";
 import PLANS from "@/data/plans";
+import { useRazorpayCheckout } from "@/hooks/use-razorpay-checkout";
 
 const ScorecardCircularProgress = ({ score }: { score: number }) => {
   const radius = 45;
@@ -253,10 +254,12 @@ const DUMMY_REPORT = {
 
 interface ReportProps {
   initialData?: typeof DUMMY_REPORT;
+  businessId?: string;
 }
 
-export default function Report({ initialData }: ReportProps) {
+export default function Report({ initialData, businessId }: ReportProps) {
   const [data, setData] = useState<typeof DUMMY_REPORT>(initialData || DUMMY_REPORT);
+  const { handleSelectPlan, renderModals } = useRazorpayCheckout();
   const [loading, setLoading] = useState(false);
 
   // States for slide dot indicators
@@ -476,7 +479,7 @@ export default function Report({ initialData }: ReportProps) {
   return (
     <div className="w-full space-y-12 text-mm-dark font-sans animate-fadeIn pb-12">
       {/* Right-side Green Scroll Progress Line */}
-      <div className="fixed top-0 right-0 w-2 h-full bg-gray-100/30 z-[9999] pointer-events-none rounded-l-md overflow-hidden">
+      <div className="fixed top-0 right-0 w-2 h-full bg-gray-100/30 z-9999 pointer-events-none rounded-l-md overflow-hidden">
         <div
           className="w-full bg-[#10B981] rounded-l-md transition-all duration-75"
           style={{ height: `${scrollProgress}%` }}
@@ -1217,7 +1220,13 @@ export default function Report({ initialData }: ReportProps) {
           {/* Recommended Plan Card */}
           <div className="lg:col-span-4 flex flex-col justify-start">
             <div className="w-full max-w-sm mx-auto lg:max-w-none">
-              <AnimatedPlanCard plan={matchedPlan} i={matchedIndex} cardType={cardType} animate={false} />
+              <AnimatedPlanCard 
+                plan={matchedPlan} 
+                i={matchedIndex} 
+                cardType={cardType} 
+                animate={false} 
+                onSelectPlan={(planName) => handleSelectPlan(planName, businessId)} 
+              />
             </div>
           </div>
 
@@ -1339,11 +1348,12 @@ export default function Report({ initialData }: ReportProps) {
                 ))}
               </div>
             </div>
-
           </div>
         </div>
       </div>
 
+      {/* Dynamic Checkout Modals */}
+      {renderModals()}
     </div>
   );
 }

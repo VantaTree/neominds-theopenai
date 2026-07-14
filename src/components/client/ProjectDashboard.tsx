@@ -631,7 +631,7 @@ export function ProjectDashboard({
     <div className="w-full flex flex-col gap-8 relative">
       {renderTabSwitcher()}
 
-      {activeTab === "report" && <Report initialData={initialReportData} />}
+      {activeTab === "report" && <Report initialData={initialReportData} businessId={activeBusiness?.id} />}
 
       {activeTab === "Automation" && (
         <PlanGate requiredPlan="Pro" fallback={planGateFallback}>

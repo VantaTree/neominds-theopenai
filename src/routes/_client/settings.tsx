@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Upload } from "lucide-react";
+import { useBusiness } from "@/hooks/use-business";
 
 export const Route = createFileRoute("/_client/settings")({
   component: RouteComponent,
@@ -9,6 +10,8 @@ export const Route = createFileRoute("/_client/settings")({
 type SettingsTab = "profile" | "notifications" | "billing" | "account";
 
 function RouteComponent() {
+  const { activeBusiness } = useBusiness();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<SettingsTab>("profile");
 
   // Form State
@@ -346,32 +349,63 @@ function RouteComponent() {
           <h3 className="text-sm font-extrabold text-mm-dark tracking-tight">
             Plan & Billing
           </h3>
-          <div className="p-4 bg-mm-subtle/30 border border-mm-border rounded-2xl flex items-center justify-between">
-            <div>
-              <span className="text-[10px] font-bold text-mm-gray uppercase tracking-wider block">Current Plan</span>
-              <h4 className="text-sm font-extrabold text-mm-dark mt-1">Growth Pro Roadmap</h4>
-              <span className="text-xs font-bold text-mm-orange mt-0.5 block">$299 / month</span>
+          {activeBusiness ? (
+            <div className="p-4 bg-mm-subtle/30 border border-mm-border rounded-2xl flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-bold text-mm-gray uppercase tracking-wider block">Current Plan</span>
+                <h4 className="text-sm font-extrabold text-mm-dark mt-1">
+                  {activeBusiness.plan !== "None" ? `${activeBusiness.plan} Plan` : "Free Tier"}
+                </h4>
+                <span className="text-xs font-bold text-mm-orange mt-0.5 block">
+                  {activeBusiness.plan === "Pro" ? "₹7,499 / month" :
+                   activeBusiness.plan === "Plus" ? "₹4,999 / month" :
+                   activeBusiness.plan === "Basic" ? "₹2,499 / month" :
+                   "₹0 / month"}
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className={`text-xs font-bold px-3 py-1.5 rounded-lg ${
+                  activeBusiness.paymentStatus === "Paid" && activeBusiness.plan !== "None"
+                    ? "text-mm-green bg-mm-green/10"
+                    : "text-amber-600 bg-amber-50"
+                }`}>
+                  {activeBusiness.paymentStatus === "Paid" && activeBusiness.plan !== "None" ? "Active" : "Pending Upgrade"}
+                </span>
+                <button
+                  onClick={() => {
+                    navigate({
+                      to: "/plans",
+                      search: { businessId: activeBusiness.id }
+                    });
+                  }}
+                  className="text-xs font-bold bg-mm-dark hover:opacity-90 text-white px-3.5 py-1.5 rounded-lg transition-all cursor-pointer"
+                >
+                  {activeBusiness.plan !== "None" ? "Change Plan" : "Upgrade"}
+                </button>
+              </div>
             </div>
-            <span className="text-xs font-bold text-mm-green bg-mm-green/10 px-3 py-1.5 rounded-lg">Active</span>
-          </div>
+          ) : (
+            <div className="p-4 bg-mm-subtle/30 border border-mm-border rounded-2xl text-center text-xs font-bold text-mm-gray">
+              No active business profile selected.
+            </div>
+          )}
 
           <div className="space-y-3">
-            <h4 className="text-xs font-bold text-mm-gray uppercase tracking-wider">Billing History</h4>
-            <div className="border border-mm-border rounded-xl overflow-hidden text-xs">
-              <div className="grid grid-cols-3 bg-mm-subtle/35 px-4 py-2.5 font-bold text-mm-gray border-b border-mm-border">
-                <span>Date</span>
-                <span>Invoice</span>
-                <span className="text-right">Amount</span>
+            <h4 className="text-xs font-bold text-mm-gray uppercase tracking-wider">Billing Info</h4>
+            <div className="border border-mm-border rounded-xl p-4 text-xs space-y-2 text-mm-dark font-semibold">
+              <div className="flex justify-between">
+                <span className="text-mm-gray">Billing Email</span>
+                <span>{activeBusiness?.contactEmail || "No email associated"}</span>
               </div>
-              <div className="grid grid-cols-3 px-4 py-3 border-b border-mm-border/50 font-semibold text-mm-dark">
-                <span>01 Jun, 2024</span>
-                <span className="text-mm-blue cursor-pointer">INV-2024-003</span>
-                <span className="text-right">$299.00</span>
+              <div className="flex justify-between">
+                <span className="text-mm-gray">Billing Phone</span>
+                <span>{activeBusiness?.contactPhone || "No contact number"}</span>
               </div>
-              <div className="grid grid-cols-3 px-4 py-3 font-semibold text-mm-dark">
-                <span>01 May, 2024</span>
-                <span className="text-mm-blue cursor-pointer">INV-2024-002</span>
-                <span className="text-right">$299.00</span>
+              <div className="flex justify-between">
+                <span className="text-mm-gray">Billing Status</span>
+                <span className={activeBusiness?.paymentStatus === "Paid" ? "text-mm-green" : "text-amber-600"}>
+                  {activeBusiness?.paymentStatus || "Pending"}
+                </span>
               </div>
             </div>
           </div>
