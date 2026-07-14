@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { adminMiddleware, authenticatedMiddleware } from "./middleware";
 import {
   GetUserSchema,
   DeleteUserSchema,
@@ -8,16 +9,16 @@ import {
 } from "../schemas/api/users";
 
 export const getUsersFn = createServerFn({ method: "GET" })
+  .middleware([adminMiddleware])
   .handler(async () => {
-    const { requireAdmin } = await import("../server/auth/permissions");
     const { UserRepository } = await import("../server/repositories/user.repository");
-    await requireAdmin();
     const userRepo = new UserRepository();
     return userRepo.getUsers();
   });
 
 export const getUserFn = createServerFn({ method: "GET" })
   .validator((d: any) => GetUserSchema.parse(d))
+  .middleware([authenticatedMiddleware])
   .handler(async ({ data }) => {
     const { requireUserOwner } = await import("../server/auth/ownership");
     const { user } = await requireUserOwner(data);
@@ -26,6 +27,7 @@ export const getUserFn = createServerFn({ method: "GET" })
 
 export const saveUserFn = createServerFn({ method: "POST" })
   .validator((d: any) => SaveUserSchema.parse(d))
+  .middleware([authenticatedMiddleware])
   .handler(async ({ data }) => {
     const { requireUserOwner } = await import("../server/auth/ownership");
     const { UserRepository } = await import("../server/repositories/user.repository");
@@ -50,10 +52,9 @@ export const saveUserFn = createServerFn({ method: "POST" })
 
 export const deleteUserFn = createServerFn({ method: "POST" })
   .validator((d: any) => DeleteUserSchema.parse(d))
+  .middleware([adminMiddleware])
   .handler(async ({ data }) => {
-    const { requireAdmin } = await import("../server/auth/permissions");
     const { UserRepository } = await import("../server/repositories/user.repository");
-    await requireAdmin();
     const userRepo = new UserRepository();
     await userRepo.deleteUser(data);
     return { success: true };
@@ -61,11 +62,11 @@ export const deleteUserFn = createServerFn({ method: "POST" })
 
 export const ensureUserDocumentFn = createServerFn({ method: "POST" })
   .validator((d: any) => EnsureUserDocumentSchema.parse(d))
-  .handler(async ({ data }) => {
-    const { requireAuth } = await import("../server/auth/session");
+  .middleware([authenticatedMiddleware])
+  .handler(async ({ data, context }) => {
     const { AuthService } = await import("../server/services/auth.service");
     
-    const decoded = await requireAuth();
+    const decoded = context.user;
     if (data.user.uid !== decoded.uid) {
       throw new Error("Unauthorized: User ID mismatch.");
     }
@@ -85,8 +86,8 @@ export const checkUserExistsFn = createServerFn({ method: "POST" })
 export const checkUserRoleFn = createServerFn({ method: "GET" })
   .handler(async () => {
     try {
-      const { requireAuth } = await import("../server/auth/session");
-      const decoded = await requireAuth();
+      const { verifyServerSession } = await import("./auth");
+      const decoded = await verifyServerSession();
       return {
         role: decoded.admin === true ? "admin" : "client",
         email: decoded.email,
@@ -99,6 +100,7 @@ export const checkUserRoleFn = createServerFn({ method: "GET" })
 
 export const getProfileFn = createServerFn({ method: "GET" })
   .validator((d: any) => GetUserSchema.parse(d))
+  .middleware([authenticatedMiddleware])
   .handler(async ({ data }) => {
     const { requireUserOwner } = await import("../server/auth/ownership");
     const { user } = await requireUserOwner(data);
@@ -107,6 +109,7 @@ export const getProfileFn = createServerFn({ method: "GET" })
 
 export const saveProfileFn = createServerFn({ method: "POST" })
   .validator((d: any) => SaveUserSchema.parse(d))
+  .middleware([authenticatedMiddleware])
   .handler(async ({ data }) => {
     const { requireUserOwner } = await import("../server/auth/ownership");
     const { UserRepository } = await import("../server/repositories/user.repository");

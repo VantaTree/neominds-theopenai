@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { authenticatedMiddleware, adminMiddleware, businessOwnerMiddleware } from "./middleware";
 import {
   GetBusinessSchema,
   GetBusinessesByUserSchema,
@@ -7,40 +8,38 @@ import {
 } from "../schemas/api/business";
 
 export const getMyBusinessesFn = createServerFn({ method: "GET" })
-  .handler(async () => {
-    const { requireAuth } = await import("../server/auth/session");
+  .middleware([authenticatedMiddleware])
+  .handler(async ({ context }) => {
     const { BusinessService } = await import("../server/services/business.service");
     
-    const decoded = await requireAuth();
+    const decoded = context.user;
     const businessService = new BusinessService();
     return businessService.getBusinessesByUser(decoded.uid);
   });
 
 export const getBusinessesFn = createServerFn({ method: "GET" })
+  .middleware([adminMiddleware])
   .handler(async () => {
-    const { requireAdmin } = await import("../server/auth/permissions");
     const { BusinessService } = await import("../server/services/business.service");
     
-    await requireAdmin();
     const businessService = new BusinessService();
     return businessService.getBusinesses();
   });
 
 export const getBusinessFn = createServerFn({ method: "GET" })
   .validator((d: any) => GetBusinessSchema.parse(d))
-  .handler(async ({ data }) => {
-    const { requireBusinessOwner } = await import("../server/auth/ownership");
-    const { business } = await requireBusinessOwner(data);
-    return business;
+  .middleware([businessOwnerMiddleware])
+  .handler(async ({ context }) => {
+    return context.business;
   });
 
 export const getBusinessesByUserFn = createServerFn({ method: "GET" })
   .validator((d: any) => GetBusinessesByUserSchema.parse(d))
-  .handler(async ({ data }) => {
-    const { requireAuth } = await import("../server/auth/session");
+  .middleware([authenticatedMiddleware])
+  .handler(async ({ data, context }) => {
     const { BusinessService } = await import("../server/services/business.service");
     
-    const decoded = await requireAuth();
+    const decoded = context.user;
     if (decoded.uid !== data && decoded.admin !== true) {
       throw new Error("Unauthorized: Cannot retrieve businesses for another user.");
     }
@@ -50,11 +49,11 @@ export const getBusinessesByUserFn = createServerFn({ method: "GET" })
 
 export const saveBusinessFn = createServerFn({ method: "POST" })
   .validator((d: any) => SaveBusinessSchema.parse(d))
-  .handler(async ({ data }) => {
-    const { requireAuth } = await import("../server/auth/session");
+  .middleware([authenticatedMiddleware])
+  .handler(async ({ data, context }) => {
     const { BusinessService } = await import("../server/services/business.service");
     
-    const decoded = await requireAuth();
+    const decoded = context.user;
     const bizUserId = typeof data.userId === "string" ? data.userId : (data.userId as any)?.id;
     if (bizUserId !== decoded.uid && decoded.admin !== true) {
       throw new Error("Unauthorized: You do not own this business.");
@@ -66,14 +65,14 @@ export const saveBusinessFn = createServerFn({ method: "POST" })
 
 export const deleteBusinessFn = createServerFn({ method: "POST" })
   .validator((d: any) => DeleteBusinessSchema.parse(d))
-  .handler(async ({ data }) => {
-    const { requireAuth } = await import("../server/auth/session");
+  .middleware([authenticatedMiddleware])
+  .handler(async ({ data, context }) => {
     const { BusinessService } = await import("../server/services/business.service");
     
     const businessService = new BusinessService();
     const existingBiz = await businessService.getBusiness(data);
     if (existingBiz) {
-      const decoded = await requireAuth();
+      const decoded = context.user;
       const bizUserId = typeof existingBiz.userId === "string" ? existingBiz.userId : (existingBiz.userId as any)?.id;
       if (bizUserId !== decoded.uid && decoded.admin !== true) {
         throw new Error("Unauthorized: You do not own this business.");

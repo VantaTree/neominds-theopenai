@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { adminMiddleware } from "./middleware";
 import {
   FetchBlogsSchema,
   FetchBlogBySlugSchema,
@@ -25,33 +26,27 @@ export const fetchBlogBySlugFn = createServerFn({ method: "GET" })
 
 export const createBlogFn = createServerFn({ method: "POST" })
   .validator((d: any) => CreateBlogSchema.parse(d))
+  .middleware([adminMiddleware])
   .handler(async ({ data }) => {
-    const { requireAdmin } = await import("../server/auth/permissions");
     const { BlogService } = await import("../server/services/blog.service");
-    
-    await requireAdmin();
     const blogService = new BlogService();
     return blogService.createBlog(data);
   });
 
 export const updateBlogFn = createServerFn({ method: "POST" })
   .validator((d: any) => UpdateBlogSchema.parse(d))
+  .middleware([adminMiddleware])
   .handler(async ({ data }) => {
-    const { requireAdmin } = await import("../server/auth/permissions");
     const { BlogService } = await import("../server/services/blog.service");
-    
-    await requireAdmin();
     const blogService = new BlogService();
     return blogService.updateBlog(data.id, data.data);
   });
 
 export const deleteBlogFn = createServerFn({ method: "POST" })
   .validator((d: any) => DeleteBlogSchema.parse(d))
+  .middleware([adminMiddleware])
   .handler(async ({ data }) => {
-    const { requireAdmin } = await import("../server/auth/permissions");
     const { BlogService } = await import("../server/services/blog.service");
-    
-    await requireAdmin();
     const blogService = new BlogService();
     await blogService.deleteBlog(data);
     return { success: true };

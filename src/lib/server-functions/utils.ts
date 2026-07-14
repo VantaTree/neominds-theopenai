@@ -1,11 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
+import { adminMiddleware, authenticatedMiddleware } from "./middleware";
 
 export const testFirestoreConnectionFn = createServerFn({ method: "POST" })
+  .middleware([adminMiddleware])
   .handler(async () => {
-    const { requireAdmin } = await import("../server/auth/permissions");
     const { adminDb } = await import("@/lib/firebase-admin.server");
     
-    await requireAdmin();
     try {
       if (!adminDb) {
         return { ok: false, error: "Firebase Admin Firestore is not initialized." };
@@ -24,10 +24,8 @@ export const testFirestoreConnectionFn = createServerFn({ method: "POST" })
   });
 
 export const getStreamCredentialsFn = createServerFn({ method: "GET" })
+  .middleware([adminMiddleware])
   .handler(async () => {
-    const { requireAdmin } = await import("../server/auth/permissions");
-    await requireAdmin();
-
     const apiKey = process.env.VITE_STREAM_API_KEY || import.meta.env.VITE_STREAM_API_KEY;
     const apiSecret = process.env.STREAM_API_SECRET || (import.meta.env as any).STREAM_API_SECRET;
 
@@ -50,9 +48,9 @@ export const getStreamCredentialsFn = createServerFn({ method: "GET" })
   });
 
 export const getClientStreamCredentialsFn = createServerFn({ method: "GET" })
-  .handler(async () => {
-    const { requireAuth } = await import("../server/auth/session");
-    const decoded = await requireAuth();
+  .middleware([authenticatedMiddleware])
+  .handler(async ({ context }) => {
+    const decoded = context.user;
 
     const apiKey = process.env.VITE_STREAM_API_KEY || import.meta.env.VITE_STREAM_API_KEY;
     const apiSecret = process.env.STREAM_API_SECRET || (import.meta.env as any).STREAM_API_SECRET;

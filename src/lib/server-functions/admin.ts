@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { authenticatedMiddleware, adminMiddleware } from "./middleware";
 import {
   SetAdminClaimSchema,
   SaveNotificationSettingsSchema,
@@ -23,55 +24,45 @@ export const verifyAdminAccessFn = createServerFn({ method: "GET" })
 
 export const setAdminClaimFn = createServerFn({ method: "POST" })
   .validator((d: any) => SetAdminClaimSchema.parse(d))
-  .handler(async ({ data }) => {
-    const { requireAuth } = await import("../server/auth/session");
+  .middleware([authenticatedMiddleware])
+  .handler(async ({ data, context }) => {
     const { AuthService } = await import("../server/services/auth.service");
-    
-    const decoded = await requireAuth();
     const authService = new AuthService();
-    await authService.setAdminClaim(decoded, data.uid, data.isAdmin);
+    await authService.setAdminClaim(context.user, data.uid, data.isAdmin);
     return { success: true };
   });
 
 export const getNotificationSettingsFn = createServerFn({ method: "GET" })
+  .middleware([adminMiddleware])
   .handler(async () => {
-    const { requireAdmin } = await import("../server/auth/permissions");
     const { AdminService } = await import("../server/services/admin.service");
-    
-    await requireAdmin();
     const adminService = new AdminService();
     return adminService.getNotificationSettings();
   });
 
 export const saveNotificationSettingsFn = createServerFn({ method: "POST" })
   .validator((d: any) => SaveNotificationSettingsSchema.parse(d))
+  .middleware([adminMiddleware])
   .handler(async ({ data }) => {
-    const { requireAdmin } = await import("../server/auth/permissions");
     const { AdminService } = await import("../server/services/admin.service");
-    
-    await requireAdmin();
     const adminService = new AdminService();
     await adminService.saveNotificationSettings(data);
     return { success: true };
   });
 
 export const getPlansFn = createServerFn({ method: "GET" })
+  .middleware([authenticatedMiddleware])
   .handler(async () => {
-    const { requireAuth } = await import("../server/auth/session");
     const { PlanService } = await import("../server/services/plan.service");
-    
-    await requireAuth();
     const planService = new PlanService();
     return planService.getPlans();
   });
 
 export const savePlanFn = createServerFn({ method: "POST" })
   .validator((d: any) => SavePlanSchema.parse(d))
+  .middleware([adminMiddleware])
   .handler(async ({ data }) => {
-    const { requireAdmin } = await import("../server/auth/permissions");
     const { PlanService } = await import("../server/services/plan.service");
-    
-    await requireAdmin();
     const planService = new PlanService();
     await planService.savePlan(data);
     return { success: true };
@@ -79,33 +70,28 @@ export const savePlanFn = createServerFn({ method: "POST" })
 
 export const deletePlanFn = createServerFn({ method: "POST" })
   .validator((d: any) => DeletePlanSchema.parse(d))
+  .middleware([adminMiddleware])
   .handler(async ({ data }) => {
-    const { requireAdmin } = await import("../server/auth/permissions");
     const { PlanService } = await import("../server/services/plan.service");
-    
-    await requireAdmin();
     const planService = new PlanService();
     await planService.deletePlan(data);
     return { success: true };
   });
 
 export const getSubscriptionsFn = createServerFn({ method: "GET" })
+  .middleware([adminMiddleware])
   .handler(async () => {
-    const { requireAdmin } = await import("../server/auth/permissions");
     const { SubscriptionService } = await import("../server/services/subscription.service");
-    
-    await requireAdmin();
     const subscriptionService = new SubscriptionService();
     return subscriptionService.getSubscriptions();
   });
 
 export const getUserSubscriptionFn = createServerFn({ method: "GET" })
   .validator((d: any) => GetUserSubscriptionSchema.parse(d))
-  .handler(async ({ data }) => {
-    const { requireAuth } = await import("../server/auth/session");
+  .middleware([authenticatedMiddleware])
+  .handler(async ({ data, context }) => {
     const { SubscriptionService } = await import("../server/services/subscription.service");
-    
-    const decoded = await requireAuth();
+    const decoded = context.user;
     if (decoded.uid !== data && decoded.admin !== true) {
       throw new Error("Unauthorized: Cannot retrieve subscription for another user.");
     }
@@ -115,11 +101,10 @@ export const getUserSubscriptionFn = createServerFn({ method: "GET" })
 
 export const saveSubscriptionFn = createServerFn({ method: "POST" })
   .validator((d: any) => SaveSubscriptionSchema.parse(d))
-  .handler(async ({ data }) => {
-    const { requireAuth } = await import("../server/auth/session");
+  .middleware([authenticatedMiddleware])
+  .handler(async ({ data, context }) => {
     const { SubscriptionService } = await import("../server/services/subscription.service");
-    
-    const decoded = await requireAuth();
+    const decoded = context.user;
     if (decoded.uid !== data.uid && decoded.admin !== true) {
       throw new Error("Unauthorized: Cannot modify subscription for another user.");
     }
@@ -130,22 +115,19 @@ export const saveSubscriptionFn = createServerFn({ method: "POST" })
 
 export const getAuditLogFn = createServerFn({ method: "GET" })
   .validator((d: any) => GetAuditLogSchema.parse(d))
+  .middleware([adminMiddleware])
   .handler(async ({ data }) => {
-    const { requireAdmin } = await import("../server/auth/permissions");
     const { AuditService } = await import("../server/services/audit.service");
-    
-    await requireAdmin();
     const auditService = new AuditService();
     return auditService.getAuditLog(data || 100);
   });
 
 export const logAuditEventFn = createServerFn({ method: "POST" })
   .validator((d: any) => LogAuditEventSchema.parse(d))
-  .handler(async ({ data }) => {
-    const { requireAuth } = await import("../server/auth/session");
+  .middleware([authenticatedMiddleware])
+  .handler(async ({ data, context }) => {
     const { AuditService } = await import("../server/services/audit.service");
-    
-    const decoded = await requireAuth();
+    const decoded = context.user;
     if (decoded.uid !== data.uid && decoded.admin !== true) {
       throw new Error("Unauthorized: Cannot log audit event for another user.");
     }
@@ -156,16 +138,14 @@ export const logAuditEventFn = createServerFn({ method: "POST" })
 
 export const seedDatabaseFn = createServerFn({ method: "POST" })
   .validator((d: any) => SaveNotificationSettingsSchema.parse(d))
+  .middleware([adminMiddleware])
   .handler(async ({ data }) => {
-    const { requireAdmin } = await import("../server/auth/permissions");
     const { AdminService } = await import("../server/services/admin.service");
     const { PlanRepository } = await import("../server/repositories/plan.repository");
     const { UserRepository } = await import("../server/repositories/user.repository");
     const { BusinessRepository } = await import("../server/repositories/business.repository");
     const { ProjectRepository } = await import("../server/repositories/project.repository");
     const { users: mockUsers, projects: mockProjects } = await import("@/lib/mock-data");
-
-    await requireAdmin();
 
     const adminService = new AdminService();
     await adminService.saveNotificationSettings(data);
