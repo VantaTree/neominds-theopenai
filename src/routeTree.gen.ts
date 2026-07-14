@@ -11,7 +11,6 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WhyRouteImport } from './routes/why'
 import { Route as SignupRouteImport } from './routes/signup'
-import { Route as PlansRouteImport } from './routes/plans'
 import { Route as LogoutRouteImport } from './routes/logout'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as HowRouteImport } from './routes/how'
@@ -25,6 +24,7 @@ import { Route as BlogsSlugRouteImport } from './routes/blogs.$slug'
 import { Route as ClientSettingsRouteImport } from './routes/_client/settings'
 import { Route as ClientProjectsRouteImport } from './routes/_client/projects'
 import { Route as ClientProfileRouteImport } from './routes/_client/profile'
+import { Route as ClientPlansRouteImport } from './routes/_client/plans'
 import { Route as ClientPlanRouteImport } from './routes/_client/plan'
 import { Route as ClientDashboardRouteImport } from './routes/_client/dashboard'
 import { Route as ClientBusinessProfileRouteImport } from './routes/_client/businessProfile'
@@ -52,11 +52,6 @@ const WhyRoute = WhyRouteImport.update({
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PlansRoute = PlansRouteImport.update({
-  id: '/plans',
-  path: '/plans',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LogoutRoute = LogoutRouteImport.update({
@@ -120,6 +115,11 @@ const ClientProjectsRoute = ClientProjectsRouteImport.update({
 const ClientProfileRoute = ClientProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => ClientRouteRoute,
+} as any)
+const ClientPlansRoute = ClientPlansRouteImport.update({
+  id: '/plans',
+  path: '/plans',
   getParentRoute: () => ClientRouteRoute,
 } as any)
 const ClientPlanRoute = ClientPlanRouteImport.update({
@@ -220,13 +220,13 @@ export interface FileRoutesByFullPath {
   '/how': typeof HowRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
-  '/plans': typeof PlansRoute
   '/signup': typeof SignupRoute
   '/why': typeof WhyRoute
   '/chat': typeof ClientChatRouteRouteWithChildren
   '/businessProfile': typeof ClientBusinessProfileRoute
   '/dashboard': typeof ClientDashboardRoute
   '/plan': typeof ClientPlanRoute
+  '/plans': typeof ClientPlansRoute
   '/profile': typeof ClientProfileRoute
   '/projects': typeof ClientProjectsRoute
   '/settings': typeof ClientSettingsRoute
@@ -253,12 +253,12 @@ export interface FileRoutesByTo {
   '/how': typeof HowRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
-  '/plans': typeof PlansRoute
   '/signup': typeof SignupRoute
   '/why': typeof WhyRoute
   '/businessProfile': typeof ClientBusinessProfileRoute
   '/dashboard': typeof ClientDashboardRoute
   '/plan': typeof ClientPlanRoute
+  '/plans': typeof ClientPlansRoute
   '/profile': typeof ClientProfileRoute
   '/projects': typeof ClientProjectsRoute
   '/settings': typeof ClientSettingsRoute
@@ -289,13 +289,13 @@ export interface FileRoutesById {
   '/how': typeof HowRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
-  '/plans': typeof PlansRoute
   '/signup': typeof SignupRoute
   '/why': typeof WhyRoute
   '/_client/chat': typeof ClientChatRouteRouteWithChildren
   '/_client/businessProfile': typeof ClientBusinessProfileRoute
   '/_client/dashboard': typeof ClientDashboardRoute
   '/_client/plan': typeof ClientPlanRoute
+  '/_client/plans': typeof ClientPlansRoute
   '/_client/profile': typeof ClientProfileRoute
   '/_client/projects': typeof ClientProjectsRoute
   '/_client/settings': typeof ClientSettingsRoute
@@ -325,13 +325,13 @@ export interface FileRouteTypes {
     | '/how'
     | '/login'
     | '/logout'
-    | '/plans'
     | '/signup'
     | '/why'
     | '/chat'
     | '/businessProfile'
     | '/dashboard'
     | '/plan'
+    | '/plans'
     | '/profile'
     | '/projects'
     | '/settings'
@@ -358,12 +358,12 @@ export interface FileRouteTypes {
     | '/how'
     | '/login'
     | '/logout'
-    | '/plans'
     | '/signup'
     | '/why'
     | '/businessProfile'
     | '/dashboard'
     | '/plan'
+    | '/plans'
     | '/profile'
     | '/projects'
     | '/settings'
@@ -393,13 +393,13 @@ export interface FileRouteTypes {
     | '/how'
     | '/login'
     | '/logout'
-    | '/plans'
     | '/signup'
     | '/why'
     | '/_client/chat'
     | '/_client/businessProfile'
     | '/_client/dashboard'
     | '/_client/plan'
+    | '/_client/plans'
     | '/_client/profile'
     | '/_client/projects'
     | '/_client/settings'
@@ -430,7 +430,6 @@ export interface RootRouteChildren {
   HowRoute: typeof HowRoute
   LoginRoute: typeof LoginRoute
   LogoutRoute: typeof LogoutRoute
-  PlansRoute: typeof PlansRoute
   SignupRoute: typeof SignupRoute
   WhyRoute: typeof WhyRoute
 }
@@ -449,13 +448,6 @@ declare module '@tanstack/react-router' {
       path: '/signup'
       fullPath: '/signup'
       preLoaderRoute: typeof SignupRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/plans': {
-      id: '/plans'
-      path: '/plans'
-      fullPath: '/plans'
-      preLoaderRoute: typeof PlansRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/logout': {
@@ -547,6 +539,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof ClientProfileRouteImport
+      parentRoute: typeof ClientRouteRoute
+    }
+    '/_client/plans': {
+      id: '/_client/plans'
+      path: '/plans'
+      fullPath: '/plans'
+      preLoaderRoute: typeof ClientPlansRouteImport
       parentRoute: typeof ClientRouteRoute
     }
     '/_client/plan': {
@@ -731,6 +730,7 @@ interface ClientRouteRouteChildren {
   ClientBusinessProfileRoute: typeof ClientBusinessProfileRoute
   ClientDashboardRoute: typeof ClientDashboardRoute
   ClientPlanRoute: typeof ClientPlanRoute
+  ClientPlansRoute: typeof ClientPlansRoute
   ClientProfileRoute: typeof ClientProfileRoute
   ClientProjectsRoute: typeof ClientProjectsRoute
   ClientSettingsRoute: typeof ClientSettingsRoute
@@ -741,6 +741,7 @@ const ClientRouteRouteChildren: ClientRouteRouteChildren = {
   ClientBusinessProfileRoute: ClientBusinessProfileRoute,
   ClientDashboardRoute: ClientDashboardRoute,
   ClientPlanRoute: ClientPlanRoute,
+  ClientPlansRoute: ClientPlansRoute,
   ClientProfileRoute: ClientProfileRoute,
   ClientProjectsRoute: ClientProjectsRoute,
   ClientSettingsRoute: ClientSettingsRoute,
@@ -771,7 +772,6 @@ const rootRouteChildren: RootRouteChildren = {
   HowRoute: HowRoute,
   LoginRoute: LoginRoute,
   LogoutRoute: LogoutRoute,
-  PlansRoute: PlansRoute,
   SignupRoute: SignupRoute,
   WhyRoute: WhyRoute,
 }

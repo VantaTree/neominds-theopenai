@@ -14,7 +14,7 @@ const plansSearchSchema = z.object({
   plan: z.string().optional(),
 });
 
-export const Route = createFileRoute("/plans")({
+export const Route = createFileRoute("/_client/plans")({
   validateSearch: plansSearchSchema,
   head: () => ({
     meta: [
@@ -77,7 +77,7 @@ function PlansPage() {
   return (
     <div className="min-h-screen bg-(--color-mm-plans-bg)">
       {/* Global Navigation */}
-      <MymindNav />
+      {/* <MymindNav /> */}
 
       {/* Main Pricing Section */}
       <section className="w-full py-24 md:py-32">
@@ -153,11 +153,10 @@ function PlansPage() {
       </section>
 
       {/* Global Footer */}
-      <MymindFooter />
+      {/* <MymindFooter /> */}
 
       {/* Dynamic Checkout Modals */}
       {renderModals()}
     </div>
   );
 }
-
