@@ -8,6 +8,7 @@ import PLANS from "@/data/plans";
 import AnimatedPlanCard from "@/components/AnimatedPlanCard";
 import { z } from "zod";
 import { useRazorpayCheckout } from "@/hooks/use-razorpay-checkout";
+import { useBusiness } from "@/hooks/use-business";
 
 const plansSearchSchema = z.object({
   businessId: z.string().optional(),
@@ -40,6 +41,8 @@ function PlansPage() {
   const search = Route.useSearch();
   const { auth } = Route.useRouteContext();
   const { handleSelectPlan, renderModals } = useRazorpayCheckout();
+  const { activeBusiness } = useBusiness();
+  const currentPlan = activeBusiness?.plan || "None";
 
   // Handle plan auto-activation if coming from checkout flow with a pre-selected plan
   useEffect(() => {
@@ -47,9 +50,9 @@ function PlansPage() {
       const planToSelect = search.plan;
       // Clear plan parameter from URL so it doesn't trigger repeatedly
       navigate({
-        search: (prev) => ({ ...prev, plan: undefined }),
+        search: (prev: any) => ({ ...prev, plan: undefined }),
         replace: true,
-      });
+      } as any);
       handleSelectPlan(planToSelect);
     }
   }, [search.plan, auth.user]);
@@ -120,6 +123,7 @@ function PlansPage() {
                 i={i}
                 cardType="default"
                 onSelectPlan={handleSelectPlan}
+                isCurrent={plan.name === currentPlan}
               />
             ))}
             {PLANS.slice(3, 4).map((plan, i) => (
@@ -129,6 +133,7 @@ function PlansPage() {
                 i={i}
                 cardType="custom"
                 onSelectPlan={handleSelectPlan}
+                isCurrent={plan.name === currentPlan}
               />
             ))}
           </div>

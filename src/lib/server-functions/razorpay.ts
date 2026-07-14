@@ -6,7 +6,12 @@ import { type Payment } from "@/lib/schemas";
 export const createRazorpayOrderFn = createServerFn({ method: "POST" })
   .validator((d: { businessId: string; planName: "Basic" | "Plus" | "Pro" }) => d)
   .middleware([businessOwnerMiddleware])
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    const biz = (context as any).business;
+    if (biz && biz.plan === data.planName) {
+      throw new Error(`BadRequest: You already have the ${data.planName} plan.`);
+    }
+
     // Find the plan in plans.ts dynamically
     const plan = PLANS.find((p) => p.name.toLowerCase() === data.planName.toLowerCase());
     if (!plan) {
@@ -66,6 +71,10 @@ export const verifyRazorpayPaymentFn = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const decoded = (context as any).user;
     const biz = (context as any).business;
+
+    if (biz && biz.plan === data.planName) {
+      throw new Error(`BadRequest: You already have the ${data.planName} plan.`);
+    }
 
     const { BusinessRepository } = await import("../server/repositories/business.repository");
     const { PaymentRepository } = await import("../server/repositories/payment.repository");
