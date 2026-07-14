@@ -25,36 +25,36 @@ const rawTestimonials = [
   {
     id: "hr_candidate_screening",
     name: "Jonathan Vance",
-    businessName: "TalentStream Partners",
-    projectDescription: "AI Resume Screener — Fit Scores & Red Flags",
-    text: "The n8n pipeline saves our recruitment team hours every day. Candidates are pre-screened in seconds and graded against live criteria with zero data entry.",
+    businessName: "AI Resume Screener",
+    projectDescription: "An AI-powered recruitment platform that automates resume screening, candidate matching, and applicant ranking to help HR teams hire faster and more efficiently",
+    text: "The platform uses artificial intelligence and natural language processing (NLP) to analyze resumes, compare candidate skills with job requirements, and generate intelligent rankings based on relevance. Recruiters can manage job postings, review shortlisted candidates, and reduce manual screening efforts, resulting in a faster, more accurate, and data-driven hiring process.",
     imagePath: "/images/portfolio/hr-automation.png",
     clientLogo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&h=120&q=80",
   },
   {
     id: "mindspace_ai",
     name: "Dr. Amit Patel",
-    businessName: "Mindspace / GoodMind",
-    projectDescription: "TARA: 24/7 AI Companion PWA",
-    text: "TARA offers an incredibly empathetic and low-latency voice and text chat experience for mental wellness. Elevating support with Firebase and ElevenLabs integration.",
+    businessName: "MindSpace.ai",
+    projectDescription: "An AI-driven mental wellness platform that provides users with 24/7 conversational support, personalized guidance, and emotional well-being assistance.",
+    text: "The application offers an intelligent AI companion capable of engaging in meaningful conversations, tracking moods, and providing personalized wellness suggestions. Designed with accessibility and user privacy in mind, the platform creates a supportive environment where users can access mental wellness resources anytime while encouraging healthy emotional habits.",
     imagePath: "/images/portfolio/mindspace.jpeg",
     clientLogo: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&h=120&q=80",
   },
   {
     id: "flooringinc_analytics",
     name: "Robert H.",
-    businessName: "IncStores E-commerce",
-    projectDescription: "360° E‑commerce Analytics & AI Queries",
-    text: "Connecting Magento to this MySQL dashboard with a Groq NL-to-SQL bot allows anyone on our team to query sales and revenue in plain English.",
+    businessName: "E-commerce Analytics Platform",
+    projectDescription: "A business intelligence dashboard that converts e-commerce data into interactive reports and actionable business insights.",
+    text: "The platform integrates sales, customer, and operational data into a centralized dashboard with real-time visualizations. It enables business teams to monitor KPIs, analyze customer behavior, identify sales trends, and generate reports that support informed decision-making and improved business performance.",
     imagePath: "/images/portfolio/dashboard.png",
     clientLogo: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=120&h=120&q=80",
   },
   {
     id: "project_buddy",
     name: "Sarah Jenkins",
-    businessName: "Vertex AI / Slack RAG",
-    projectDescription: "Project Buddy: Slack-integrated RAG Bot",
-    text: "Finding answers in our Google Drive document corpus was reduced from 20 minutes to 2 seconds. The Slack thread context integration is exceptionally intuitive.",
+    businessName: "Project Buddy – Slack Integration",
+    projectDescription: "An AI-powered Slack assistant that enables employees to instantly access project information, documentation, and organizational knowledge without leaving Slack.",
+    text: "The solution integrates seamlessly with Slack to provide intelligent search and conversational assistance across project documentation and internal knowledge bases. Employees can ask questions in natural language, retrieve relevant information within seconds, and collaborate more effectively while minimizing time spent searching for documents.",
     imagePath: "/images/portfolio/project-buddy.png",
     clientLogo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&h=120&q=80",
   },
@@ -62,44 +62,44 @@ const rawTestimonials = [
     id: "mindspace_ai_dashboard",
     name: "Elena Rostova",
     businessName: "Mindspace Platform",
-    projectDescription: "Mindspace.ai Admin Control Panel",
-    text: "Our admin team now has absolute control over users, notifications, and engagement analytics. The AI-generated push notifications are a massive productivity boost.",
+    projectDescription: "A centralized SaaS management platform that streamlines administration, user management, notifications, analytics, and platform operations.",
+    text: "The platform provides administrators with a comprehensive dashboard for managing users, monitoring system performance, sending notifications, and tracking business metrics. Built with scalability and ease of use in mind, it simplifies day-to-day operations while improving overall platform management and operational efficiency.",
     imagePath: "/images/portfolio/mindspace-dashboard.png",
     clientLogo: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=120&h=120&q=80",
   },
   {
     id: "ai_co_teacher",
     name: "Marcus Chen",
-    businessName: "Horizon EdTech",
-    projectDescription: "AI Co-Teacher: Lesson & Quiz Generator",
-    text: "Teachers at our academy cut lesson planning and quiz prep time down by 80%. We can track attendance and struggling students from a single screen.",
+    businessName: "AI Co-Teacher",
+    projectDescription: "An AI-powered teaching assistant designed to automate lesson planning, content creation, assessments, and classroom management for educators.",
+    text: "The platform assists teachers by generating lesson plans, presentations, quizzes, assignments, worksheets, and other educational resources in minutes. It also supports student progress tracking and classroom organization, allowing educators to spend less time on administrative work and more time focusing on effective teaching and student engagement.",
     imagePath: "/images/portfolio/coteacher.png",
     clientLogo: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=120&h=120&q=80",
   },
   {
     id: "ai_lms",
     name: "David K.",
-    businessName: "Apex Learning Systems",
-    projectDescription: "AI LMS: Adaptive Learning & Auto-Grading",
-    text: "The adaptive quiz engine and NLP auto-grading are outstanding. Our dropout alerts have significantly improved student completion rates.",
+    businessName: "AIMC Assistant – Waqf Document AI",
+    projectDescription: "An AI-powered legal document assistant developed to simplify the understanding and analysis of Waqf-related documents. The platform enables users to search, upload, and interact with legal records through an intelligent bilingual conversational interface.",
+    text: "Developed an advanced AI legal assistant that leverages Large Language Models (LLMs) and Natural Language Processing (NLP) to analyze Waqf documents, government notifications, legal judgments, and related records. Users can upload documents, ask questions in natural language, receive contextual answers, and generate summaries in both English and Urdu. The platform features intelligent document search, multilingual support, secure document processing, and AI-powered legal insights, enabling legal professionals, researchers, and citizens to access and understand complex Waqf information more efficiently.",
     imagePath: "/images/portfolio/lms.png",
     clientLogo: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=120&h=120&q=80",
   },
   {
     id: "smart_fee_management",
     name: "Julian V.",
-    businessName: "Vanguard Colleges",
-    projectDescription: "Smart Fee Management & Receipts",
-    text: "Automating payment links and WhatsApp reminders cleared our outstanding collections. The financial forecasting dashboard gives perfect clarity.",
+    businessName: "AI Fee Management System for Schools & Colleges",
+    projectDescription: "An AI-powered fee management solution designed to automate fee collection, payment tracking, invoicing, and financial reporting for schools and colleges. The platform simplifies administrative tasks while providing parents and institutions with a seamless payment experience.",
+    text: "Developed a comprehensive fee management platform that enables educational institutions to create customized fee structures, generate invoices, collect payments through multiple payment methods, and automatically issue digital receipts. The system includes AI-assisted payment reminders, real-time dashboards, due payment tracking, financial analytics, role-based access for administrators, and detailed reporting to improve operational efficiency, reduce manual work, and ensure transparent financial management across the institution",
     imagePath: "/images/portfolio/fee collection.png",
     clientLogo: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=120&h=120&q=80",
   },
   {
     id: "ai_social_posts",
     name: "Aisha Rahman",
-    businessName: "Zenith Retail",
-    projectDescription: "AI Social Posts: One-Prompt Creator",
-    text: "Creating both the graphics and captions in a single prompt and scheduling them directly has scaled our social media presence without extra hires.",
+    businessName: "AI Image Caption Generation for Social Media",
+    projectDescription: "An AI-powered content generation platform that transforms images into engaging, platform-ready social media captions. The solution helps creators and businesses generate high-quality captions, hashtags, and post ideas in seconds, improving content creation efficiency and audience engagement. ",
+    text: "Developed an intelligent image caption generation system that uses computer vision and generative AI to analyze uploaded images and understand their context, objects, emotions, and visual elements. Based on the selected social media platform and desired tone, the system generates creative captions, relevant hashtags, and call-to-action suggestions tailored for platforms such as Instagram, LinkedIn, Facebook, and X. The platform enables content creators, marketers, and businesses to maintain consistent branding, reduce content creation time, and publish engaging social media posts with ease.",
     imagePath: "/images/portfolio/market.jpeg",
     clientLogo: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=120&h=120&q=80",
   },
@@ -107,8 +107,8 @@ const rawTestimonials = [
     id: "aristotle_practice_buddy",
     name: "Professor Harris",
     businessName: "Aristotle Academics",
-    projectDescription: "Aristotle: AI Practice & Handwriting Buddy",
-    text: "Real-time handwriting recognition and mistake detection guide students step-by-step, turning study struggles into rewarding breakthroughs.",
+    projectDescription: "An AI-powered problem-solving platform that helps users analyze complex questions, generate structured solutions, and receive intelligent guidance across academic, professional, and everyday challenges. The platform is designed to simplify decision-making through conversational AI and logical reasoning. ",
+    text: "Developed an intelligent AI assistant capable of understanding user queries, breaking down complex problems into manageable steps, and generating clear, actionable solutions. The platform leverages advanced Large Language Models (LLMs) to provide contextual explanations, brainstorming support, research assistance, content generation, and decision-making guidance through a conversational interface. Built with a user-friendly experience in mind, Aristotle enables students, professionals, and businesses to solve problems more efficiently while improving productivity and knowledge discovery.",
     imagePath: "/images/portfolio/Aristotle.png",
     clientLogo: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&w=120&h=120&q=80",
   },
@@ -116,52 +116,52 @@ const rawTestimonials = [
     id: "expirio_inventory",
     name: "Lisa Miller",
     businessName: "Expirio Kitchens",
-    projectDescription: "Expirio: Expiry Alerts & Recipe Suggester",
-    text: "Expirio completely resolved duplicate orders and inventory waste in our pantry and kitchen. The recipe generator uses up expiring stock beautifully.",
+    projectDescription: "An AI-powered inventory management platform that helps businesses monitor product expiry dates, track inventory levels, and receive proactive alerts to minimize waste and optimize stock management. The solution enables organizations to maintain accurate inventory while reducing operational losses caused by expired products. ",
+    text: "Developed a smart inventory and expiry management system that provides real-time visibility into stock availability, expiry status, and product movement through an intuitive dashboard. The platform features automated expiry notifications, low-stock alerts, intelligent inventory categorization, and analytics to support timely decision-making. By streamlining inventory monitoring and reducing manual tracking, the solution helps businesses improve operational efficiency, minimize product wastage, and maintain optimal inventory levels across their operations.",
     imagePath: "/images/portfolio/expirio.jpg",
     clientLogo: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=120&h=120&q=80",
   },
   {
     id: "ai_complaint_classifier",
     name: "Carlos M.",
-    businessName: "Techflow Support",
-    projectDescription: "AI Complaint Classifier & Router",
-    text: "By reading ticket sentiment and routing complaints automatically, our manual triage workload was cut by 60%. Highly recommend.",
+    businessName: "AI Complaint Classifier & Complaint Management System",
+    projectDescription: "An AI-powered complaint management platform that automatically classifies, prioritizes, and routes complaints to the appropriate department for faster resolution. The system streamlines grievance handling through intelligent automation, real-time tracking, and centralized case management",
+    text: "Developed a comprehensive complaint management solution that leverages Artificial Intelligence and Natural Language Processing (NLP) to analyze incoming complaints, identify categories, assess urgency, and assign cases to the relevant teams automatically. The platform includes complaint registration, status tracking, automated notifications, role-based workflows, analytics dashboards, and performance reports. By reducing manual effort and improving response times, the solution enhances operational efficiency, transparency, and overall citizen/customer satisfaction.",
     imagePath: "/images/portfolio/complaint.jpeg",
     clientLogo: "https://images.unsplash.com/photo-1501196354995-cbb51c65aaea?auto=format&fit=crop&w=120&h=120&q=80",
   },
   {
     id: "ai_textbook_tool",
     name: "Hannah Abbott",
-    businessName: "EduSmart Tools",
-    projectDescription: "AI Textbook Platform: Summaries & Flashcards",
-    text: "Uploading 400-page textbooks and instantly generating matching quizzes and active-recall flashcards has transformed student revision.",
+    businessName: "AI Textbook Intelligence Platform",
+    projectDescription: "An AI-powered textbook intelligence platform that transforms traditional learning materials into interactive, searchable, and personalized educational resources. The solution enables students and educators to access key concepts, summaries, and learning support through an intelligent interface.",
+    text: "Developed an advanced AI platform that processes textbooks and educational content using Natural Language Processing (NLP) and Large Language Models (LLMs) to deliver an enhanced learning experience. Users can upload textbooks, search topics instantly, generate chapter summaries, ask questions in natural language, and receive contextual explanations based on the uploaded content. The platform also supports intelligent content organization, personalized learning assistance, and interactive knowledge retrieval, helping educational institutions improve student engagement, simplify learning, and make educational resources more accessible and effective.Uploading 400-page textbooks and instantly generating matching quizzes and active-recall flashcards has transformed student revision.",
     imagePath: "/images/portfolio/textbook.png",
     clientLogo: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&h=120&q=80",
   },
   {
     id: "ai_sql_chatbot",
     name: "Victor Petrov",
-    businessName: "Finova Tech Data",
-    projectDescription: "AI SQL Chatbot: Natural Language Analytics",
-    text: "Our business users can query complex databases in plain English without writing a single line of SQL. Secure, quick, and robust.",
+    businessName: "AI SQL Chatbot",
+    projectDescription: "An AI-powered SQL chatbot that enables users to interact with databases using natural language instead of writing SQL queries. The platform simplifies data analysis by instantly converting user questions into SQL queries and presenting meaningful insights through an intuitive conversational interface.",
+    text: "Developed an intelligent conversational analytics platform that integrates Large Language Models (LLMs) with relational databases to automate SQL query generation and data retrieval. Users can ask business questions in plain English, and the system interprets the request, generates optimized SQL queries, executes them securely, and presents the results in easy-to-understand tables and visualizations. The platform supports role-based access, query history, contextual conversations, and real-time analytics, enabling business teams to make faster, data-driven decisions without requiring technical SQL expertise.Our business users can query complex databases in plain English without writing a single line of SQL. Secure, quick, and robust.",
     imagePath: "/images/portfolio/mysql.png",
     clientLogo: "https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?auto=format&fit=crop&w=120&h=120&q=80",
   },
   {
     id: "aqsa_calligraphy",
     name: "Aqsa Rauf",
-    businessName: "AAQSAA Calligraphy",
-    projectDescription: "Luxury Calligraphy Portfolio & Commissions",
-    text: "The Gold/Glassmorphism SPA represents my artwork perfectly. The secure Gmail SMTP commission flow has made custom bookings seamless.",
+    businessName: "Calligraphy by Aqsa",
+    projectDescription: "A custom-designed business website created to showcase handcrafted calligraphy artwork, personalized collections, and creative services through an elegant and user-friendly online presence. The platform helps customers explore products, learn about the brand, and connect for custom orders.",
+    text: "Developed a modern, responsive portfolio and business website that highlights the artist's calligraphy collections, custom design services, and brand story with a visually appealing user experience. The website includes beautifully organized galleries, service pages, inquiry and contact forms, mobile-friendly navigation, and SEO-optimized content to enhance online visibility. Designed with a focus on aesthetics and usability, the platform strengthens the brand's digital presence and makes it easier for customers to discover, explore, and request personalized calligraphy services.he Gold/Glassmorphism SPA represents my artwork perfectly. The secure Gmail SMTP commission flow has made custom bookings seamless.",
     imagePath: "/images/portfolio/aqsa.png",
     clientLogo: "https://images.unsplash.com/photo-1554151228-14d9def656e4?auto=format&fit=crop&w=120&h=120&q=80",
   },
   {
     id: "neo_emotion",
     name: "Simon Templar",
-    businessName: "Neo Emotion Labs",
-    projectDescription: "Neo Emotion: Real-Time Face Emotion AI",
+    businessName: "Neo Emotion – Facial Expression Recognition",
+    projectDescription: "An AI-powered facial expression recognition system that detects and analyzes human emotions in real time using computer vision and deep learning. The platform helps organizations gain meaningful emotional insights to enhance user experiences, engagement, and decision-making.",
     text: "Real-time webcam facial expression analysis with ResNet-18 has given our interactive apps a stable, high-performance empathy layer.",
     imagePath: "/images/portfolio/neomotion.png",
     clientLogo: "https://images.unsplash.com/photo-1500048993953-d23a436266cf?auto=format&fit=crop&w=120&h=120&q=80",
@@ -356,7 +356,7 @@ export function MymindTestimonials() {
       // Prevent the website body/background from scrolling and block other listeners (like Lenis)
       e.preventDefault();
       e.stopPropagation();
-      
+
       // Redirect scroll delta directly to the side panel container
       if (panelScrollRef.current) {
         panelScrollRef.current.scrollTop += e.deltaY;
@@ -1104,17 +1104,15 @@ export function MymindTestimonials() {
           {/* Background canvas connections web */}
           <canvas
             ref={canvasRef}
-            className={`absolute inset-0 w-full h-full pointer-events-none transition-[filter,opacity] duration-300 ${
-              isPanelOpen ? "blur-md opacity-40" : ""
-            }`}
+            className={`absolute inset-0 w-full h-full pointer-events-none transition-[filter,opacity] duration-300 ${isPanelOpen ? "blur-md opacity-40" : ""
+              }`}
           />
 
           {/* Tilted / Panned graph layout wrapper */}
           <div
             ref={graphWrapperRef}
-            className={`absolute inset-0 pointer-events-none will-change-transform transition-[filter,opacity] duration-300 ${
-              isPanelOpen ? "blur-md pointer-events-none opacity-40" : ""
-            }`}
+            className={`absolute inset-0 pointer-events-none will-change-transform transition-[filter,opacity] duration-300 ${isPanelOpen ? "blur-md pointer-events-none opacity-40" : ""
+              }`}
             style={{ transformOrigin: "0 0" }}
           >
             {testimonials.map((card, idx) => {
@@ -1135,8 +1133,8 @@ export function MymindTestimonials() {
                   {/* Premium Testimonial Card */}
                   <div
                     className={`w-[230px] sm:w-[285px] aspect-[16/11] rounded-2xl border bg-white border-mm-border shadow-2xl flex flex-col transition-all duration-500 will-change-transform overflow-hidden relative ${isActive
-                        ? "ring-1 ring-mm-orange border-mm-orange/40 scale-115 md:scale-150 shadow-[0_15px_45px_rgba(255,89,36,0.12)]"
-                        : "opacity-60 scale-90 saturate-50 hover:opacity-90"
+                      ? "ring-1 ring-mm-orange border-mm-orange/40 scale-115 md:scale-150 shadow-[0_15px_45px_rgba(255,89,36,0.12)]"
+                      : "opacity-60 scale-90 saturate-50 hover:opacity-90"
                       }`}
                   >
                     {/* The centered image contained inside the card */}
@@ -1210,8 +1208,8 @@ export function MymindTestimonials() {
                   <div
                     key={node.id}
                     className={`absolute size-1.5 rounded-full transition-all duration-300 pointer-events-none ${isActive
-                        ? "bg-mm-orange scale-150 shadow-[0_0_6px_rgba(255,89,36,0.6)]"
-                        : "bg-mm-dark/20"
+                      ? "bg-mm-orange scale-150 shadow-[0_0_6px_rgba(255,89,36,0.6)]"
+                      : "bg-mm-dark/20"
                       }`}
                     style={{
                       transform: `translate3d(${nodePctX * 70}px, ${nodePctY * 40}px, 0)`,
@@ -1310,7 +1308,7 @@ export function MymindTestimonials() {
                           Client Feedback
                         </span>
                         <div className="relative bg-linear-to-b from-black/[0.02] to-black/[0.005] rounded-2xl p-6 border border-mm-border shadow-[inset_0_1px_1px_rgba(0,0,0,0.02)] overflow-hidden">
-                          <p 
+                          <p
                             className="text-lg text-mm-dark leading-relaxed pl-3 pt-2 relative z-10 font-semibold"
                             style={{ fontFamily: "'Louize', Georgia, serif", fontStyle: "italic" }}
                           >
