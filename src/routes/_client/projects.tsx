@@ -83,7 +83,10 @@ function RouteComponent() {
       setLoading(true);
       try {
         const [fetchedProjects, fetchedReports] = await Promise.all([
-          getProjectsByBusinessFn({ data: businessId }),
+          getProjectsByBusinessFn({ data: businessId }).catch((err) => {
+            console.warn("Failed to load projects (upgrade required):", err);
+            return [];
+          }),
           getReportsByBusinessFn({ data: businessId }),
         ]);
         if (active) {

@@ -41,7 +41,7 @@ export const getReportsByUserFn = createServerFn({ method: "GET" })
 
 export const getReportsByBusinessFn = createServerFn({ method: "GET" })
   .validator((d: any) => GetReportsByBusinessSchema.parse(d))
-  .middleware([businessOwnerMiddleware, requirePlanMiddleware("Basic")])
+  .middleware([businessOwnerMiddleware])
   .handler(async ({ data: businessId }) => {
     const { ReportService } = await import("../server/services/report.service");
     const reportService = new ReportService();
