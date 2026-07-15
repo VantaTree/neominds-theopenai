@@ -30,7 +30,7 @@ export const getBusinessFn = createServerFn({ method: "GET" })
   .validator((d: any) => GetBusinessSchema.parse(d))
   .middleware([businessOwnerMiddleware])
   .handler(async ({ context }) => {
-    return context.business;
+    return context!.business;
   });
 
 export const getBusinessesByUserFn = createServerFn({ method: "GET" })

@@ -81,3 +81,10 @@ export {
   createRazorpayOrderFn,
   verifyRazorpayPaymentFn,
 } from "./server-functions/razorpay";
+
+export {
+  getAuthUrlFn,
+  exchangeAuthCodeFn,
+  getDashboardInsightsFn,
+} from "./server-functions/integrations";
+

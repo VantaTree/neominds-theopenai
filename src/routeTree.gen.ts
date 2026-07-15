@@ -20,6 +20,7 @@ import { Route as ClientRouteRouteImport } from './routes/_client/route'
 import { Route as AdminRouteRouteImport } from './routes/_admin/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as BlogsIndexRouteImport } from './routes/blogs.index'
+import { Route as OauthCallbackRouteImport } from './routes/oauth/callback'
 import { Route as BlogsSlugRouteImport } from './routes/blogs.$slug'
 import { Route as ClientSettingsRouteImport } from './routes/_client/settings'
 import { Route as ClientProjectsRouteImport } from './routes/_client/projects'
@@ -96,6 +97,11 @@ const BlogsIndexRoute = BlogsIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => BlogsRoute,
+} as any)
+const OauthCallbackRoute = OauthCallbackRouteImport.update({
+  id: '/oauth/callback',
+  path: '/oauth/callback',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const BlogsSlugRoute = BlogsSlugRouteImport.update({
   id: '/$slug',
@@ -231,6 +237,7 @@ export interface FileRoutesByFullPath {
   '/projects': typeof ClientProjectsRoute
   '/settings': typeof ClientSettingsRoute
   '/blogs/$slug': typeof BlogsSlugRoute
+  '/oauth/callback': typeof OauthCallbackRoute
   '/blogs/': typeof BlogsIndexRoute
   '/admin/chat': typeof AdminAdminChatRoute
   '/admin/payments': typeof AdminAdminPaymentsRoute
@@ -263,6 +270,7 @@ export interface FileRoutesByTo {
   '/projects': typeof ClientProjectsRoute
   '/settings': typeof ClientSettingsRoute
   '/blogs/$slug': typeof BlogsSlugRoute
+  '/oauth/callback': typeof OauthCallbackRoute
   '/blogs': typeof BlogsIndexRoute
   '/admin/chat': typeof AdminAdminChatRoute
   '/admin/payments': typeof AdminAdminPaymentsRoute
@@ -300,6 +308,7 @@ export interface FileRoutesById {
   '/_client/projects': typeof ClientProjectsRoute
   '/_client/settings': typeof ClientSettingsRoute
   '/blogs/$slug': typeof BlogsSlugRoute
+  '/oauth/callback': typeof OauthCallbackRoute
   '/blogs/': typeof BlogsIndexRoute
   '/_admin/admin/chat': typeof AdminAdminChatRoute
   '/_admin/admin/payments': typeof AdminAdminPaymentsRoute
@@ -336,6 +345,7 @@ export interface FileRouteTypes {
     | '/projects'
     | '/settings'
     | '/blogs/$slug'
+    | '/oauth/callback'
     | '/blogs/'
     | '/admin/chat'
     | '/admin/payments'
@@ -368,6 +378,7 @@ export interface FileRouteTypes {
     | '/projects'
     | '/settings'
     | '/blogs/$slug'
+    | '/oauth/callback'
     | '/blogs'
     | '/admin/chat'
     | '/admin/payments'
@@ -404,6 +415,7 @@ export interface FileRouteTypes {
     | '/_client/projects'
     | '/_client/settings'
     | '/blogs/$slug'
+    | '/oauth/callback'
     | '/blogs/'
     | '/_admin/admin/chat'
     | '/_admin/admin/payments'
@@ -432,6 +444,7 @@ export interface RootRouteChildren {
   LogoutRoute: typeof LogoutRoute
   SignupRoute: typeof SignupRoute
   WhyRoute: typeof WhyRoute
+  OauthCallbackRoute: typeof OauthCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -512,6 +525,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/blogs/'
       preLoaderRoute: typeof BlogsIndexRouteImport
       parentRoute: typeof BlogsRoute
+    }
+    '/oauth/callback': {
+      id: '/oauth/callback'
+      path: '/oauth/callback'
+      fullPath: '/oauth/callback'
+      preLoaderRoute: typeof OauthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/blogs/$slug': {
       id: '/blogs/$slug'
@@ -774,6 +794,7 @@ const rootRouteChildren: RootRouteChildren = {
   LogoutRoute: LogoutRoute,
   SignupRoute: SignupRoute,
   WhyRoute: WhyRoute,
+  OauthCallbackRoute: OauthCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -5,12 +5,12 @@ import { Building2, CheckCircle, Loader2 } from "lucide-react";
 import { BusinessContext } from "@/hooks/use-business";
 import PLANS from "@/data/plans";
 
-export function useRazorpayCheckout(options?: { onPaymentSuccess?: () => void; auth?: any }) {
+export function useRazorpayCheckout(hookOptions?: { onPaymentSuccess?: () => void; auth?: any }) {
   const navigate = useNavigate();
   const router = useRouter();
 
   // Safely extract auth session reactively
-  let auth = options?.auth;
+  let auth = hookOptions?.auth;
   if (!auth) {
     try {
       const routeContext = useRouteContext({ strict: false });
@@ -187,8 +187,8 @@ export function useRazorpayCheckout(options?: { onPaymentSuccess?: () => void; a
               if (businessCtx?.refetch) {
                 await businessCtx.refetch();
               }
-              if (options?.onPaymentSuccess) {
-                options.onPaymentSuccess();
+              if (hookOptions?.onPaymentSuccess) {
+                hookOptions.onPaymentSuccess();
               }
             } else {
               throw new Error("Verification failed on the server.");

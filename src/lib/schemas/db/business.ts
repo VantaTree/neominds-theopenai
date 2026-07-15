@@ -21,6 +21,23 @@ export const PaymentStatusEnum = z.enum([
 ]);
 export type PaymentStatus = z.infer<typeof PaymentStatusEnum>;
 
+export const IntegrationDetailsSchema = z.object({
+  isConnected: z.boolean().default(false),
+  accessToken: z.string().optional().nullable(),
+  refreshToken: z.string().optional().nullable(),
+  expiresAt: z.string().optional().nullable(),
+  updatedAt: z.string().optional().nullable(),
+  instagramBusinessId: z.string().optional().nullable(),
+  facebookPageId: z.string().optional().nullable(),
+});
+export type IntegrationDetails = z.infer<typeof IntegrationDetailsSchema>;
+
+export const IntegrationsSchema = z.object({
+  google: IntegrationDetailsSchema.optional().nullable(),
+  meta: IntegrationDetailsSchema.optional().nullable(),
+});
+export type Integrations = z.infer<typeof IntegrationsSchema>;
+
 export const BusinessSchema = z.object({
   id: z.string().min(1, "Business ID is required"),
   userId: Reference(UserSchema, "User ID reference is required"),
@@ -33,8 +50,10 @@ export const BusinessSchema = z.object({
   image: z.string().url().optional(),
   websiteUrl: z.string().default(""),
   paymentStatus: PaymentStatusEnum.default("Pending"),
+  integrations: IntegrationsSchema.optional().nullable(),
   createdAt: DateField,
   updatedAt: DateField,
 });
 
 export type Business = z.infer<typeof BusinessSchema>;
+
