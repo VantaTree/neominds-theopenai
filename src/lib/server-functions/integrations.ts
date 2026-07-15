@@ -197,6 +197,34 @@ export const exchangeAuthCodeFn = createServerFn({ method: "POST" })
     return { success: true };
   });
 
+const ActivatePlusPlatformSchema = z.object({
+  businessId: z.string().min(1),
+  platform: z.enum(["instagram", "facebook"]),
+});
+
+export const activatePlusPlatformFn = createServerFn({ method: "POST" })
+  .validator((d: any) => ActivatePlusPlatformSchema.parse(d))
+  .middleware([businessOwnerMiddleware])
+  .handler(async ({ data }) => {
+    const { businessId, platform } = data;
+    const { BusinessService } = await import("../server/services/business.service");
+    const businessService = new BusinessService();
+    const business = await businessService.getBusiness(businessId);
+
+    if (!business) {
+      throw new Error(`Business with ID ${businessId} not found.`);
+    }
+
+    if (!business.integrations?.meta) {
+      throw new Error("Meta integration not connected.");
+    }
+
+    business.integrations.meta.activatedPlatform = platform;
+    await businessService.saveBusiness(business);
+
+    return { success: true };
+  });
+
 async function refreshGoogleAccessToken(encryptedRefreshToken: string): Promise<string> {
   const refreshToken = decryptToken(encryptedRefreshToken);
   const response = await fetch("https://oauth2.googleapis.com/token", {
@@ -486,6 +514,7 @@ export const getDashboardInsightsFn = createServerFn({ method: "GET" })
         },
         instagram: {
           isConnected: !!integrations.meta?.isConnected,
+          activatedPlatform: integrations.meta?.activatedPlatform || null,
           metrics: [
             { label: "Followers", value: "12.8K", trend: "14.2%", isPositive: true },
             { label: "Engagement", value: "3.7K", trend: "16.8%", isPositive: true },
@@ -493,6 +522,7 @@ export const getDashboardInsightsFn = createServerFn({ method: "GET" })
         },
         facebook: {
           isConnected: !!integrations.meta?.isConnected,
+          activatedPlatform: integrations.meta?.activatedPlatform || null,
           metrics: [
             { label: "Page Reach", value: "45.6K", trend: "23.1%", isPositive: true },
             { label: "Ad Spend", value: "$2.45K", trend: "12.6%", isPositive: true },
