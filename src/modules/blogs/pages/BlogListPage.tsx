@@ -197,14 +197,14 @@ export default function BlogListPage({
         </div>
 
         {/* Filter Actions wrapper */}
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex flex-wrap items-center gap-3">
           {/* Featured Toggle */}
           <button
             onClick={() => {
               setShowOnlyFeatured(!showOnlyFeatured);
               setCurrentPage(1);
             }}
-            className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 shrink-0 ${
               showOnlyFeatured
                 ? "bg-yellow-50 border-yellow-200 text-yellow-600 shadow-sm"
                 : "bg-white border-mm-border text-mm-gray hover:text-mm-dark"
@@ -215,7 +215,7 @@ export default function BlogListPage({
           </button>
 
           {/* Tab Filters */}
-          <div className="flex bg-white border border-mm-border rounded-xl p-1 shrink-0">
+          <div className="flex bg-white border border-mm-border rounded-xl p-1 overflow-x-auto max-w-full scrollbar-none">
             {[
               { id: "all", label: "All Posts" },
               { id: "published", label: "Published" },
@@ -228,7 +228,7 @@ export default function BlogListPage({
                   setStatusFilter(f.id as any);
                   setCurrentPage(1);
                 }}
-                className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 ${
                   statusFilter === f.id
                     ? "bg-white text-mm-orange shadow-sm"
                     : "text-mm-gray hover:text-mm-gray"

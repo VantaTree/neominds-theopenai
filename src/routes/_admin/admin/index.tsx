@@ -433,7 +433,7 @@ function Dashboard() {
             Here's what's happening with your platform
           </p>
         </div>
-        <div className="flex items-center gap-3 relative" ref={datePickerRef}>
+        <div className="flex items-center justify-between sm:justify-start gap-3 w-full sm:w-auto relative" ref={datePickerRef}>
           <button
             onClick={() => setDatePickerOpen(!datePickerOpen)}
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold border border-mm-border bg-white text-mm-dark hover:bg-mm-subtle/50 transition-all cursor-pointer"
@@ -511,7 +511,7 @@ function Dashboard() {
               </div>
             </div>
           )}
-          <div className="relative inline-flex">
+          <div className="relative inline-flex self-end">
             <button
               onClick={() => setIsNotificationOpen(!isNotificationOpen)}
               className={`relative rounded-xl flex items-center justify-center border border-mm-border p-2 cursor-pointer transition-all ${
@@ -540,7 +540,7 @@ function Dashboard() {
                   onClick={() => setIsNotificationOpen(false)}
                 />
                 <div className="absolute right-0 top-full mt-2 z-50">
-                  <div className="bg-white border border-mm-border rounded-[20px] w-[380px] shadow-[0_8px_30px_rgba(0,0,0,0.06)] overflow-hidden">
+                  <div className="bg-white border border-mm-border rounded-[20px] w-[calc(100vw-48px)] sm:w-[380px] shadow-[0_8px_30px_rgba(0,0,0,0.06)] overflow-hidden">
                     <div className="flex justify-between items-center border-b border-mm-border/60 px-5 py-4 bg-white">
                       <div className="font-extrabold text-sm text-mm-dark">
                         Notifications
