@@ -1,5 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
-import AnalyticsCard from "./AnalyticsCard";
+import { Store, Globe, Instagram, Facebook } from "lucide-react";
+import Insight from "./insight";
 import BusinessTaskCard from "./BusinessTaskCard";
 import UpgradeCard from "./UpgradeCard";
 import PlanGate from "./PlanGate";
@@ -7,15 +8,99 @@ import PlanGate from "./PlanGate";
 export default function ClientDashboardDesktop() {
   const navigate = useNavigate();
 
+  const insights = [
+    {
+      platform: "Website Analytics",
+      label: "Visitors",
+      value: "5.4K",
+      trend: "21.4%",
+      isPositive: true,
+      borderColor: "#5CB13E",
+      icon: Globe,
+    },
+    {
+      platform: "Website Analytics",
+      label: "Sessions",
+      value: "7.8K",
+      trend: "18.7%",
+      isPositive: true,
+      borderColor: "#5CB13E",
+      icon: Globe,
+    },
+    {
+      platform: "Google Business",
+      label: "Searches",
+      value: "1.2K",
+      trend: "18.6%",
+      isPositive: true,
+      borderColor: "#3B82F6",
+      icon: Store,
+    },
+    {
+      platform: "Google Business",
+      label: "Profile Views",
+      value: "2.6K",
+      trend: "24.3%",
+      isPositive: true,
+      borderColor: "#3B82F6",
+      icon: Store,
+    },
+    {
+      platform: "Instagram",
+      label: "Followers",
+      value: "12.8K",
+      trend: "14.2%",
+      isPositive: true,
+      borderColor: "#FF7DD3",
+      icon: Instagram,
+    },
+    {
+      platform: "Instagram",
+      label: "Engagement",
+      value: "3.7K",
+      trend: "16.8%",
+      isPositive: true,
+      borderColor: "#FF7DD3",
+      icon: Instagram,
+    },
+    {
+      platform: "Facebook",
+      label: "Page Reach",
+      value: "45.6K",
+      trend: "23.1%",
+      isPositive: true,
+      borderColor: "#1877F2",
+      icon: Facebook,
+    },
+    {
+      platform: "Facebook",
+      label: "Ad Spend",
+      value: "$2.45K",
+      trend: "12.6%",
+      isPositive: true,
+      borderColor: "#1877F2",
+      icon: Facebook,
+    },
+  ];
+
   return (
     <div className="flex-1 w-full px-6 py-8 md:px-8 md:py-10 space-y-8">
-      {/* Analytics Section - 4 Columns */}
-      <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-        <AnalyticsCard category="google" />
-        <AnalyticsCard category="website" />
-        <AnalyticsCard category="social" />
-        <AnalyticsCard category="campaign" />
+      {/* Analytics Section - 8 Cards in 2x4 Layout on Desktop/Laptop screens */}
+      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {insights.map((insight, idx) => (
+          <Insight
+            key={idx}
+            platform={insight.platform}
+            label={insight.label}
+            value={insight.value}
+            trend={insight.trend}
+            isPositive={insight.isPositive}
+            borderColor={insight.borderColor}
+            icon={insight.icon}
+          />
+        ))}
       </section>
+
 
       {/* Action / Task Section - 4 Columns */}
       <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
