@@ -1258,9 +1258,10 @@ export default function Report({ initialData, businessId, isAdmin }: ReportProps
                 cardType={cardType} 
                 animate={false} 
                 onSelectPlan={() => {
-                  if (!isAdmin) {
-                    window.location.href = "https://neominds.theopenai.vercel.app/plans";
-                  }
+                  // if (!isAdmin) {
+                  //   window.location.href = "https://neominds.theopenai.vercel.app/plans";
+                  // }
+                  handleSelectPlan(matchedPlan.name, businessId)
                 }} 
                 disabled={isAdmin}
               />
