@@ -24,8 +24,8 @@ export const adminMiddleware = createMiddleware()
   });
 
 export const businessOwnerMiddleware = createMiddleware()
-  .server(async (opts: any) => {
-    const { next, data } = opts;
+  .server(async ({ next, ...rest }) => {
+    const data = (rest as any).data;
     let businessId: string | undefined;
     if (typeof data === "string") {
       businessId = data;
