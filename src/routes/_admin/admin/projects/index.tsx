@@ -24,7 +24,7 @@ import {
   ChevronDown,
   SearchX,
 } from "lucide-react";
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import {
   getProjectsFn,
   saveProjectFn,
@@ -256,7 +256,7 @@ function ProjectsPage() {
   const [businessSearchQuery, setBusinessSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All Status");
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
-  const [showCompleted, setShowCompleted] = useState(true);
+  const [showCompleted, setShowCompleted] = useState(false);
 
   const [isDomainOpen, setIsDomainOpen] = useState(false);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
@@ -431,8 +431,19 @@ function ProjectsPage() {
     });
   };
 
-  const filteredProjects = useMemo(() => {
-    return sortedProjects.filter((p) => {
+  const getFilteredProjectsForBusiness = useCallback((bizId: string) => {
+    const bizProjects = projectList.filter((p) => {
+      const pBizId = typeof p.businessId === "object" && p.businessId !== null ? p.businessId.id : p.businessId;
+      return pBizId === bizId;
+    });
+
+    const sorted = [...bizProjects].sort((a, b) => {
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return timeB - timeA;
+    });
+
+    return sorted.filter((p) => {
       const biz =
         typeof p.businessId === "object" && p.businessId !== null
           ? p.businessId
@@ -488,7 +499,7 @@ function ProjectsPage() {
       return matchType && matchStatus && matchServices && matchCompleted && matchSearch;
     });
   }, [
-    sortedProjects,
+    projectList,
     domainFilter,
     statusFilter,
     selectedServices,
@@ -498,12 +509,17 @@ function ProjectsPage() {
     users,
   ]);
 
+  const filteredProjects = useMemo(() => {
+    if (!selectedBusinessId) return [];
+    return getFilteredProjectsForBusiness(selectedBusinessId);
+  }, [selectedBusinessId, getFilteredProjectsForBusiness]);
+
   const clearAllFilters = () => {
     setSearchQuery("");
     setDomainFilter("All Domains");
     setStatusFilter("All Status");
     setSelectedServices([]);
-    setShowCompleted(true);
+    setShowCompleted(false);
   };
 
   const hasActiveFilters =
@@ -511,36 +527,75 @@ function ProjectsPage() {
     domainFilter !== "All Domains" ||
     statusFilter !== "All Status" ||
     selectedServices.length > 0 ||
-    !showCompleted;
+    showCompleted;
 
   const filteredBusinesses = useMemo(() => {
     return businesses.filter((biz) => {
+      // 1. First apply the businessSearchQuery (if any)
       const term = businessSearchQuery.toLowerCase();
-      if (!term) return true;
+      if (term) {
+        const bizName = biz.businessName || "";
+        const bizType = biz.businessType || "";
+        const userIdStr = typeof biz.userId === "object" && biz.userId !== null ? biz.userId.id : biz.userId;
+        const client = users.find((u) => u.id === userIdStr);
+        const clientName = client?.fullName || "";
 
-      const bizName = biz.businessName || "";
-      const bizType = biz.businessType || "";
-      
-      const userIdStr = typeof biz.userId === "object" && biz.userId !== null ? biz.userId.id : biz.userId;
-      const client = users.find((u) => u.id === userIdStr);
-      const clientName = client?.fullName || "";
+        const matchesSearch =
+          bizName.toLowerCase().includes(term) ||
+          bizType.toLowerCase().includes(term) ||
+          clientName.toLowerCase().includes(term);
+        
+        if (!matchesSearch) return false;
+      }
 
-      return (
-        bizName.toLowerCase().includes(term) ||
-        bizType.toLowerCase().includes(term) ||
-        clientName.toLowerCase().includes(term)
-      );
+      // 2. Then, if project filters are active, ensure business has matching projects
+      const isProjectFilteringActive =
+        searchQuery ||
+        domainFilter !== "All Domains" ||
+        statusFilter !== "All Status" ||
+        selectedServices.length > 0 ||
+        showCompleted;
+
+      if (isProjectFilteringActive) {
+        const matchingProjects = getFilteredProjectsForBusiness(biz.id);
+        return matchingProjects.length > 0;
+      }
+
+      return true;
     });
-  }, [businesses, businessSearchQuery, users]);
+  }, [
+    businesses,
+    businessSearchQuery,
+    searchQuery,
+    domainFilter,
+    statusFilter,
+    selectedServices,
+    showCompleted,
+    users,
+    getFilteredProjectsForBusiness,
+  ]);
 
   return (
     <div className="flex flex-col md:flex-row bg-[#FCFDFE] h-full w-full overflow-hidden">
       {/* Business Sidebar - Desktop */}
       <div className="hidden md:flex flex-col w-[260px] lg:w-[300px] bg-white border-r border-mm-border shrink-0 select-none">
         <div className="p-5 border-b border-mm-border/60 space-y-3">
-          <h2 className="text-xs font-black text-mm-gray uppercase tracking-wider">
-            Businesses
-          </h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-black text-mm-gray uppercase tracking-wider">
+              Businesses
+            </h2>
+            {(hasActiveFilters || businessSearchQuery) && (
+              <button
+                onClick={() => {
+                  clearAllFilters();
+                  setBusinessSearchQuery("");
+                }}
+                className="text-[10px] font-bold text-mm-orange hover:underline cursor-pointer"
+              >
+                Clear Filters
+              </button>
+            )}
+          </div>
           <div className="relative">
             <Search
               size={14}
@@ -571,13 +626,7 @@ function ProjectsPage() {
         <div className="flex-1 overflow-y-auto py-2">
           {filteredBusinesses.map((biz) => {
             const isSelected = selectedBusinessId === biz.id;
-            const projectCount = projectList.filter((p) => {
-              const bizId =
-                typeof p.businessId === "object" && p.businessId !== null
-                  ? p.businessId.id
-                  : p.businessId;
-              return bizId === biz.id;
-            }).length;
+            const projectCount = getFilteredProjectsForBusiness(biz.id).length;
 
             const userIdStr = typeof biz.userId === "object" && biz.userId !== null ? biz.userId.id : biz.userId;
             const clientUser = users.find((u) => u.id === userIdStr);
@@ -647,9 +696,22 @@ function ProjectsPage() {
 
       {/* Business Selector - Mobile */}
       <div className="md:hidden bg-white border-b border-mm-border px-4 py-3 flex flex-col gap-2 sticky top-0 z-10">
-        <span className="text-[10px] font-black text-mm-gray uppercase tracking-wider">
-          Select Business
-        </span>
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] font-black text-mm-gray uppercase tracking-wider">
+            Select Business
+          </span>
+          {(hasActiveFilters || businessSearchQuery) && (
+            <button
+              onClick={() => {
+                clearAllFilters();
+                setBusinessSearchQuery("");
+              }}
+              className="text-[10px] font-bold text-mm-orange hover:underline cursor-pointer"
+            >
+              Clear Filters
+            </button>
+          )}
+        </div>
         <div className="relative">
           <Search
             size={14}
@@ -679,13 +741,7 @@ function ProjectsPage() {
         <div className="flex gap-2 overflow-x-auto pb-1.5 scrollbar-none">
           {filteredBusinesses.map((biz) => {
             const isSelected = selectedBusinessId === biz.id;
-            const projectCount = projectList.filter((p) => {
-              const bizId =
-                typeof p.businessId === "object" && p.businessId !== null
-                  ? p.businessId.id
-                  : p.businessId;
-              return bizId === biz.id;
-            }).length;
+            const projectCount = getFilteredProjectsForBusiness(biz.id).length;
 
             const userIdStr = typeof biz.userId === "object" && biz.userId !== null ? biz.userId.id : biz.userId;
             const clientUser = users.find((u) => u.id === userIdStr);
@@ -1184,16 +1240,7 @@ function ProjectsPage() {
             </label>
           </div>
 
-          <div className="flex items-center justify-between sm:justify-end gap-3 w-full md:w-auto shrink-0">
-            {hasActiveFilters && (
-              <button
-                onClick={clearAllFilters}
-                className="text-xs hover:underline whitespace-nowrap"
-                style={{ color: "var(--color-mm-orange)" }}
-              >
-                Clear all filters
-              </button>
-            )}
+          <div className="flex items-center justify-end gap-3 w-full md:w-auto shrink-0">
             <button
               onClick={handleOpenNewProject}
               className="px-4 py-2.5 bg-mm-orange hover:bg-mm-orange/95 text-white font-semibold rounded-xl transition-colors inline-flex items-center justify-center gap-2 w-full sm:w-auto whitespace-nowrap cursor-pointer"
@@ -1202,6 +1249,61 @@ function ProjectsPage() {
             </button>
           </div>
         </div>
+
+        {/* Active Filters Row (rendered below the filters bar) */}
+        {hasActiveFilters && (
+          <div className="flex flex-wrap items-center gap-2 px-1 mb-4 animate-in fade-in duration-200">
+            <span className="text-xs font-semibold text-mm-gray/60 uppercase tracking-wider mr-1">
+              Active Filters:
+            </span>
+            {searchQuery && (
+              <span className="inline-flex items-center gap-1 bg-mm-gray/10 text-mm-gray text-xs font-medium px-2.5 py-1 rounded-lg animate-in fade-in duration-100">
+                Search: "{searchQuery}"
+                <button onClick={() => setSearchQuery("")} className="hover:text-mm-red cursor-pointer">
+                  <X size={10} />
+                </button>
+              </span>
+            )}
+            {domainFilter !== "All Domains" && (
+              <span className="inline-flex items-center gap-1 bg-mm-orange/10 text-mm-orange text-xs font-medium px-2.5 py-1 rounded-lg animate-in fade-in duration-100">
+                Domain: {domainFilter}
+                <button onClick={() => setDomainFilter("All Domains")} className="hover:text-mm-red cursor-pointer">
+                  <X size={10} />
+                </button>
+              </span>
+            )}
+            {statusFilter !== "All Status" && (
+              <span className="inline-flex items-center gap-1 bg-mm-blue/10 text-mm-blue text-xs font-medium px-2.5 py-1 rounded-lg animate-in fade-in duration-100">
+                Status: {statusFilter}
+                <button onClick={() => setStatusFilter("All Status")} className="hover:text-mm-red cursor-pointer">
+                  <X size={10} />
+                </button>
+              </span>
+            )}
+            {selectedServices.map((service) => (
+              <span key={service} className="inline-flex items-center gap-1 bg-mm-green/10 text-mm-green text-xs font-medium px-2.5 py-1 rounded-lg animate-in fade-in duration-100">
+                Service: {service}
+                <button onClick={() => setSelectedServices((prev) => prev.filter((s) => s !== service))} className="hover:text-mm-red cursor-pointer">
+                  <X size={10} />
+                </button>
+              </span>
+            ))}
+            {showCompleted && (
+              <span className="inline-flex items-center gap-1 bg-mm-green/10 text-mm-green text-xs font-medium px-2.5 py-1 rounded-lg animate-in fade-in duration-100">
+                Showing Completed
+                <button onClick={() => setShowCompleted(false)} className="hover:text-mm-red cursor-pointer">
+                  <X size={10} />
+                </button>
+              </span>
+            )}
+            <button
+              onClick={clearAllFilters}
+              className="text-xs font-bold text-mm-orange hover:underline ml-2 cursor-pointer"
+            >
+              Clear all filters
+            </button>
+          </div>
+        )}
 
         <div className="bg-white border border-mm-border rounded-[24px] shadow-[0_2px_12px_rgba(0,0,0,0.02)] overflow-hidden">
           <div className="overflow-x-auto">
