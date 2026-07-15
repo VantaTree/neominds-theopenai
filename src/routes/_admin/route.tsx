@@ -131,7 +131,7 @@ function RouteComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className={`flex bg-white text-mm-dark font-sans flex-col md:flex-row ${is0PadRoute ? "h-screen overflow-hidden" : "min-h-screen"}`}>
+      <div className={`flex bg-white text-mm-dark font-sans flex-col md:flex-row ${is0PadRoute ? "h-dvh overflow-hidden" : "min-h-screen"}`}>
         {/* Responsive Sidebar & Mobile Header Bar */}
         <AdminAside />
 

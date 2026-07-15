@@ -127,7 +127,7 @@ export default function AdminAside() {
   return (
     <>
       {/* Mobile Header Bar */}
-      <header className="md:hidden flex items-center justify-between px-6 py-4 border-b border-mm-border bg-white select-none shrink-0 font-sans">
+      <header className="md:hidden sticky top-0 z-40 flex items-center justify-between px-6 py-4 border-b border-mm-border bg-white select-none shrink-0 font-sans">
         {/* Logo */}
         <a href="/" className="flex items-center gap-2">
           <img
@@ -158,7 +158,7 @@ export default function AdminAside() {
 
       {/* Sidebar Panel Container */}
       <aside
-        className={`fixed inset-y-0 left-0 w-64 border-r border-mm-border bg-white flex flex-col h-screen z-50 transition-transform duration-300 shrink-0 select-none md:sticky md:top-0 md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 w-64 border-r border-mm-border bg-white flex flex-col h-dvh md:h-screen z-50 transition-transform duration-300 shrink-0 select-none md:sticky md:top-0 md:translate-x-0 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >

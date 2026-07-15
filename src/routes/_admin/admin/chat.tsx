@@ -35,7 +35,9 @@ const chatSearchSchema = z.object({
   domain: z.string().optional(),
 });
 
-export function formatChatTimestamp(dateInput: Date | string | null | undefined) {
+export function formatChatTimestamp(
+  dateInput: Date | string | null | undefined,
+) {
   if (!dateInput) return "";
   const date = new Date(dateInput);
   if (isNaN(date.getTime())) return "";
@@ -44,9 +46,10 @@ export function formatChatTimestamp(dateInput: Date | string | null | undefined)
   const diffTime = now.getTime() - date.getTime();
   const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
-  const isToday = date.getDate() === now.getDate() &&
-                  date.getMonth() === now.getMonth() &&
-                  date.getFullYear() === now.getFullYear();
+  const isToday =
+    date.getDate() === now.getDate() &&
+    date.getMonth() === now.getMonth() &&
+    date.getFullYear() === now.getFullYear();
 
   if (isToday) {
     return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -54,9 +57,10 @@ export function formatChatTimestamp(dateInput: Date | string | null | undefined)
 
   const yesterday = new Date(now);
   yesterday.setDate(now.getDate() - 1);
-  const isYesterday = date.getDate() === yesterday.getDate() &&
-                      date.getMonth() === yesterday.getMonth() &&
-                      date.getFullYear() === yesterday.getFullYear();
+  const isYesterday =
+    date.getDate() === yesterday.getDate() &&
+    date.getMonth() === yesterday.getMonth() &&
+    date.getFullYear() === yesterday.getFullYear();
 
   if (isYesterday) {
     return "Yesterday";
@@ -117,7 +121,9 @@ interface ChatSidebarProps {
   typingStates: Record<string, boolean>;
   isChatListLoading: boolean;
   chatFilter: "all" | "unread" | "website" | "marketing" | "automation";
-  setChatFilter: (f: "all" | "unread" | "website" | "marketing" | "automation") => void;
+  setChatFilter: (
+    f: "all" | "unread" | "website" | "marketing" | "automation",
+  ) => void;
 }
 
 function ChatSidebar({
@@ -194,7 +200,9 @@ function ChatSidebar({
         {isChatListLoading ? (
           <div className="flex flex-col items-center justify-center py-20 text-center px-6">
             <div className="w-8 h-8 border-4 border-mm-orange border-t-transparent rounded-full animate-spin mb-4"></div>
-            <p className="text-xs font-bold text-mm-gray animate-pulse">Loading recent chats...</p>
+            <p className="text-xs font-bold text-mm-gray animate-pulse">
+              Loading recent chats...
+            </p>
           </div>
         ) : groupedChats.length > 0 ? (
           groupedChats.map((chat) => {
@@ -213,7 +221,7 @@ function ChatSidebar({
             const websiteText = isWebsiteTyping
               ? "typing..."
               : websiteLastMsg
-                ? `${websiteLastMsg.user?.id === "admin" ? "You" : (websiteLastMsg.user?.name || chat.userName || "Client")}: ${websiteLastMsg.text}`
+                ? `${websiteLastMsg.user?.id === "admin" ? "You" : websiteLastMsg.user?.name || chat.userName || "Client"}: ${websiteLastMsg.text}`
                 : "No messages yet";
             const websiteTime = websiteLastMsg
               ? formatChatTimestamp(websiteLastMsg.created_at)
@@ -238,7 +246,7 @@ function ChatSidebar({
             const marketingText = isMarketingTyping
               ? "typing..."
               : marketingLastMsg
-                ? `${marketingLastMsg.user?.id === "admin" ? "You" : (marketingLastMsg.user?.name || chat.userName || "Client")}: ${marketingLastMsg.text}`
+                ? `${marketingLastMsg.user?.id === "admin" ? "You" : marketingLastMsg.user?.name || chat.userName || "Client"}: ${marketingLastMsg.text}`
                 : "No messages yet";
             const marketingTime = marketingLastMsg
               ? formatChatTimestamp(marketingLastMsg.created_at)
@@ -257,12 +265,16 @@ function ChatSidebar({
             const automationLastMsg = hasAutomation
               ? automationMessages[automationMessages.length - 1]
               : null;
-            const businessObj = businesses.find((b) => b.id === chat.businessId);
-            const isAutomationLocked = businessObj ? businessObj.plan !== "Pro" : true;
+            const businessObj = businesses.find(
+              (b) => b.id === chat.businessId,
+            );
+            const isAutomationLocked = businessObj
+              ? businessObj.plan !== "Pro"
+              : true;
             const automationText = isAutomationTyping
               ? "typing..."
               : automationLastMsg
-                ? `${automationLastMsg.user?.id === "admin" ? "You" : (automationLastMsg.user?.name || chat.userName || "Client")}: ${automationLastMsg.text}`
+                ? `${automationLastMsg.user?.id === "admin" ? "You" : automationLastMsg.user?.name || chat.userName || "Client"}: ${automationLastMsg.text}`
                 : isAutomationLocked
                   ? "Upgrade to unlock automation chat & sync task updates directly."
                   : "No messages yet";
@@ -302,37 +314,43 @@ function ChatSidebar({
             if (isDomainFilterActive) {
               displayDom = chatFilter;
               const activeChan = chat.channels[chatFilter];
-              const isChanTyping = !!(activeChan && typingStates[activeChan.id]);
+              const isChanTyping = !!(
+                activeChan && typingStates[activeChan.id]
+              );
               if (isChanTyping) {
                 displayLastMsg = "typing...";
               } else {
                 const messagesList = activeChan?.state?.messages || [];
                 if (messagesList.length > 0) {
                   const lm = messagesList[messagesList.length - 1];
-                  displayLastMsg = `${lm.user?.id === "admin" ? "You" : (lm.user?.name || chat.userName || "Client")}: ${lm.text}`;
+                  displayLastMsg = `${lm.user?.id === "admin" ? "You" : lm.user?.name || chat.userName || "Client"}: ${lm.text}`;
                   lastMsgTime = formatChatTimestamp(lm.created_at);
                 } else {
-                  displayLastMsg = chatFilter === "automation" && isAutomationLocked
-                    ? "Upgrade to unlock automation chat & sync task updates directly."
-                    : "No messages yet";
+                  displayLastMsg =
+                    chatFilter === "automation" && isAutomationLocked
+                      ? "Upgrade to unlock automation chat & sync task updates directly."
+                      : "No messages yet";
                 }
               }
             } else if (isActive && activeDomain) {
               displayDom = activeDomain;
               const activeChan = chat.channels[activeDomain];
-              const isChanTyping = !!(activeChan && typingStates[activeChan.id]);
+              const isChanTyping = !!(
+                activeChan && typingStates[activeChan.id]
+              );
               if (isChanTyping) {
                 displayLastMsg = "typing...";
               } else {
                 const messagesList = activeChan?.state?.messages || [];
                 if (messagesList.length > 0) {
                   const lm = messagesList[messagesList.length - 1];
-                  displayLastMsg = `${lm.user?.id === "admin" ? "You" : (lm.user?.name || chat.userName || "Client")}: ${lm.text}`;
+                  displayLastMsg = `${lm.user?.id === "admin" ? "You" : lm.user?.name || chat.userName || "Client"}: ${lm.text}`;
                   lastMsgTime = formatChatTimestamp(lm.created_at);
                 } else {
-                  displayLastMsg = activeDomain === "automation" && isAutomationLocked
-                    ? "Upgrade to unlock automation chat & sync task updates directly."
-                    : "No messages yet";
+                  displayLastMsg =
+                    activeDomain === "automation" && isAutomationLocked
+                      ? "Upgrade to unlock automation chat & sync task updates directly."
+                      : "No messages yet";
                 }
               }
             } else {
@@ -340,22 +358,24 @@ function ChatSidebar({
               if (activeChans.length > 0 && !isGroupTyping) {
                 let latestMsgObj: any = null;
                 let latestDomName = displayDom;
-                Object.entries(chat.channels).forEach(([domName, c]: [string, any]) => {
-                  const messagesList = c.state?.messages || [];
-                  if (messagesList.length > 0) {
-                    const lm = messagesList[messagesList.length - 1];
-                    if (
-                      !latestMsgObj ||
-                      new Date(lm.created_at).getTime() >
-                        new Date(latestMsgObj.created_at).getTime()
-                    ) {
-                      latestMsgObj = lm;
-                      latestDomName = domName;
+                Object.entries(chat.channels).forEach(
+                  ([domName, c]: [string, any]) => {
+                    const messagesList = c.state?.messages || [];
+                    if (messagesList.length > 0) {
+                      const lm = messagesList[messagesList.length - 1];
+                      if (
+                        !latestMsgObj ||
+                        new Date(lm.created_at).getTime() >
+                          new Date(latestMsgObj.created_at).getTime()
+                      ) {
+                        latestMsgObj = lm;
+                        latestDomName = domName;
+                      }
                     }
-                  }
-                });
+                  },
+                );
                 if (latestMsgObj) {
-                  displayLastMsg = `${latestMsgObj.user?.id === "admin" ? "You" : (latestMsgObj.user?.name || chat.userName || "Client")}: ${latestMsgObj.text}`;
+                  displayLastMsg = `${latestMsgObj.user?.id === "admin" ? "You" : latestMsgObj.user?.name || chat.userName || "Client"}: ${latestMsgObj.text}`;
                   lastMsgTime = formatChatTimestamp(latestMsgObj.created_at);
                   displayDom = latestDomName;
                 }
@@ -787,12 +807,14 @@ function ChatArea({
       {/* Messages Scroll Area */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto px-4.5 py-5 space-y-3.5 bg-white relative"
+        className="flex-1 overflow-y-auto max-h-dvh px-4.5 py-5 space-y-3.5 bg-white relative"
       >
         {isChatLoading ? (
           <div className="flex flex-col items-center justify-center h-full space-y-4">
             <div className="w-8 h-8 border-4 border-mm-orange border-t-transparent rounded-full animate-spin"></div>
-            <span className="text-xs font-semibold text-mm-gray animate-pulse">Loading chat history...</span>
+            <span className="text-xs font-semibold text-mm-gray animate-pulse">
+              Loading chat history...
+            </span>
           </div>
         ) : (
           <>
@@ -816,7 +838,10 @@ function ChatArea({
               }
 
               const isClientRead = () => {
-                if (!activeUserId || !activeChannel?.state?.read?.[activeUserId])
+                if (
+                  !activeUserId ||
+                  !activeChannel?.state?.read?.[activeUserId]
+                )
                   return false;
                 const lastReadTime = new Date(
                   activeChannel.state.read[activeUserId].last_read,
@@ -969,7 +994,9 @@ function ChatRouteComponent() {
   const [channels, setChannels] = useState<any[]>([]);
   const [isChatListLoading, setIsChatListLoading] = useState(true);
   const [isChatLoading, setIsChatLoading] = useState(false);
-  const [chatFilter, setChatFilter] = useState<"all" | "unread" | "website" | "marketing" | "automation">("all");
+  const [chatFilter, setChatFilter] = useState<
+    "all" | "unread" | "website" | "marketing" | "automation"
+  >("all");
   const [activeChannel, setActiveChannel] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [inputText, setInputText] = useState("");
@@ -1219,19 +1246,21 @@ function ChatRouteComponent() {
         handleSelectDomain(activeUserId, activeBusinessId, chatFilter);
       }
     } else {
-      // Revert back to the preselected / fallback domain when selecting a non-domain option
-      const activeChatObj = groupedChats.find(
-        (c) => c.userId === activeUserId && c.businessId === activeBusinessId,
-      );
-      const lastDom =
-        activeChatObj?.latestDomain ||
-        localStorage.getItem(`last_domain_${activeUserId}_${activeBusinessId}`) ||
-        "website";
-      if (activeDomain !== lastDom) {
+      // Revert back to the preselected / fallback domain only when no activeDomain parameter is set
+      if (!activeDomain) {
+        const activeChatObj = groupedChats.find(
+          (c) => c.userId === activeUserId && c.businessId === activeBusinessId,
+        );
+        const lastDom =
+          activeChatObj?.latestDomain ||
+          localStorage.getItem(
+            `last_domain_${activeUserId}_${activeBusinessId}`,
+          ) ||
+          "website";
         handleSelectDomain(activeUserId, activeBusinessId, lastDom);
       }
     }
-  }, [chatFilter, activeUserId, activeBusinessId]);
+  }, [chatFilter, activeUserId, activeBusinessId, activeDomain]);
 
   // Auto-scroll to bottom of messages
   useEffect(() => {
@@ -1365,7 +1394,8 @@ function ChatRouteComponent() {
         new Date(existing.latestTimestamp).getTime()
       ) {
         existing.latestTimestamp = lastMsgTime;
-        existing.latestDomain = lastMsgTime !== new Date(0).toISOString() ? dom : "";
+        existing.latestDomain =
+          lastMsgTime !== new Date(0).toISOString() ? dom : "";
       }
     });
 
@@ -1435,17 +1465,35 @@ function ChatRouteComponent() {
     } else if (chatFilter === "website") {
       finalFiltered = finalFiltered.filter((chat) => {
         const chan = chat.channels["website"];
-        return chan && (chan.state?.messages?.length > 0 || (activeUserId === chat.userId && activeBusinessId === chat.businessId && activeDomain === "website"));
+        return (
+          chan &&
+          (chan.state?.messages?.length > 0 ||
+            (activeUserId === chat.userId &&
+              activeBusinessId === chat.businessId &&
+              activeDomain === "website"))
+        );
       });
     } else if (chatFilter === "marketing") {
       finalFiltered = finalFiltered.filter((chat) => {
         const chan = chat.channels["marketing"];
-        return chan && (chan.state?.messages?.length > 0 || (activeUserId === chat.userId && activeBusinessId === chat.businessId && activeDomain === "marketing"));
+        return (
+          chan &&
+          (chan.state?.messages?.length > 0 ||
+            (activeUserId === chat.userId &&
+              activeBusinessId === chat.businessId &&
+              activeDomain === "marketing"))
+        );
       });
     } else if (chatFilter === "automation") {
       finalFiltered = finalFiltered.filter((chat) => {
         const chan = chat.channels["automation"];
-        return chan && (chan.state?.messages?.length > 0 || (activeUserId === chat.userId && activeBusinessId === chat.businessId && activeDomain === "automation"));
+        return (
+          chan &&
+          (chan.state?.messages?.length > 0 ||
+            (activeUserId === chat.userId &&
+              activeBusinessId === chat.businessId &&
+              activeDomain === "automation"))
+        );
       });
     }
 
