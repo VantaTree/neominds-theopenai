@@ -19,10 +19,12 @@ import {
   User,
   MessageSquare,
   Loader2,
+  MoreVertical,
+  Key,
 } from "lucide-react";
 import { useState, useEffect, useRef, useMemo, Fragment } from "react";
 import { Avatar, PlanBadge, StatusBadge } from "@/components/admin/shared";
-import { uploadFileToStorage } from "@/lib/firebase";
+import { uploadFileToStorage, sendPasswordResetEmailFn } from "@/lib/firebase";
 import {
   getUsersFn,
   saveUserFn,
@@ -172,6 +174,8 @@ function UsersPage() {
   const [toast, setToast] = useState<{ title: string; sub?: string } | null>(
     null,
   );
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  const [dropdownCoords, setDropdownCoords] = useState<{ top: number; left: number } | null>(null);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [planFilter, setPlanFilter] = useState("All Plans");
@@ -191,10 +195,27 @@ function UsersPage() {
         setIsPlanOpen(false);
       if (statusRef.current && !statusRef.current.contains(e.target as Node))
         setIsStatusOpen(false);
+
+      const target = e.target as HTMLElement;
+      if (openDropdownId && !target.closest(".actions-dropdown-container")) {
+        setOpenDropdownId(null);
+      }
     }
+
+    function handleScrollOrResize() {
+      setOpenDropdownId(null);
+    }
+
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+    window.addEventListener("scroll", handleScrollOrResize, true);
+    window.addEventListener("resize", handleScrollOrResize);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("scroll", handleScrollOrResize, true);
+      window.removeEventListener("resize", handleScrollOrResize);
+    };
+  }, [openDropdownId]);
 
   useEffect(() => {
     if (toast) {
@@ -552,17 +573,25 @@ function UsersPage() {
     URL.revokeObjectURL(url);
   };
 
-  const handleResetPassword = () => {
-    if (!selectedUser) return;
+  const handleResetPassword = (email?: string) => {
+    const targetEmail = email || selectedUser?.email;
+    if (!targetEmail) return;
     if (
       window.confirm(
-        `Are you sure you want to send a password reset link to ${selectedUser.email}?`,
+        `Are you sure you want to send a password reset link to ${targetEmail}?`,
       )
     ) {
-      setToast({
-        title: "✓ Password Reset Sent!",
-        sub: `A password reset link has been sent to ${selectedUser.email}.`,
-      });
+      sendPasswordResetEmailFn(targetEmail)
+        .then(() => {
+          setToast({
+            title: "✓ Password Reset Sent!",
+            sub: `A password reset link has been sent to ${targetEmail}.`,
+          });
+        })
+        .catch((err) => {
+          console.error("Failed to send password reset email:", err);
+          alert(err.message || "Failed to send password reset email");
+        });
     }
   };
 
@@ -1530,6 +1559,53 @@ function UsersPage() {
                                     style={{ color: "var(--color-mm-gray)" }}
                                   />
                                 </button>
+                                <div className="relative inline-block actions-dropdown-container">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const rect = e.currentTarget.getBoundingClientRect();
+                                      const dropdownHeight = 80;
+                                      const dropdownWidth = 160;
+                                      let top = rect.bottom;
+                                      if (top + dropdownHeight > window.innerHeight) {
+                                        top = rect.top - dropdownHeight - 8;
+                                      }
+                                      let left = rect.right - dropdownWidth;
+                                      if (left < 8) {
+                                        left = 8;
+                                      }
+                                      setDropdownCoords({ top, left });
+                                      setOpenDropdownId(
+                                        openDropdownId === u.id ? null : u.id,
+                                      );
+                                    }}
+                                    className="p-1 rounded-lg hover:bg-mm-subtle transition-colors cursor-pointer text-mm-gray hover:text-mm-dark flex items-center justify-center"
+                                    title="More Actions"
+                                  >
+                                    <MoreVertical size={16} />
+                                  </button>
+                                  {openDropdownId === u.id && dropdownCoords && (
+                                    <div
+                                      className="fixed mt-1 w-40 bg-white border border-mm-border rounded-xl shadow-lg py-1.5 z-50 animate-in fade-in slide-in-from-top-1 duration-150"
+                                      style={{
+                                        boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+                                        top: `${dropdownCoords.top}px`,
+                                        left: `${dropdownCoords.left}px`,
+                                      }}
+                                    >
+                                      <button
+                                        onClick={() => {
+                                          handleResetPassword(u.email);
+                                          setOpenDropdownId(null);
+                                        }}
+                                        className="flex items-center gap-2 w-full text-left px-3 py-2 text-xs text-mm-orange hover:bg-mm-orange/5 transition-colors cursor-pointer font-semibold"
+                                      >
+                                        <Key size={14} />
+                                        <span>Reset Password</span>
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </td>
                           </tr>

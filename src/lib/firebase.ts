@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth, onAuthStateChanged, User } from "firebase/auth";
+import { getAuth, onAuthStateChanged, User, sendPasswordResetEmail, confirmPasswordReset } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
@@ -74,6 +74,22 @@ export async function uploadFileToStorage(
   await uploadBytes(storageRef, file);
   const downloadUrl = await getDownloadURL(storageRef);
   return downloadUrl;
+}
+
+export async function sendPasswordResetEmailFn(email: string): Promise<void> {
+  if (!isFirebaseConfigured || !auth) {
+    console.warn("Firebase not configured. Mocking success password reset sent to:", email);
+    return Promise.resolve();
+  }
+  await sendPasswordResetEmail(auth, email);
+}
+
+export async function confirmPasswordResetFn(oobCode: string, newPassword: string): Promise<void> {
+  if (!isFirebaseConfigured || !auth) {
+    console.warn("Firebase not configured. Mocking success password reset confirmation.");
+    return Promise.resolve();
+  }
+  await confirmPasswordReset(auth, oobCode, newPassword);
 }
 
 
