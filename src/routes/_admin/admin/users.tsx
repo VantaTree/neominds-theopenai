@@ -83,6 +83,7 @@ function UsersPage() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploadingUserAvatar, setIsUploadingUserAvatar] = useState(false);
+  const [isSavingUser, setIsSavingUser] = useState(false);
 
   const handleAvatarClick = () => {
     fileInputRef.current?.click();
@@ -341,7 +342,7 @@ function UsersPage() {
       phone: editForm.phone,
       status: editForm.status as any,
       role: editingUser!.role as any,
-      image: editForm.image || "",
+      image: editForm.image || null,
       businessCount: users.find((u) => u.id === userId)?.businessCount || 1,
       createdAt: users.find((u) => u.id === userId)?.createdAt || new Date(),
       updatedAt: new Date(),
@@ -368,34 +369,42 @@ function UsersPage() {
       updatedAt: new Date(),
     };
 
+    setIsSavingUser(true);
     Promise.all([
       saveUserFn({ data: userSchemaData }),
       saveBusinessFn({ data: businessSchemaData }),
-    ]).then(() => {
-      setUsers((prev) =>
-        prev.map((u) => (u.id === userId ? userSchemaData : u)),
-      );
-      setBusinesses((prev) =>
-        prev.map((b) => (b.id === bizId ? businessSchemaData : b)),
-      );
-      if (selectedUser?.id === userId) {
-        setSelectedUser({
-          ...selectedUser,
-          name: editForm.name,
-          business: editForm.business,
-          email: editForm.email,
-          phone: editForm.phone,
-          plan: editForm.plan,
-          status: editForm.status,
-          role: editingUser!.role,
-          industry: editForm.industry,
-          website: editForm.website,
-          image: editForm.image,
-        });
-      }
-      setEditingUser(null);
-      setToast({ title: "✓ User updated successfully!" });
-    });
+    ])
+      .then(() => {
+        setIsSavingUser(false);
+        setUsers((prev) =>
+          prev.map((u) => (u.id === userId ? userSchemaData : u)),
+        );
+        setBusinesses((prev) =>
+          prev.map((b) => (b.id === bizId ? businessSchemaData : b)),
+        );
+        if (selectedUser?.id === userId) {
+          setSelectedUser({
+            ...selectedUser,
+            name: editForm.name,
+            business: editForm.business,
+            email: editForm.email,
+            phone: editForm.phone,
+            plan: editForm.plan,
+            status: editForm.status,
+            role: editingUser!.role,
+            industry: editForm.industry,
+            website: editForm.website,
+            image: editForm.image,
+          });
+        }
+        setEditingUser(null);
+        setToast({ title: "✓ User updated successfully!" });
+      })
+      .catch((err) => {
+        console.error("Failed to update user:", err);
+        setIsSavingUser(false);
+        setToast({ title: "✗ Failed to update user" });
+      });
   };
 
   const handleEditBusinessSubmit = () => {
@@ -2131,12 +2140,15 @@ function UsersPage() {
                 Cancel
               </button>
               <button
-                disabled={isUploadingUserAvatar}
+                disabled={isSavingUser || isUploadingUserAvatar}
                 onClick={handleEditSubmit}
-                className="px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 style={{ background: "var(--color-mm-orange)", color: "white" }}
               >
-                Save Changes
+                {isSavingUser && (
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                )}
+                {isSavingUser ? "Saving..." : "Save Changes"}
               </button>
             </div>
           </div>
@@ -2529,9 +2541,12 @@ function UsersPage() {
               <button
                 disabled={isSavingBusiness || isUploadingBusinessLogo}
                 onClick={handleEditBusinessSubmit}
-                className="px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity cursor-pointer flex items-center justify-center min-w-[120px] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity cursor-pointer flex items-center justify-center gap-2 min-w-[120px] disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ background: "var(--color-mm-orange)", color: "white" }}
               >
+                {isSavingBusiness && (
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                )}
                 {isSavingBusiness ? "Saving..." : "Save Changes"}
               </button>
             </div>
