@@ -1,11 +1,37 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Search, Plus, Eye, Edit2, Trash2, MessageSquare } from "lucide-react";
+import {
+  Search,
+  Plus,
+  Eye,
+  Edit2,
+  Trash2,
+  MessageSquare,
+  MoreVertical,
+} from "lucide-react";
 import { statusColors } from "@/lib/mock-data";
 import type { Project } from "@/lib/schemas";
-import { Avatar, ProgressBar, StatusBadge, Card } from "@/components/admin/shared";
-import { CheckCircle2, ArrowRight, X, ChevronDown, SearchX } from "lucide-react";
+import {
+  Avatar,
+  ProgressBar,
+  StatusBadge,
+  Card,
+} from "@/components/admin/shared";
+import {
+  CheckCircle2,
+  ArrowRight,
+  X,
+  ChevronDown,
+  SearchX,
+} from "lucide-react";
 import { useState, useEffect, useRef, useMemo } from "react";
-import { getProjectsFn, saveProjectFn, getUsersFn, deleteProjectFn, logAuditEventFn, getBusinessesFn } from "@/lib/server-functions";
+import {
+  getProjectsFn,
+  saveProjectFn,
+  getUsersFn,
+  deleteProjectFn,
+  logAuditEventFn,
+  getBusinessesFn,
+} from "@/lib/server-functions";
 import { AdminLoader } from "@/components/AdminLoader";
 
 export const Route = createFileRoute("/_admin/admin/projects/")({
@@ -28,12 +54,75 @@ export const Route = createFileRoute("/_admin/admin/projects/")({
   component: ProjectsPage,
 });
 
+function ProgressRing({ value, color }: { value: number; color: string }) {
+  const radius = 18;
+  const stroke = 5;
+  const normalizedRadius = radius - stroke / 2;
+  const circumference = normalizedRadius * 2 * Math.PI;
+  const strokeDashoffset = circumference - (value / 100) * circumference;
+
+  return (
+    <div className="relative inline-flex items-center justify-center shrink-0">
+      <svg
+        height={radius * 2}
+        width={radius * 2}
+        className="transform -rotate-90"
+      >
+        {/* Track circle */}
+        <circle
+          stroke="rgba(224, 86, 36, 0.08)"
+          fill="transparent"
+          strokeWidth={stroke}
+          r={normalizedRadius}
+          cx={radius}
+          cy={radius}
+        />
+        {/* Progress circle */}
+        <circle
+          stroke={color}
+          fill="transparent"
+          strokeWidth={stroke}
+          strokeDasharray={circumference + " " + circumference}
+          style={{ strokeDashoffset, transition: "stroke-dashoffset 0.35s" }}
+          strokeLinecap="round"
+          r={normalizedRadius}
+          cx={radius}
+          cy={radius}
+        />
+      </svg>
+      <span className="absolute text-[9px] font-bold text-mm-dark">
+        {value}%
+      </span>
+    </div>
+  );
+}
+
 function ProjectsPage() {
-  const { projects: initialProjects, users: initialUsers, businesses: initialBusinesses } = Route.useLoaderData();
+  const {
+    projects: initialProjects,
+    users: initialUsers,
+    businesses: initialBusinesses,
+  } = Route.useLoaderData();
   const [projectList, setProjectList] = useState<Project[]>(initialProjects);
   const [users, setUsers] = useState<any[]>(initialUsers);
   const [businesses, setBusinesses] = useState<any[]>(initialBusinesses);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedBusinessId, setSelectedBusinessId] = useState<string | null>(
+    null,
+  );
+
+  const selectedBiz = useMemo(() => {
+    return businesses.find((b) => b.id === selectedBusinessId);
+  }, [businesses, selectedBusinessId]);
+
+  const activeUser = useMemo(() => {
+    if (!selectedBiz) return null;
+    const userIdStr =
+      typeof selectedBiz.userId === "object" && selectedBiz.userId !== null
+        ? selectedBiz.userId.id
+        : selectedBiz.userId;
+    return users.find((u) => u.id === userIdStr);
+  }, [selectedBiz, users]);
 
   useEffect(() => {
     setProjectList(initialProjects);
@@ -41,11 +130,36 @@ function ProjectsPage() {
     setBusinesses(initialBusinesses);
   }, [initialProjects, initialUsers, initialBusinesses]);
 
+  useEffect(() => {
+    if (initialBusinesses.length > 0 && !selectedBusinessId) {
+      setSelectedBusinessId(initialBusinesses[0].id);
+    }
+  }, [initialBusinesses, selectedBusinessId]);
+
+  const activeBizProjects = useMemo(() => {
+    if (!selectedBusinessId) return [];
+    return projectList.filter((p) => {
+      const bizId =
+        typeof p.businessId === "object" && p.businessId !== null
+          ? p.businessId.id
+          : p.businessId;
+      return bizId === selectedBusinessId;
+    });
+  }, [projectList, selectedBusinessId]);
+
+  const sortedProjects = useMemo(() => {
+    return [...activeBizProjects].sort((a, b) => {
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return timeB - timeA;
+    });
+  }, [activeBizProjects]);
+
   const refreshProjects = async () => {
     const [pData, uData, bData] = await Promise.all([
       getProjectsFn(),
       getUsersFn(),
-      getBusinessesFn()
+      getBusinessesFn(),
     ]);
     setProjectList(pData);
     setUsers(uData);
@@ -53,24 +167,70 @@ function ProjectsPage() {
   };
 
   const [isNewProjectOpen, setIsNewProjectOpen] = useState(false);
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [newProjectForm, setNewProjectForm] = useState({
-    name: "", client: "", businessId: "", services: [] as string[], domain: "" as any, manager: "",
-    startDate: "", deadline: "", status: "" as any, priority: "" as any,
-    description: "", notes: ""
+    name: "",
+    client: "",
+    businessId: "",
+    services: [] as string[],
+    domain: "" as any,
+    manager: "",
+    startDate: "",
+    deadline: "",
+    status: "" as any,
+    priority: "" as any,
+    description: "",
+    notes: "",
   });
-  const [newProjectErrors, setNewProjectErrors] = useState<Record<string, boolean>>({});
+  const [newProjectErrors, setNewProjectErrors] = useState<
+    Record<string, boolean>
+  >({});
+
+  const handleOpenNewProject = () => {
+    const selectedBiz = businesses.find((b) => b.id === selectedBusinessId);
+    const linkedUserId = selectedBiz
+      ? typeof selectedBiz.userId === "string"
+        ? selectedBiz.userId
+        : selectedBiz.userId?.id
+      : "";
+    setNewProjectForm({
+      name: "",
+      client: linkedUserId || "",
+      businessId: selectedBusinessId || "",
+      services: [],
+      domain: "" as any,
+      manager: "",
+      startDate: "",
+      deadline: "",
+      status: "" as any,
+      priority: "" as any,
+      description: "",
+      notes: "",
+    });
+    setNewProjectErrors({});
+    setIsNewProjectOpen(true);
+  };
+
   const [toast, setToast] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Project | null>(null);
 
   const handleDelete = async (p: Project) => {
-    const biz = typeof p.businessId === "object" && p.businessId !== null
-      ? p.businessId
-      : businesses.find(b => b.id === p.businessId);
+    const biz =
+      typeof p.businessId === "object" && p.businessId !== null
+        ? p.businessId
+        : businesses.find((b) => b.id === p.businessId);
     const client = biz?.businessName || "No business";
     const manager = p.assignee;
     await deleteProjectFn({ data: p.id });
-    await logAuditEventFn({ data: { uid: "admin", action: "project_deleted", payload: { projectId: p.id, client, manager }, userName: "Admin" } });
-    setProjectList(prev => prev.filter(x => x.id !== p.id));
+    await logAuditEventFn({
+      data: {
+        uid: "admin",
+        action: "project_deleted",
+        payload: { projectId: p.id, client, manager },
+        userName: "Admin",
+      },
+    });
+    setProjectList((prev) => prev.filter((x) => x.id !== p.id));
     setConfirmDelete(null);
     setToast(`✓ Project "${p.id}" deleted successfully.`);
   };
@@ -79,7 +239,7 @@ function ProjectsPage() {
   const [typeFilter, setTypeFilter] = useState("All Projects");
   const [statusFilter, setStatusFilter] = useState("All Status");
   const [serviceFilter, setServiceFilter] = useState("All Services");
-  
+
   const [isTypeOpen, setIsTypeOpen] = useState(false);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isServiceOpen, setIsServiceOpen] = useState(false);
@@ -90,13 +250,21 @@ function ProjectsPage() {
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (typeRef.current && !typeRef.current.contains(e.target as Node)) setIsTypeOpen(false);
-      if (statusRef.current && !statusRef.current.contains(e.target as Node)) setIsStatusOpen(false);
-      if (serviceRef.current && !serviceRef.current.contains(e.target as Node)) setIsServiceOpen(false);
+      if (typeRef.current && !typeRef.current.contains(e.target as Node))
+        setIsTypeOpen(false);
+      if (statusRef.current && !statusRef.current.contains(e.target as Node))
+        setIsStatusOpen(false);
+      if (serviceRef.current && !serviceRef.current.contains(e.target as Node))
+        setIsServiceOpen(false);
+
+      const target = e.target as HTMLElement;
+      if (openDropdownId && !target.closest(".actions-dropdown-container")) {
+        setOpenDropdownId(null);
+      }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [openDropdownId]);
 
   useEffect(() => {
     if (toast) {
@@ -106,9 +274,11 @@ function ProjectsPage() {
   }, [toast]);
 
   const toggleService = (s: string) => {
-    setNewProjectForm(prev => ({
+    setNewProjectForm((prev) => ({
       ...prev,
-      services: prev.services.includes(s) ? prev.services.filter(x => x !== s) : [...prev.services, s]
+      services: prev.services.includes(s)
+        ? prev.services.filter((x) => x !== s)
+        : [...prev.services, s],
     }));
   };
 
@@ -116,34 +286,53 @@ function ProjectsPage() {
     if (!newProjectForm.client) {
       return businesses;
     }
-    return businesses.filter(b => (typeof b.userId === "string" ? b.userId : b.userId?.id) === newProjectForm.client);
+    return businesses.filter(
+      (b) =>
+        (typeof b.userId === "string" ? b.userId : b.userId?.id) ===
+        newProjectForm.client,
+    );
   }, [businesses, newProjectForm.client]);
 
   const handleClientChange = (clientId: string) => {
-    const clientBizs = businesses.filter(b => (typeof b.userId === "string" ? b.userId : b.userId?.id) === clientId);
+    const clientBizs = businesses.filter(
+      (b) =>
+        (typeof b.userId === "string" ? b.userId : b.userId?.id) === clientId,
+    );
     let nextBizId = "";
     if (clientBizs.length === 1) {
       nextBizId = clientBizs[0].id;
-    } else if (clientBizs.some(b => b.id === newProjectForm.businessId)) {
+    } else if (clientBizs.some((b) => b.id === newProjectForm.businessId)) {
       nextBizId = newProjectForm.businessId;
     }
-    setNewProjectForm(prev => ({
+    setNewProjectForm((prev) => ({
       ...prev,
       client: clientId,
-      businessId: nextBizId
+      businessId: nextBizId,
     }));
-    setNewProjectErrors(prev => ({ ...prev, client: false, businessId: false }));
+    setNewProjectErrors((prev) => ({
+      ...prev,
+      client: false,
+      businessId: false,
+    }));
   };
 
   const handleBusinessChange = (businessId: string) => {
-    const selectedBiz = businesses.find(b => b.id === businessId);
-    const linkedUserId = selectedBiz ? (typeof selectedBiz.userId === "string" ? selectedBiz.userId : selectedBiz.userId?.id) : "";
-    setNewProjectForm(prev => ({
+    const selectedBiz = businesses.find((b) => b.id === businessId);
+    const linkedUserId = selectedBiz
+      ? typeof selectedBiz.userId === "string"
+        ? selectedBiz.userId
+        : selectedBiz.userId?.id
+      : "";
+    setNewProjectForm((prev) => ({
       ...prev,
       businessId,
-      client: linkedUserId || prev.client
+      client: linkedUserId || prev.client,
     }));
-    setNewProjectErrors(prev => ({ ...prev, client: false, businessId: false }));
+    setNewProjectErrors((prev) => ({
+      ...prev,
+      client: false,
+      businessId: false,
+    }));
   };
 
   const handleCreateSubmit = () => {
@@ -178,7 +367,9 @@ function ProjectsPage() {
       notes: newProjectForm.notes,
       updates: [],
       startDate: new Date(newProjectForm.startDate),
-      deadline: newProjectForm.deadline ? new Date(newProjectForm.deadline) : null,
+      deadline: newProjectForm.deadline
+        ? new Date(newProjectForm.deadline)
+        : null,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -187,9 +378,18 @@ function ProjectsPage() {
       refreshProjects().then(() => {
         setIsNewProjectOpen(false);
         setNewProjectForm({
-          name: "", client: "", businessId: "", services: [], domain: "" as any, manager: "",
-          startDate: "", deadline: "", status: "" as any, priority: "" as any,
-          description: "", notes: ""
+          name: "",
+          client: "",
+          businessId: "",
+          services: [],
+          domain: "" as any,
+          manager: "",
+          startDate: "",
+          deadline: "",
+          status: "" as any,
+          priority: "" as any,
+          description: "",
+          notes: "",
         });
         setToast("✓ Project created successfully!");
       });
@@ -197,12 +397,13 @@ function ProjectsPage() {
   };
 
   const filteredProjects = useMemo(() => {
-    return projectList.filter(p => {
-      const biz = typeof p.businessId === "object" && p.businessId !== null
-        ? p.businessId
-        : businesses.find(b => b.id === p.businessId);
+    return sortedProjects.filter((p) => {
+      const biz =
+        typeof p.businessId === "object" && p.businessId !== null
+          ? p.businessId
+          : businesses.find((b) => b.id === p.businessId);
       const manager = p.assignee;
-      
+
       let status: "Pending" | "In Progress" | "Completed" = "In Progress";
       if (p.progress === 0) status = "Pending";
       else if (p.progress === 100) status = "Completed";
@@ -210,9 +411,12 @@ function ProjectsPage() {
       let matchType = true;
       if (typeFilter === "My Projects") matchType = manager === p.assignee;
       else if (typeFilter === "AI Projects") matchType = true;
-      else if (typeFilter === "Website Projects") matchType = p.services.includes("Website");
-      else if (typeFilter === "Marketing Projects") matchType = p.services.includes("Marketing");
-      else if (typeFilter === "SEO Projects") matchType = p.services.includes("SEO");
+      else if (typeFilter === "Website Projects")
+        matchType = p.services.includes("Website");
+      else if (typeFilter === "Marketing Projects")
+        matchType = p.services.includes("Marketing");
+      else if (typeFilter === "SEO Projects")
+        matchType = p.services.includes("SEO");
 
       let matchStatus = true;
       if (statusFilter !== "All Status") matchStatus = status === statusFilter;
@@ -220,7 +424,8 @@ function ProjectsPage() {
       let matchService = true;
       if (serviceFilter !== "All Services") {
         if (serviceFilter === "Website + Marketing") {
-          matchService = p.services.includes("Website") && p.services.includes("Marketing");
+          matchService =
+            p.services.includes("Website") && p.services.includes("Marketing");
         } else {
           matchService = p.services.includes(serviceFilter);
         }
@@ -230,11 +435,11 @@ function ProjectsPage() {
       const term = searchQuery.toLowerCase();
       if (term) {
         const userIdStr = biz
-          ? (typeof biz.userId === "object" && biz.userId !== null
+          ? typeof biz.userId === "object" && biz.userId !== null
             ? biz.userId.id
-            : biz.userId)
+            : biz.userId
           : null;
-        const matchedUser = users.find(u => u.id === userIdStr);
+        const matchedUser = users.find((u) => u.id === userIdStr);
         const clientName = matchedUser?.fullName || "Unknown Client";
         const clientEmail = matchedUser?.email || "No email";
         const businessName = biz?.businessName || "No business";
@@ -251,7 +456,15 @@ function ProjectsPage() {
 
       return matchType && matchStatus && matchService && matchSearch;
     });
-  }, [projectList, typeFilter, statusFilter, serviceFilter, searchQuery, businesses, users]);
+  }, [
+    sortedProjects,
+    typeFilter,
+    statusFilter,
+    serviceFilter,
+    searchQuery,
+    businesses,
+    users,
+  ]);
 
   const clearAllFilters = () => {
     setSearchQuery("");
@@ -260,538 +473,1730 @@ function ProjectsPage() {
     setServiceFilter("All Services");
   };
 
-  const hasActiveFilters = searchQuery || typeFilter !== "All Projects" || statusFilter !== "All Status" || serviceFilter !== "All Services";
+  const hasActiveFilters =
+    searchQuery ||
+    typeFilter !== "All Projects" ||
+    statusFilter !== "All Status" ||
+    serviceFilter !== "All Services";
 
   return (
-    <div className="space-y-8">
-      <h1 className="text-2xl font-bold" style={{ color: "var(--color-mm-dark)" }}>
-        Projects
-      </h1>
-
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 w-full md:w-auto">
-          <div className="w-full sm:w-[280px]">
-            <div className="relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--color-mm-gray)" }} />
-              <input 
-                className="w-full rounded-xl pl-9 pr-8 py-2.5 text-sm outline-none transition-all" 
-                placeholder="Search projects..." 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                style={{ background: "white", border: "1px solid var(--color-mm-border)", color: "var(--color-mm-dark)" }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = "var(--color-mm-orange)";
-                  e.target.style.boxShadow = "0 0 0 3px rgba(232,157,24,0.1)";
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = "var(--color-mm-border)";
-                  e.target.style.boxShadow = "none";
-                }}
-              />
-              {searchQuery && (
-                <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2">
-                  <X size={14} style={{ color: "var(--color-mm-gray)" }} onMouseEnter={(e) => e.currentTarget.style.color = "var(--color-mm-red)"} onMouseLeave={(e) => e.currentTarget.style.color = "var(--color-mm-gray)"} />
-                </button>
-              )}
-            </div>
-            {hasActiveFilters && (
-              <div style={{ color: "var(--color-mm-gray)", fontSize: "12px", paddingLeft: "4px", marginTop: "4px" }}>
-                Showing {filteredProjects.length} of {projectList.length} projects
-              </div>
-            )}
-          </div>
-
-          <div className="relative w-full sm:w-auto" ref={typeRef}>
-            <button 
-              onClick={() => setIsTypeOpen(!isTypeOpen)}
-              className="inline-flex items-center justify-between sm:justify-start gap-2 px-4 py-2.5 rounded-xl text-sm transition-colors w-full sm:w-auto"
-              style={{ background: "white", border: typeFilter === "All Projects" ? "1px solid var(--color-mm-border)" : "1px solid var(--color-mm-orange)", color: typeFilter === "All Projects" ? "var(--color-mm-gray)" : "var(--color-mm-orange)" }}
-            >
-              <span className="truncate">{typeFilter}</span>
-              <ChevronDown size={14} className="shrink-0" style={{ transform: isTypeOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 150ms ease" }} />
-            </button>
-            {isTypeOpen && (
-              <div style={{ background: "white", border: "1px solid var(--color-mm-border)", borderRadius: "16px", padding: "8px", boxShadow: "0 8px 24px rgba(0,0,0,0.10)", minWidth: "220px", position: "absolute", zIndex: 100, marginTop: "4px" }} className="w-full sm:w-auto left-0">
-                {[
-                  { label: "All Projects", count: projectList.length },
-                  { label: "My Projects", count: projectList.filter(() => true).length },
-                  { label: "AI Projects", count: projectList.length },
-                  { label: "Website Projects", count: projectList.filter(p => p.services.includes("Website")).length },
-                  { label: "Marketing Projects", count: projectList.filter(p => p.services.includes("Marketing")).length },
-                  { label: "SEO Projects", count: projectList.filter(p => p.services.includes("SEO")).length }
-                ].map(opt => (
-                  <div 
-                    key={opt.label} onClick={() => { setTypeFilter(opt.label); setIsTypeOpen(false); }}
-                    style={{ padding: "10px 14px", borderRadius: "10px", color: typeFilter === opt.label ? "var(--color-mm-orange)" : "var(--color-mm-gray)", fontSize: "14px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", background: typeFilter === opt.label ? "rgba(224, 86, 36, 0.1)" : "transparent", fontWeight: typeFilter === opt.label ? 600 : 400 }}
-                    onMouseEnter={(e) => { if (typeFilter !== opt.label) { e.currentTarget.style.background = "rgba(224, 86, 36, 0.1)"; e.currentTarget.style.color = "var(--color-mm-dark)"; } }}
-                    onMouseLeave={(e) => { if (typeFilter !== opt.label) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--color-mm-gray)"; } }}
-                  >
-                    <div className="flex items-center gap-2">
-                      {opt.label}
-                    </div>
-                    <span style={{ color: "var(--color-mm-gray)", fontSize: "12px" }}>{opt.count}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="relative w-full sm:w-auto" ref={statusRef}>
-            <button 
-              onClick={() => setIsStatusOpen(!isStatusOpen)}
-              className="inline-flex items-center justify-between sm:justify-start gap-2 px-4 py-2.5 rounded-xl text-sm transition-colors w-full sm:w-auto"
-              style={{ background: "white", border: statusFilter === "All Status" ? "1px solid var(--color-mm-border)" : "1px solid var(--color-mm-orange)", color: statusFilter === "All Status" ? "var(--color-mm-gray)" : "var(--color-mm-orange)" }}
-            >
-              <span className="truncate">{statusFilter}</span>
-              <ChevronDown size={14} className="shrink-0" style={{ transform: isStatusOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 150ms ease" }} />
-            </button>
-            {isStatusOpen && (
-              <div style={{ background: "white", border: "1px solid var(--color-mm-border)", borderRadius: "16px", padding: "8px", boxShadow: "0 8px 24px rgba(0,0,0,0.10)", minWidth: "200px", position: "absolute", zIndex: 100, marginTop: "4px" }} className="w-full sm:w-auto left-0">
-                {[
-                  { label: "All Status", bg: "transparent", color: "transparent" },
-                  { label: "In Progress", bg: "rgba(59, 130, 246, 0.1)", color: "var(--color-mm-blue)" },
-                  { label: "Pending", bg: "rgba(224, 86, 36, 0.1)", color: "var(--color-mm-orange)" },
-                  { label: "On Hold", bg: "rgba(224, 86, 36, 0.1)", color: "var(--color-mm-red)" },
-                  { label: "Completed", bg: "rgba(92, 177, 62, 0.1)", color: "var(--color-mm-green)" },
-                  { label: "Cancelled", bg: "var(--color-mm-subtle)", color: "var(--color-mm-gray)" }
-                ].map(opt => {
-                  const count = opt.label === "All Status" 
-                    ? projectList.length 
-                    : projectList.filter(p => {
-                        let status: "Pending" | "In Progress" | "Completed" = "In Progress";
-                        if (p.progress === 0) status = "Pending";
-                        else if (p.progress === 100) status = "Completed";
-                        return status === opt.label;
-                      }).length;
-                  return (
-                    <div 
-                      key={opt.label} onClick={() => { setStatusFilter(opt.label); setIsStatusOpen(false); }}
-                      style={{ padding: "10px 14px", borderRadius: "10px", color: statusFilter === opt.label ? "var(--color-mm-orange)" : "var(--color-mm-gray)", fontSize: "14px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", background: statusFilter === opt.label ? "rgba(224, 86, 36, 0.1)" : "transparent", fontWeight: statusFilter === opt.label ? 600 : 400 }}
-                      onMouseEnter={(e) => { if (statusFilter !== opt.label) { e.currentTarget.style.background = "rgba(224, 86, 36, 0.1)"; e.currentTarget.style.color = "var(--color-mm-dark)"; } }}
-                      onMouseLeave={(e) => { if (statusFilter !== opt.label) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--color-mm-gray)"; } }}
-                    >
-                      <div className="flex items-center gap-2">
-                        {opt.label}
-                        {opt.bg !== "transparent" && <span style={{ background: opt.bg, color: opt.color, borderRadius: "999px", padding: "2px 8px", fontSize: "11px", fontWeight: 600 }}>{opt.label}</span>}
-                      </div>
-                      <span style={{ color: "var(--color-mm-gray)", fontSize: "12px" }}>({count})</span>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-
-          <div className="relative w-full sm:w-auto" ref={serviceRef}>
-            <button 
-              onClick={() => setIsServiceOpen(!isServiceOpen)}
-              className="inline-flex items-center justify-between sm:justify-start gap-2 px-4 py-2.5 rounded-xl text-sm transition-colors w-full sm:w-auto"
-              style={{ background: "white", border: serviceFilter === "All Services" ? "1px solid var(--color-mm-border)" : "1px solid var(--color-mm-orange)", color: serviceFilter === "All Services" ? "var(--color-mm-gray)" : "var(--color-mm-orange)" }}
-            >
-              <span className="truncate">{serviceFilter}</span>
-              <ChevronDown size={14} className="shrink-0" style={{ transform: isServiceOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 150ms ease" }} />
-            </button>
-            {isServiceOpen && (
-              <div style={{ background: "white", border: "1px solid var(--color-mm-border)", borderRadius: "16px", padding: "8px", boxShadow: "0 8px 24px rgba(0,0,0,0.10)", minWidth: "200px", position: "absolute", zIndex: 100, marginTop: "4px" }} className="w-full sm:w-auto left-0">
-                {[
-                  { label: "All Services", chips: [] },
-                  { label: "Website", chips: [{ bg: "rgba(59, 130, 246, 0.1)", color: "var(--color-mm-blue)", text: "Website" }] },
-                  { label: "Marketing", chips: [{ bg: "rgba(92, 177, 62, 0.1)", color: "var(--color-mm-green)", text: "Marketing" }] },
-                  { label: "SEO", chips: [{ bg: "rgba(224, 86, 36, 0.1)", color: "var(--color-mm-orange)", text: "SEO" }] },
-                  { label: "Sales", chips: [{ bg: "rgba(224, 86, 36, 0.1)", color: "var(--color-mm-red)", text: "Sales" }] },
-                  { label: "Website + Marketing", chips: [{ bg: "rgba(59, 130, 246, 0.1)", color: "var(--color-mm-blue)", text: "Website" }, { bg: "rgba(92, 177, 62, 0.1)", color: "var(--color-mm-green)", text: "Marketing" }] }
-                ].map(opt => (
-                  <div 
-                    key={opt.label} onClick={() => { setServiceFilter(opt.label); setIsServiceOpen(false); }}
-                    style={{ padding: "10px 14px", borderRadius: "10px", color: serviceFilter === opt.label ? "var(--color-mm-orange)" : "var(--color-mm-gray)", fontSize: "14px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", background: serviceFilter === opt.label ? "rgba(224, 86, 36, 0.1)" : "transparent", fontWeight: serviceFilter === opt.label ? 600 : 400 }}
-                    onMouseEnter={(e) => { if (serviceFilter !== opt.label) { e.currentTarget.style.background = "rgba(224, 86, 36, 0.1)"; e.currentTarget.style.color = "var(--color-mm-dark)"; } }}
-                    onMouseLeave={(e) => { if (serviceFilter !== opt.label) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--color-mm-gray)"; } }}
-                  >
-                    {opt.label}
-                    <div className="flex gap-1">
-                      {opt.chips.map((c, i) => (
-                        <span key={i} style={{ background: c.bg, color: c.color, borderRadius: "999px", padding: "2px 8px", fontSize: "11px", fontWeight: 600 }}>{c.text}</span>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+    <div className="flex flex-col md:flex-row bg-[#FCFDFE] h-full w-full overflow-hidden">
+      {/* Business Sidebar - Desktop */}
+      <div className="hidden md:flex flex-col w-[260px] lg:w-[300px] bg-white border-r border-mm-border shrink-0 select-none">
+        <div className="p-5 border-b border-mm-border/60">
+          <h2 className="text-xs font-black text-mm-gray uppercase tracking-wider">
+            Businesses
+          </h2>
         </div>
-        
-        <div className="flex items-center justify-between sm:justify-end gap-3 w-full md:w-auto">
-          {hasActiveFilters && (
-            <button onClick={clearAllFilters} className="text-xs hover:underline whitespace-nowrap" style={{ color: "var(--color-mm-orange)" }}>
-              Clear all filters
-            </button>
-          )}
-          <button onClick={() => setIsNewProjectOpen(true)} className="px-4 py-2.5 bg-mm-orange hover:bg-mm-orange/95 text-white font-semibold rounded-xl transition-colors inline-flex items-center justify-center gap-2 w-full sm:w-auto whitespace-nowrap">
-            <Plus size={16} /> New Project
-          </button>
+        <div className="flex-1 overflow-y-auto py-2">
+          {businesses.map((biz) => {
+            const isSelected = selectedBusinessId === biz.id;
+            const projectCount = projectList.filter((p) => {
+              const bizId =
+                typeof p.businessId === "object" && p.businessId !== null
+                  ? p.businessId.id
+                  : p.businessId;
+              return bizId === biz.id;
+            }).length;
+
+            return (
+              <button
+                key={biz.id}
+                onClick={() => setSelectedBusinessId(biz.id)}
+                className={`w-full flex items-center justify-between gap-3 px-5 py-3.5 transition-colors border-l-4 text-left cursor-pointer ${
+                  isSelected
+                    ? "bg-mm-orange/5 border-mm-orange text-mm-dark font-semibold"
+                    : "border-transparent text-mm-gray hover:bg-mm-subtle/50"
+                }`}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  {biz.image ? (
+                    <img
+                      src={biz.image}
+                      alt={biz.businessName}
+                      className="w-9 h-9 rounded-xl object-cover aspect-square shrink-0"
+                    />
+                  ) : (
+                    <Avatar name={biz.businessName} size={36} />
+                  )}
+                  <div className="min-w-0">
+                    <div
+                      className={`text-xs font-bold truncate ${isSelected ? "text-mm-dark" : "text-mm-dark/80"}`}
+                    >
+                      {biz.businessName}
+                    </div>
+                    <div className="text-[10px] text-mm-gray truncate mt-0.5 font-medium">
+                      {biz.businessType || "Consulting"}
+                    </div>
+                  </div>
+                </div>
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                    isSelected
+                      ? "bg-mm-orange/15 text-mm-orange"
+                      : "bg-mm-subtle text-mm-gray/80"
+                  }`}
+                >
+                  {projectCount}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      <div className="bg-white border border-mm-border rounded-[24px] shadow-[0_2px_12px_rgba(0,0,0,0.02)] overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-mm-subtle border-b border-mm-border text-mm-gray font-semibold">
-                {["Client", "Business", "Services", "Assignee", "Status", "Progress", "Deadline", "Actions"].map((h) => (
-                  <th key={h} className="text-left font-semibold px-4 py-3 whitespace-nowrap">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading ? (
-                <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center">
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <div className="w-6 h-6 border-2 border-mm-orange border-t-transparent rounded-full animate-spin"></div>
-                      <span className="text-xs font-semibold" style={{ color: "var(--color-mm-gray)" }}>Loading projects...</span>
-                    </div>
-                  </td>
-                </tr>
-              ) : filteredProjects.length > 0 ? (
-                filteredProjects.map((p) => {
-                  const biz = typeof p.businessId === "object" && p.businessId !== null
-                    ? p.businessId
-                    : businesses.find(b => b.id === p.businessId);
-                  const manager = p.assignee;
+      {/* Business Selector - Mobile */}
+      <div className="md:hidden bg-white border-b border-mm-border px-4 py-3 flex flex-col gap-2 sticky top-0 z-10">
+        <span className="text-[10px] font-black text-mm-gray uppercase tracking-wider">
+          Select Business
+        </span>
+        <div className="flex gap-2 overflow-x-auto pb-1.5 scrollbar-none">
+          {businesses.map((biz) => {
+            const isSelected = selectedBusinessId === biz.id;
+            const projectCount = projectList.filter((p) => {
+              const bizId =
+                typeof p.businessId === "object" && p.businessId !== null
+                  ? p.businessId.id
+                  : p.businessId;
+              return bizId === biz.id;
+            }).length;
 
-                  const userIdStr = biz
-                    ? (typeof biz.userId === "object" && biz.userId !== null
-                      ? biz.userId.id
-                      : biz.userId)
-                    : null;
-                  const matchedUser = users.find(u => u.id === userIdStr);
+            return (
+              <button
+                key={biz.id}
+                onClick={() => setSelectedBusinessId(biz.id)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl border shrink-0 transition-all text-xs font-bold cursor-pointer ${
+                  isSelected
+                    ? "bg-mm-orange/10 border-mm-orange text-mm-orange"
+                    : "bg-white border-mm-border/60 text-mm-gray hover:bg-mm-subtle/50"
+                }`}
+              >
+                {biz.image ? (
+                  <img
+                    src={biz.image}
+                    alt={biz.businessName}
+                    className="w-5 h-5 rounded-md object-cover aspect-square"
+                  />
+                ) : (
+                  <Avatar name={biz.businessName} size={20} />
+                )}
+                <span>{biz.businessName}</span>
+                <span
+                  className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${
+                    isSelected
+                      ? "bg-mm-orange/20 text-mm-orange"
+                      : "bg-mm-subtle text-mm-gray/70"
+                  }`}
+                >
+                  {projectCount}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
-                  const clientName = matchedUser?.fullName || "Unknown Client";
-                  const clientEmail = matchedUser?.email || "No email";
-                  const businessName = biz?.businessName || "No business";
-                  const businessType = biz?.businessType || "Consulting";
-                  
-                  let status: "Pending" | "In Progress" | "Completed" = "In Progress";
-                  if (p.progress === 0) status = "Pending";
-                  else if (p.progress === 100) status = "Completed";
+      {/* Right Side - Projects Content */}
+      <div className="flex-1 p-6 md:p-8 lg:p-10 space-y-6 overflow-y-scroll min-w-0">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div>
+            <h1
+              className="text-2xl font-bold"
+              style={{ color: "var(--color-mm-dark)" }}
+            >
+              Projects
+            </h1>
+            <p className="text-xs text-mm-gray mt-1 font-medium">
+              Showing projects for{" "}
+              {selectedBiz?.businessName || "selected business"}
+            </p>
+          </div>
 
-                  const deadlineStr = p.deadline ? new Date(p.deadline).toLocaleDateString() : "";
-
-                  return (
-                    <tr key={p.id} style={{ borderTop: "1px solid var(--color-mm-border)" }} className="hover:bg-mm-subtle transition-colors">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          {matchedUser?.image ? (
-                            <img
-                              src={matchedUser.image}
-                              alt={clientName}
-                              className="w-8 h-8 rounded-full object-cover aspect-square shrink-0"
-                            />
-                          ) : (
-                            <Avatar name={clientName} size={32} />
-                          )}
-                          <div>
-                            <div className="font-semibold" style={{ color: "var(--color-mm-dark)" }}>
-                              {clientName}
-                            </div>
-                            <div className="text-xs mt-0.5" style={{ color: "var(--color-mm-gray)" }}>
-                              {clientEmail}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          {biz?.image ? (
-                            <img
-                              src={biz.image}
-                              alt={businessName}
-                              className="w-8 h-8 rounded-full object-cover aspect-square shrink-0"
-                            />
-                          ) : (
-                            <Avatar name={businessName} size={32} />
-                          )}
-                          <div>
-                            <div className="font-semibold" style={{ color: "var(--color-mm-dark)" }}>
-                              {businessName}
-                            </div>
-                            <div className="text-xs mt-0.5" style={{ color: "var(--color-mm-gray)" }}>
-                              {businessType}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-wrap gap-1">
-                          {p.services.map((s) => (
-                            <span key={s} className="px-2.5 py-0.5 rounded-full text-xs border border-mm-border bg-mm-subtle text-mm-gray">
-                              {s}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3" style={{ color: "var(--color-mm-gray)" }}>{manager}</td>
-                      <td className="px-4 py-3"><StatusBadge status={status} /></td>
-                      <td className="px-4 py-3 min-w-[160px]">
-                        <ProgressBar value={p.progress} color={statusColors[status as keyof typeof statusColors]} />
-                      </td>
-                      <td className="px-4 py-3 text-xs whitespace-nowrap" style={{ color: "var(--color-mm-gray)" }}>{deadlineStr}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <Link to="/admin/projects/$id" params={{ id: p.id }} search={{ edit: false }} className="hover:opacity-70" title="View">
-                            <Eye size={16} style={{ color: "var(--color-mm-gray)" }} />
-                          </Link>
-                          <Link to="/admin/projects/$id" params={{ id: p.id }} search={{ edit: true }} className="hover:opacity-70" title="Edit">
-                            <Edit2 size={16} style={{ color: "var(--color-mm-gray)" }} />
-                          </Link>
-                          <Link
-                            to="/admin/chat"
-                            search={{
-                              user: userIdStr || "",
-                              business: (typeof p.businessId === "string" ? p.businessId : biz?.id) || "",
-                              domain: p.domain,
-                            }}
-                            className="hover:opacity-70 text-mm-orange"
-                            title="Chat"
-                          >
-                            <MessageSquare size={16} />
-                          </Link>
-                          <button onClick={() => setConfirmDelete(p)} className="hover:opacity-70 text-mm-red" title="Delete">
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
+          {activeUser && (
+            <div className="flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-white border border-mm-border/60 shadow-[0_2px_8px_rgba(0,0,0,0.01)] max-w-sm">
+              {activeUser.image ? (
+                <img
+                  src={activeUser.image}
+                  alt={activeUser.fullName}
+                  className="w-9 h-9 rounded-full object-cover aspect-square shrink-0"
+                />
               ) : (
-                <tr>
-                  <td colSpan={8} className="px-4 py-12">
-                    <div className="flex flex-col items-center justify-center">
-                      <SearchX size={32} style={{ color: "var(--color-mm-gray)" }} />
-                      <div style={{ color: "var(--color-mm-gray)", fontSize: "14px", marginTop: "12px", fontWeight: 600 }}>No projects found</div>
-                      <button onClick={clearAllFilters} style={{ color: "var(--color-mm-orange)", fontSize: "12px", marginTop: "4px" }} className="hover:underline">Clear filters</button>
-                    </div>
-                  </td>
-                </tr>
+                <Avatar name={activeUser.fullName || "Client"} size={36} />
               )}
-            </tbody>
-          </table>
+              <div className="min-w-0">
+                <span className="text-[9px] font-black text-mm-gray uppercase tracking-wider block">
+                  Client Owner
+                </span>
+                <div className="font-bold text-xs text-mm-dark truncate">
+                  {activeUser.fullName}
+                </div>
+                <div className="text-[10px] text-mm-gray truncate">
+                  {activeUser.email}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 w-full md:w-auto">
+            <div className="w-full sm:w-[280px]">
+              <div className="relative">
+                <Search
+                  size={16}
+                  className="absolute left-3 top-1/2 -translate-y-1/2"
+                  style={{ color: "var(--color-mm-gray)" }}
+                />
+                <input
+                  className="w-full rounded-xl pl-9 pr-8 py-2.5 text-sm outline-none transition-all"
+                  placeholder="Search projects..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  style={{
+                    background: "white",
+                    border: "1px solid var(--color-mm-border)",
+                    color: "var(--color-mm-dark)",
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = "var(--color-mm-orange)";
+                    e.target.style.boxShadow = "0 0 0 3px rgba(232,157,24,0.1)";
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = "var(--color-mm-border)";
+                    e.target.style.boxShadow = "none";
+                  }}
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2"
+                  >
+                    <X
+                      size={14}
+                      style={{ color: "var(--color-mm-gray)" }}
+                      onMouseEnter={(e) =>
+                        (e.currentTarget.style.color = "var(--color-mm-red)")
+                      }
+                      onMouseLeave={(e) =>
+                        (e.currentTarget.style.color = "var(--color-mm-gray)")
+                      }
+                    />
+                  </button>
+                )}
+              </div>
+              {hasActiveFilters && (
+                <div
+                  style={{
+                    color: "var(--color-mm-gray)",
+                    fontSize: "12px",
+                    paddingLeft: "4px",
+                    marginTop: "4px",
+                  }}
+                >
+                  Showing {filteredProjects.length} of {projectList.length}{" "}
+                  projects
+                </div>
+              )}
+            </div>
+
+            <div className="relative w-full sm:w-auto" ref={typeRef}>
+              <button
+                onClick={() => setIsTypeOpen(!isTypeOpen)}
+                className="inline-flex items-center justify-between sm:justify-start gap-2 px-4 py-2.5 rounded-xl text-sm transition-colors w-full sm:w-auto"
+                style={{
+                  background: "white",
+                  border:
+                    typeFilter === "All Projects"
+                      ? "1px solid var(--color-mm-border)"
+                      : "1px solid var(--color-mm-orange)",
+                  color:
+                    typeFilter === "All Projects"
+                      ? "var(--color-mm-gray)"
+                      : "var(--color-mm-orange)",
+                }}
+              >
+                <span className="truncate">{typeFilter}</span>
+                <ChevronDown
+                  size={14}
+                  className="shrink-0"
+                  style={{
+                    transform: isTypeOpen ? "rotate(180deg)" : "rotate(0deg)",
+                    transition: "transform 150ms ease",
+                  }}
+                />
+              </button>
+              {isTypeOpen && (
+                <div
+                  style={{
+                    background: "white",
+                    border: "1px solid var(--color-mm-border)",
+                    borderRadius: "16px",
+                    padding: "8px",
+                    boxShadow: "0 8px 24px rgba(0,0,0,0.10)",
+                    minWidth: "220px",
+                    position: "absolute",
+                    zIndex: 100,
+                    marginTop: "4px",
+                  }}
+                  className="w-full sm:w-auto left-0"
+                >
+                  {[
+                    { label: "All Projects", count: projectList.length },
+                    {
+                      label: "My Projects",
+                      count: projectList.filter(() => true).length,
+                    },
+                    { label: "AI Projects", count: projectList.length },
+                    {
+                      label: "Website Projects",
+                      count: projectList.filter((p) =>
+                        p.services.includes("Website"),
+                      ).length,
+                    },
+                    {
+                      label: "Marketing Projects",
+                      count: projectList.filter((p) =>
+                        p.services.includes("Marketing"),
+                      ).length,
+                    },
+                    {
+                      label: "SEO Projects",
+                      count: projectList.filter((p) =>
+                        p.services.includes("SEO"),
+                      ).length,
+                    },
+                  ].map((opt) => (
+                    <div
+                      key={opt.label}
+                      onClick={() => {
+                        setTypeFilter(opt.label);
+                        setIsTypeOpen(false);
+                      }}
+                      style={{
+                        padding: "10px 14px",
+                        borderRadius: "10px",
+                        color:
+                          typeFilter === opt.label
+                            ? "var(--color-mm-orange)"
+                            : "var(--color-mm-gray)",
+                        fontSize: "14px",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        background:
+                          typeFilter === opt.label
+                            ? "rgba(224, 86, 36, 0.1)"
+                            : "transparent",
+                        fontWeight: typeFilter === opt.label ? 600 : 400,
+                      }}
+                      onMouseEnter={(e) => {
+                        if (typeFilter !== opt.label) {
+                          e.currentTarget.style.background =
+                            "rgba(224, 86, 36, 0.1)";
+                          e.currentTarget.style.color = "var(--color-mm-dark)";
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (typeFilter !== opt.label) {
+                          e.currentTarget.style.background = "transparent";
+                          e.currentTarget.style.color = "var(--color-mm-gray)";
+                        }
+                      }}
+                    >
+                      <div className="flex items-center gap-2">{opt.label}</div>
+                      <span
+                        style={{
+                          color: "var(--color-mm-gray)",
+                          fontSize: "12px",
+                        }}
+                      >
+                        {opt.count}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="relative w-full sm:w-auto" ref={statusRef}>
+              <button
+                onClick={() => setIsStatusOpen(!isStatusOpen)}
+                className="inline-flex items-center justify-between sm:justify-start gap-2 px-4 py-2.5 rounded-xl text-sm transition-colors w-full sm:w-auto"
+                style={{
+                  background: "white",
+                  border:
+                    statusFilter === "All Status"
+                      ? "1px solid var(--color-mm-border)"
+                      : "1px solid var(--color-mm-orange)",
+                  color:
+                    statusFilter === "All Status"
+                      ? "var(--color-mm-gray)"
+                      : "var(--color-mm-orange)",
+                }}
+              >
+                <span className="truncate">{statusFilter}</span>
+                <ChevronDown
+                  size={14}
+                  className="shrink-0"
+                  style={{
+                    transform: isStatusOpen ? "rotate(180deg)" : "rotate(0deg)",
+                    transition: "transform 150ms ease",
+                  }}
+                />
+              </button>
+              {isStatusOpen && (
+                <div
+                  style={{
+                    background: "white",
+                    border: "1px solid var(--color-mm-border)",
+                    borderRadius: "16px",
+                    padding: "8px",
+                    boxShadow: "0 8px 24px rgba(0,0,0,0.10)",
+                    minWidth: "200px",
+                    position: "absolute",
+                    zIndex: 100,
+                    marginTop: "4px",
+                  }}
+                  className="w-full sm:w-auto left-0"
+                >
+                  {[
+                    {
+                      label: "All Status",
+                      bg: "transparent",
+                      color: "transparent",
+                    },
+                    {
+                      label: "In Progress",
+                      bg: "rgba(59, 130, 246, 0.1)",
+                      color: "var(--color-mm-blue)",
+                    },
+                    {
+                      label: "Pending",
+                      bg: "rgba(224, 86, 36, 0.1)",
+                      color: "var(--color-mm-orange)",
+                    },
+                    {
+                      label: "On Hold",
+                      bg: "rgba(224, 86, 36, 0.1)",
+                      color: "var(--color-mm-red)",
+                    },
+                    {
+                      label: "Completed",
+                      bg: "rgba(92, 177, 62, 0.1)",
+                      color: "var(--color-mm-green)",
+                    },
+                    {
+                      label: "Cancelled",
+                      bg: "var(--color-mm-subtle)",
+                      color: "var(--color-mm-gray)",
+                    },
+                  ].map((opt) => {
+                    const count =
+                      opt.label === "All Status"
+                        ? projectList.length
+                        : projectList.filter((p) => {
+                            let status:
+                              "Pending" | "In Progress" | "Completed" =
+                              "In Progress";
+                            if (p.progress === 0) status = "Pending";
+                            else if (p.progress === 100) status = "Completed";
+                            return status === opt.label;
+                          }).length;
+                    return (
+                      <div
+                        key={opt.label}
+                        onClick={() => {
+                          setStatusFilter(opt.label);
+                          setIsStatusOpen(false);
+                        }}
+                        style={{
+                          padding: "10px 14px",
+                          borderRadius: "10px",
+                          color:
+                            statusFilter === opt.label
+                              ? "var(--color-mm-orange)"
+                              : "var(--color-mm-gray)",
+                          fontSize: "14px",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          background:
+                            statusFilter === opt.label
+                              ? "rgba(224, 86, 36, 0.1)"
+                              : "transparent",
+                          fontWeight: statusFilter === opt.label ? 600 : 400,
+                        }}
+                        onMouseEnter={(e) => {
+                          if (statusFilter !== opt.label) {
+                            e.currentTarget.style.background =
+                              "rgba(224, 86, 36, 0.1)";
+                            e.currentTarget.style.color =
+                              "var(--color-mm-dark)";
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (statusFilter !== opt.label) {
+                            e.currentTarget.style.background = "transparent";
+                            e.currentTarget.style.color =
+                              "var(--color-mm-gray)";
+                          }
+                        }}
+                      >
+                        <div className="flex items-center gap-2">
+                          {opt.label}
+                          {opt.bg !== "transparent" && (
+                            <span
+                              style={{
+                                background: opt.bg,
+                                color: opt.color,
+                                borderRadius: "999px",
+                                padding: "2px 8px",
+                                fontSize: "11px",
+                                fontWeight: 600,
+                              }}
+                            >
+                              {opt.label}
+                            </span>
+                          )}
+                        </div>
+                        <span
+                          style={{
+                            color: "var(--color-mm-gray)",
+                            fontSize: "12px",
+                          }}
+                        >
+                          ({count})
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="relative w-full sm:w-auto" ref={serviceRef}>
+              <button
+                onClick={() => setIsServiceOpen(!isServiceOpen)}
+                className="inline-flex items-center justify-between sm:justify-start gap-2 px-4 py-2.5 rounded-xl text-sm transition-colors w-full sm:w-auto"
+                style={{
+                  background: "white",
+                  border:
+                    serviceFilter === "All Services"
+                      ? "1px solid var(--color-mm-border)"
+                      : "1px solid var(--color-mm-orange)",
+                  color:
+                    serviceFilter === "All Services"
+                      ? "var(--color-mm-gray)"
+                      : "var(--color-mm-orange)",
+                }}
+              >
+                <span className="truncate">{serviceFilter}</span>
+                <ChevronDown
+                  size={14}
+                  className="shrink-0"
+                  style={{
+                    transform: isServiceOpen
+                      ? "rotate(180deg)"
+                      : "rotate(0deg)",
+                    transition: "transform 150ms ease",
+                  }}
+                />
+              </button>
+              {isServiceOpen && (
+                <div
+                  style={{
+                    background: "white",
+                    border: "1px solid var(--color-mm-border)",
+                    borderRadius: "16px",
+                    padding: "8px",
+                    boxShadow: "0 8px 24px rgba(0,0,0,0.10)",
+                    minWidth: "200px",
+                    position: "absolute",
+                    zIndex: 100,
+                    marginTop: "4px",
+                  }}
+                  className="w-full sm:w-auto left-0"
+                >
+                  {[
+                    { label: "All Services", chips: [] },
+                    {
+                      label: "Website",
+                      chips: [
+                        {
+                          bg: "rgba(59, 130, 246, 0.1)",
+                          color: "var(--color-mm-blue)",
+                          text: "Website",
+                        },
+                      ],
+                    },
+                    {
+                      label: "Marketing",
+                      chips: [
+                        {
+                          bg: "rgba(92, 177, 62, 0.1)",
+                          color: "var(--color-mm-green)",
+                          text: "Marketing",
+                        },
+                      ],
+                    },
+                    {
+                      label: "SEO",
+                      chips: [
+                        {
+                          bg: "rgba(224, 86, 36, 0.1)",
+                          color: "var(--color-mm-orange)",
+                          text: "SEO",
+                        },
+                      ],
+                    },
+                    {
+                      label: "Sales",
+                      chips: [
+                        {
+                          bg: "rgba(224, 86, 36, 0.1)",
+                          color: "var(--color-mm-red)",
+                          text: "Sales",
+                        },
+                      ],
+                    },
+                    {
+                      label: "Website + Marketing",
+                      chips: [
+                        {
+                          bg: "rgba(59, 130, 246, 0.1)",
+                          color: "var(--color-mm-blue)",
+                          text: "Website",
+                        },
+                        {
+                          bg: "rgba(92, 177, 62, 0.1)",
+                          color: "var(--color-mm-green)",
+                          text: "Marketing",
+                        },
+                      ],
+                    },
+                  ].map((opt) => (
+                    <div
+                      key={opt.label}
+                      onClick={() => {
+                        setServiceFilter(opt.label);
+                        setIsServiceOpen(false);
+                      }}
+                      style={{
+                        padding: "10px 14px",
+                        borderRadius: "10px",
+                        color:
+                          serviceFilter === opt.label
+                            ? "var(--color-mm-orange)"
+                            : "var(--color-mm-gray)",
+                        fontSize: "14px",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        background:
+                          serviceFilter === opt.label
+                            ? "rgba(224, 86, 36, 0.1)"
+                            : "transparent",
+                        fontWeight: serviceFilter === opt.label ? 600 : 400,
+                      }}
+                      onMouseEnter={(e) => {
+                        if (serviceFilter !== opt.label) {
+                          e.currentTarget.style.background =
+                            "rgba(224, 86, 36, 0.1)";
+                          e.currentTarget.style.color = "var(--color-mm-dark)";
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (serviceFilter !== opt.label) {
+                          e.currentTarget.style.background = "transparent";
+                          e.currentTarget.style.color = "var(--color-mm-gray)";
+                        }
+                      }}
+                    >
+                      {opt.label}
+                      <div className="flex gap-1">
+                        {opt.chips.map((c, i) => (
+                          <span
+                            key={i}
+                            style={{
+                              background: c.bg,
+                              color: c.color,
+                              borderRadius: "999px",
+                              padding: "2px 8px",
+                              fontSize: "11px",
+                              fontWeight: 600,
+                            }}
+                          >
+                            {c.text}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between sm:justify-end gap-3 w-full md:w-auto shrink-0">
+            {hasActiveFilters && (
+              <button
+                onClick={clearAllFilters}
+                className="text-xs hover:underline whitespace-nowrap"
+                style={{ color: "var(--color-mm-orange)" }}
+              >
+                Clear all filters
+              </button>
+            )}
+            <button
+              onClick={handleOpenNewProject}
+              className="px-4 py-2.5 bg-mm-orange hover:bg-mm-orange/95 text-white font-semibold rounded-xl transition-colors inline-flex items-center justify-center gap-2 w-full sm:w-auto whitespace-nowrap cursor-pointer"
+            >
+              <Plus size={16} /> New Project
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-white border border-mm-border rounded-[24px] shadow-[0_2px_12px_rgba(0,0,0,0.02)] overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-mm-subtle border-b border-mm-border text-mm-gray font-semibold">
+                  {[
+                    "Project Name",
+                    "Services",
+                    "Assignee",
+                    "Status",
+                    "Progress",
+                    "Timeline",
+                    "Actions",
+                  ].map((h) => (
+                    <th
+                      key={h}
+                      className="text-left font-semibold px-4 py-3 whitespace-nowrap"
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-12 text-center">
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <div className="w-6 h-6 border-2 border-mm-orange border-t-transparent rounded-full animate-spin"></div>
+                        <span
+                          className="text-xs font-semibold"
+                          style={{ color: "var(--color-mm-gray)" }}
+                        >
+                          Loading projects...
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : filteredProjects.length > 0 ? (
+                  filteredProjects.map((p) => {
+                    const biz =
+                      typeof p.businessId === "object" && p.businessId !== null
+                        ? p.businessId
+                        : businesses.find((b) => b.id === p.businessId);
+                    const manager = p.assignee;
+
+                    const userIdStr = biz
+                      ? typeof biz.userId === "object" && biz.userId !== null
+                        ? biz.userId.id
+                        : biz.userId
+                      : null;
+                    const matchedUser = users.find((u) => u.id === userIdStr);
+
+                    let status: "Pending" | "In Progress" | "Completed" =
+                      "In Progress";
+                    if (p.progress === 0) status = "Pending";
+                    else if (p.progress === 100) status = "Completed";
+
+                    const startDateStr = p.startDate
+                      ? new Date(p.startDate).toLocaleDateString()
+                      : "";
+                    const deadlineStr = p.deadline
+                      ? new Date(p.deadline).toLocaleDateString()
+                      : "";
+
+                    return (
+                      <tr
+                        key={p.id}
+                        style={{
+                          borderTop: "1px solid var(--color-mm-border)",
+                        }}
+                        className="hover:bg-mm-subtle transition-colors"
+                      >
+                        <td className="px-4 py-3 font-semibold text-mm-dark whitespace-nowrap">
+                          {p.name || p.id}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-wrap gap-1">
+                            {p.services.map((s) => (
+                              <span
+                                key={s}
+                                className="px-2.5 py-0.5 rounded-full text-xs border border-mm-border bg-mm-subtle text-mm-gray"
+                              >
+                                {s}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                        <td
+                          className="px-4 py-3"
+                          style={{ color: "var(--color-mm-gray)" }}
+                        >
+                          {manager}
+                        </td>
+                        <td className="px-4 py-3">
+                          <StatusBadge status={status} />
+                        </td>
+                        <td className="px-4 py-3">
+                          <ProgressRing
+                            value={p.progress}
+                            color={
+                              statusColors[status as keyof typeof statusColors]
+                            }
+                          />
+                        </td>
+                        <td
+                          className="px-4 py-3 text-xs whitespace-nowrap"
+                          style={{ color: "var(--color-mm-gray)" }}
+                        >
+                          <div className="text-[10px] text-mm-gray mt-0.5">
+                            {startDateStr || "N/A"} to
+                          </div>
+                          <div className="font-semibold text-mm-dark">
+                            {deadlineStr || "N/A"}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="relative inline-block actions-dropdown-container">
+                            <button
+                              onClick={() =>
+                                setOpenDropdownId(
+                                  openDropdownId === p.id ? null : p.id,
+                                )
+                              }
+                              className="p-1.5 rounded-lg hover:bg-mm-subtle transition-colors cursor-pointer text-mm-gray hover:text-mm-dark flex items-center justify-center"
+                              title="Actions"
+                            >
+                              <MoreVertical size={16} />
+                            </button>
+                            {openDropdownId === p.id && (
+                              <div
+                                className="absolute right-0 mt-1 w-40 bg-white border border-mm-border rounded-xl shadow-lg py-1.5 z-50 animate-in fade-in slide-in-from-top-1 duration-150"
+                                style={{
+                                  boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+                                }}
+                              >
+                                <Link
+                                  to="/admin/projects/$id"
+                                  params={{ id: p.id }}
+                                  search={{ edit: false }}
+                                  onClick={() => setOpenDropdownId(null)}
+                                  className="flex items-center gap-2 px-3 py-2 text-xs text-mm-gray hover:text-mm-dark hover:bg-mm-subtle transition-colors"
+                                >
+                                  <Eye size={14} />
+                                  <span>View Project</span>
+                                </Link>
+                                <Link
+                                  to="/admin/projects/$id"
+                                  params={{ id: p.id }}
+                                  search={{ edit: true }}
+                                  onClick={() => setOpenDropdownId(null)}
+                                  className="flex items-center gap-2 px-3 py-2 text-xs text-mm-gray hover:text-mm-dark hover:bg-mm-subtle transition-colors"
+                                >
+                                  <Edit2 size={14} />
+                                  <span>Edit Project</span>
+                                </Link>
+                                <Link
+                                  to="/admin/chat"
+                                  search={{
+                                    user: userIdStr || "",
+                                    business:
+                                      (typeof p.businessId === "string"
+                                        ? p.businessId
+                                        : biz?.id) || "",
+                                    domain: p.domain,
+                                  }}
+                                  onClick={() => setOpenDropdownId(null)}
+                                  className="flex items-center gap-2 px-3 py-2 text-xs text-mm-orange hover:bg-mm-orange/5 transition-colors"
+                                >
+                                  <MessageSquare size={14} />
+                                  <span>Open Chat</span>
+                                </Link>
+                                <hr className="border-t border-mm-border my-1" />
+                                <button
+                                  onClick={() => {
+                                    setConfirmDelete(p);
+                                    setOpenDropdownId(null);
+                                  }}
+                                  className="flex items-center gap-2 w-full text-left px-3 py-2 text-xs text-mm-red hover:bg-mm-red/5 transition-colors cursor-pointer"
+                                >
+                                  <Trash2 size={14} />
+                                  <span>Delete Project</span>
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-12">
+                      <div className="flex flex-col items-center justify-center">
+                        <SearchX
+                          size={32}
+                          style={{ color: "var(--color-mm-gray)" }}
+                        />
+                        <div
+                          style={{
+                            color: "var(--color-mm-gray)",
+                            fontSize: "14px",
+                            marginTop: "12px",
+                            fontWeight: 600,
+                          }}
+                        >
+                          No projects found
+                        </div>
+                        <button
+                          onClick={clearAllFilters}
+                          style={{
+                            color: "var(--color-mm-orange)",
+                            fontSize: "12px",
+                            marginTop: "4px",
+                          }}
+                          className="hover:underline cursor-pointer"
+                        >
+                          Clear filters
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
       {isNewProjectOpen && (
-        <div className="fixed inset-0 z-100 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.2)", backdropFilter: "blur(4px)" }} onClick={() => setIsNewProjectOpen(false)}>
-          <div className="w-full" style={{ background: "white", borderRadius: "24px", border: "1px solid var(--color-mm-border)", maxWidth: "560px", padding: "32px", boxShadow: "0 20px 60px rgba(0,0,0,0.15)", width: "90%", maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 z-100 flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.2)", backdropFilter: "blur(4px)" }}
+          onClick={() => setIsNewProjectOpen(false)}
+        >
+          <div
+            className="w-full"
+            style={{
+              background: "white",
+              borderRadius: "24px",
+              border: "1px solid var(--color-mm-border)",
+              maxWidth: "560px",
+              padding: "32px",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.15)",
+              width: "90%",
+              maxHeight: "90vh",
+              overflowY: "auto",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between mb-6">
-              <h2 style={{ color: "var(--color-mm-dark)", fontWeight: 700, fontSize: "20px" }}>Create New Project</h2>
-              <button onClick={() => setIsNewProjectOpen(false)} className="hover:opacity-70 transition-opacity"><X size={20} style={{ color: "var(--color-mm-gray)" }} onMouseEnter={(e) => e.currentTarget.style.color = "var(--color-mm-red)"} onMouseLeave={(e) => e.currentTarget.style.color = "var(--color-mm-gray)"} /></button>
+              <h2
+                style={{
+                  color: "var(--color-mm-dark)",
+                  fontWeight: 700,
+                  fontSize: "20px",
+                }}
+              >
+                Create New Project
+              </h2>
+              <button
+                onClick={() => setIsNewProjectOpen(false)}
+                className="hover:opacity-70 transition-opacity cursor-pointer"
+              >
+                <X
+                  size={20}
+                  style={{ color: "var(--color-mm-gray)" }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.color = "var(--color-mm-red)")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.color = "var(--color-mm-gray)")
+                  }
+                />
+              </button>
             </div>
-            
+
             <div className="space-y-4">
               <div>
-                <label style={{ color: "var(--color-mm-gray)", fontWeight: 600, fontSize: "13px", display: "block", marginBottom: "4px" }}>Project Name*</label>
-                <input placeholder="Enter project name" value={newProjectForm.name} onChange={(e) => setNewProjectForm({...newProjectForm, name: e.target.value})} style={{ background: "white", border: newProjectErrors.name ? "1px solid var(--color-mm-red)" : "1px solid var(--color-mm-border)", borderRadius: "12px", padding: "10px 14px", color: "var(--color-mm-dark)", width: "100%", outline: "none" }} onFocus={(e) => { if (!newProjectErrors.name) e.target.style.borderColor = "var(--color-mm-orange)" }} onBlur={(e) => { if (!newProjectErrors.name) e.target.style.borderColor = "var(--color-mm-border)" }} />
-                {newProjectErrors.name && <div style={{ color: "var(--color-mm-red)", fontSize: "12px", marginTop: "4px" }}>Project Name is required.</div>}
+                <label
+                  style={{
+                    color: "var(--color-mm-gray)",
+                    fontWeight: 600,
+                    fontSize: "13px",
+                    display: "block",
+                    marginBottom: "4px",
+                  }}
+                >
+                  Project Name*
+                </label>
+                <input
+                  placeholder="Enter project name"
+                  value={newProjectForm.name}
+                  onChange={(e) =>
+                    setNewProjectForm({
+                      ...newProjectForm,
+                      name: e.target.value,
+                    })
+                  }
+                  style={{
+                    background: "white",
+                    border: newProjectErrors.name
+                      ? "1px solid var(--color-mm-red)"
+                      : "1px solid var(--color-mm-border)",
+                    borderRadius: "12px",
+                    padding: "10px 14px",
+                    color: "var(--color-mm-dark)",
+                    width: "100%",
+                    outline: "none",
+                  }}
+                  onFocus={(e) => {
+                    if (!newProjectErrors.name)
+                      e.target.style.borderColor = "var(--color-mm-orange)";
+                  }}
+                  onBlur={(e) => {
+                    if (!newProjectErrors.name)
+                      e.target.style.borderColor = "var(--color-mm-border)";
+                  }}
+                />
+                {newProjectErrors.name && (
+                  <div
+                    style={{
+                      color: "var(--color-mm-red)",
+                      fontSize: "12px",
+                      marginTop: "4px",
+                    }}
+                  >
+                    Project Name is required.
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <div className="flex items-center justify-between" style={{ marginBottom: "4px" }}>
-                    <label style={{ color: "var(--color-mm-gray)", fontWeight: 600, fontSize: "13px" }}>Client / User*</label>
+                  <div
+                    className="flex items-center justify-between"
+                    style={{ marginBottom: "4px" }}
+                  >
+                    <label
+                      style={{
+                        color: "var(--color-mm-gray)",
+                        fontWeight: 600,
+                        fontSize: "13px",
+                      }}
+                    >
+                      Client / User*
+                    </label>
                     {(newProjectForm.client || newProjectForm.businessId) && (
                       <button
                         type="button"
-                        onClick={() => setNewProjectForm(prev => ({ ...prev, client: "", businessId: "" }))}
-                        className="text-xs font-semibold hover:opacity-80 transition-opacity cursor-pointer"
-                        style={{ color: "var(--color-mm-orange)", background: "none", border: "none", padding: 0 }}
+                        onClick={() =>
+                          setNewProjectForm((prev) => ({
+                            ...prev,
+                            client: "",
+                            businessId: "",
+                          }))
+                        }
+                        className="text-xs font-semibold hover:opacity-80 transition-opacity cursor-pointer text-mm-orange bg-none border-none p-0"
                       >
                         Clear User & Business
                       </button>
                     )}
                   </div>
-                  <select 
-                    value={newProjectForm.client} 
-                    onChange={(e) => handleClientChange(e.target.value)} 
-                    style={{ background: "white", border: newProjectErrors.client ? "1px solid var(--color-mm-red)" : "1px solid var(--color-mm-border)", borderRadius: "12px", padding: "10px 14px", color: "var(--color-mm-dark)", width: "100%", outline: "none" }} 
-                    onFocus={(e) => { if (!newProjectErrors.client) e.target.style.borderColor = "var(--color-mm-orange)" }} 
-                    onBlur={(e) => { if (!newProjectErrors.client) e.target.style.borderColor = "var(--color-mm-border)" }}
+                  <select
+                    value={newProjectForm.client}
+                    onChange={(e) => handleClientChange(e.target.value)}
+                    style={{
+                      background: "white",
+                      border: newProjectErrors.client
+                        ? "1px solid var(--color-mm-red)"
+                        : "1px solid var(--color-mm-border)",
+                      borderRadius: "12px",
+                      padding: "10px 14px",
+                      color: "var(--color-mm-dark)",
+                      width: "100%",
+                      outline: "none",
+                    }}
+                    onFocus={(e) => {
+                      if (!newProjectErrors.client)
+                        e.target.style.borderColor = "var(--color-mm-orange)";
+                    }}
+                    onBlur={(e) => {
+                      if (!newProjectErrors.client)
+                        e.target.style.borderColor = "var(--color-mm-border)";
+                    }}
                   >
-                    <option value="" disabled>Select a client</option>
-                    {users.map(u => (
-                      <option key={u.id} value={u.id}>{u.fullName} ({u.email})</option>
+                    <option value="" disabled>
+                      Select a client
+                    </option>
+                    {users.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.fullName} ({u.email})
+                      </option>
                     ))}
                   </select>
-                  {newProjectErrors.client && <div style={{ color: "var(--color-mm-red)", fontSize: "12px", marginTop: "4px" }}>Client is required.</div>}
+                  {newProjectErrors.client && (
+                    <div
+                      style={{
+                        color: "var(--color-mm-red)",
+                        fontSize: "12px",
+                        marginTop: "4px",
+                      }}
+                    >
+                      Client is required.
+                    </div>
+                  )}
                 </div>
 
                 <div>
-                  <label style={{ color: "var(--color-mm-gray)", fontWeight: 600, fontSize: "13px", display: "block", marginBottom: "4px" }}>Business*</label>
-                  <select 
-                    value={newProjectForm.businessId} 
-                    onChange={(e) => handleBusinessChange(e.target.value)} 
-                    style={{ background: "white", border: newProjectErrors.businessId ? "1px solid var(--color-mm-red)" : "1px solid var(--color-mm-border)", borderRadius: "12px", padding: "10px 14px", color: "var(--color-mm-dark)", width: "100%", outline: "none" }} 
-                    onFocus={(e) => { if (!newProjectErrors.businessId) e.target.style.borderColor = "var(--color-mm-orange)" }} 
-                    onBlur={(e) => { if (!newProjectErrors.businessId) e.target.style.borderColor = "var(--color-mm-border)" }}
+                  <label
+                    style={{
+                      color: "var(--color-mm-gray)",
+                      fontWeight: 600,
+                      fontSize: "13px",
+                      display: "block",
+                      marginBottom: "4px",
+                    }}
                   >
-                    <option value="" disabled>Select a business</option>
-                    {filteredBusinessesForSelect.map(b => (
-                      <option key={b.id} value={b.id}>{b.businessName} ({b.businessType || "Consulting"})</option>
+                    Business*
+                  </label>
+                  <select
+                    value={newProjectForm.businessId}
+                    onChange={(e) => handleBusinessChange(e.target.value)}
+                    style={{
+                      background: "white",
+                      border: newProjectErrors.businessId
+                        ? "1px solid var(--color-mm-red)"
+                        : "1px solid var(--color-mm-border)",
+                      borderRadius: "12px",
+                      padding: "10px 14px",
+                      color: "var(--color-mm-dark)",
+                      width: "100%",
+                      outline: "none",
+                    }}
+                    onFocus={(e) => {
+                      if (!newProjectErrors.businessId)
+                        e.target.style.borderColor = "var(--color-mm-orange)";
+                    }}
+                    onBlur={(e) => {
+                      if (!newProjectErrors.businessId)
+                        e.target.style.borderColor = "var(--color-mm-border)";
+                    }}
+                  >
+                    <option value="" disabled>
+                      Select a business
+                    </option>
+                    {filteredBusinessesForSelect.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.businessName} ({b.businessType || "Consulting"})
+                      </option>
                     ))}
                   </select>
-                  {newProjectErrors.businessId && <div style={{ color: "var(--color-mm-red)", fontSize: "12px", marginTop: "4px" }}>Business is required.</div>}
+                  {newProjectErrors.businessId && (
+                    <div
+                      style={{
+                        color: "var(--color-mm-red)",
+                        fontSize: "12px",
+                        marginTop: "4px",
+                      }}
+                    >
+                      Business is required.
+                    </div>
+                  )}
                 </div>
               </div>
 
               <div>
-                <label style={{ color: "var(--color-mm-gray)", fontWeight: 600, fontSize: "13px", display: "block", marginBottom: "4px" }}>Project Domain*</label>
-                <select 
-                  value={newProjectForm.domain} 
-                  onChange={(e) => { setNewProjectForm({...newProjectForm, domain: e.target.value}); setNewProjectErrors(prev => ({ ...prev, domain: false })); }} 
-                  style={{ background: "white", border: newProjectErrors.domain ? "1px solid var(--color-mm-red)" : "1px solid var(--color-mm-border)", borderRadius: "12px", padding: "10px 14px", color: "var(--color-mm-dark)", width: "100%", outline: "none" }} 
-                  onFocus={(e) => { if (!newProjectErrors.domain) e.target.style.borderColor = "var(--color-mm-orange)" }} 
-                  onBlur={(e) => { if (!newProjectErrors.domain) e.target.style.borderColor = "var(--color-mm-border)" }}
+                <label
+                  style={{
+                    color: "var(--color-mm-gray)",
+                    fontWeight: 600,
+                    fontSize: "13px",
+                    display: "block",
+                    marginBottom: "4px",
+                  }}
                 >
-                  <option value="" disabled>Select a domain</option>
+                  Project Domain*
+                </label>
+                <select
+                  value={newProjectForm.domain}
+                  onChange={(e) => {
+                    setNewProjectForm({
+                      ...newProjectForm,
+                      domain: e.target.value,
+                    });
+                    setNewProjectErrors((prev) => ({ ...prev, domain: false }));
+                  }}
+                  style={{
+                    background: "white",
+                    border: newProjectErrors.domain
+                      ? "1px solid var(--color-mm-red)"
+                      : "1px solid var(--color-mm-border)",
+                    borderRadius: "12px",
+                    padding: "10px 14px",
+                    color: "var(--color-mm-dark)",
+                    width: "100%",
+                    outline: "none",
+                  }}
+                  onFocus={(e) => {
+                    if (!newProjectErrors.domain)
+                      e.target.style.borderColor = "var(--color-mm-orange)";
+                  }}
+                  onBlur={(e) => {
+                    if (!newProjectErrors.domain)
+                      e.target.style.borderColor = "var(--color-mm-border)";
+                  }}
+                >
+                  <option value="" disabled>
+                    Select a domain
+                  </option>
                   <option value="Website">Website</option>
                   <option value="Marketing">Marketing</option>
                   <option value="Automation">Automation</option>
                 </select>
-                {newProjectErrors.domain && <div style={{ color: "var(--color-mm-red)", fontSize: "12px", marginTop: "4px" }}>Domain is required.</div>}
-              </div>
-
-              <div>
-                <label style={{ color: "var(--color-mm-gray)", fontWeight: 600, fontSize: "13px", display: "block", marginBottom: "4px" }}>Services*</label>
-                <div className="flex flex-wrap gap-2">
-                  {["Website", "Marketing", "SEO", "Sales", "Automation"].map(s => {
-                    const isSelected = newProjectForm.services.includes(s);
-                    return (
-                      <button key={s} onClick={() => toggleService(s)} style={{ background: isSelected ? "var(--color-mm-orange)" : "var(--color-mm-subtle)", border: isSelected ? "1px solid var(--color-mm-orange)" : "1px solid var(--color-mm-border)", color: isSelected ? "white" : "var(--color-mm-gray)", borderRadius: "999px", padding: "6px 12px", fontSize: "13px" }} className="transition-colors hover:opacity-90">
-                        {s}
-                      </button>
-                    )
-                  })}
-                </div>
-                {newProjectErrors.services && <div style={{ color: "var(--color-mm-red)", fontSize: "12px", marginTop: "4px" }}>Select at least one service.</div>}
-              </div>
-
-              <div>
-                <label style={{ color: "var(--color-mm-gray)", fontWeight: 600, fontSize: "13px", display: "block", marginBottom: "4px" }}>Assignee / Manager*</label>
-                <input 
-                  placeholder="Enter manager's name" 
-                  value={newProjectForm.manager} 
-                  onChange={(e) => setNewProjectForm({...newProjectForm, manager: e.target.value})} 
-                  style={{ background: "white", border: newProjectErrors.manager ? "1px solid var(--color-mm-red)" : "1px solid var(--color-mm-border)", borderRadius: "12px", padding: "10px 14px", color: "var(--color-mm-dark)", width: "100%", outline: "none" }}
-                  onFocus={(e) => { if (!newProjectErrors.manager) e.target.style.borderColor = "var(--color-mm-orange)" }}
-                  onBlur={(e) => { if (!newProjectErrors.manager) e.target.style.borderColor = "var(--color-mm-border)" }}
-                />
-                {newProjectErrors.manager && <div style={{ color: "var(--color-mm-red)", fontSize: "12px", marginTop: "4px" }}>Assignee is required.</div>}
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label style={{ color: "var(--color-mm-gray)", fontWeight: 600, fontSize: "13px", display: "block", marginBottom: "4px" }}>Start Date*</label>
-                  <input type="date" value={newProjectForm.startDate} onChange={(e) => setNewProjectForm({...newProjectForm, startDate: e.target.value})} style={{ background: "white", border: newProjectErrors.startDate ? "1px solid var(--color-mm-red)" : "1px solid var(--color-mm-border)", borderRadius: "12px", padding: "10px 14px", color: "var(--color-mm-dark)", width: "100%", outline: "none" }} />
-                  {newProjectErrors.startDate && <div style={{ color: "var(--color-mm-red)", fontSize: "12px", marginTop: "4px" }}>Required.</div>}
-                </div>
-                <div>
-                  <label style={{ color: "var(--color-mm-gray)", fontWeight: 600, fontSize: "13px", display: "block", marginBottom: "4px" }}>Deadline*</label>
-                  <input type="date" value={newProjectForm.deadline} onChange={(e) => setNewProjectForm({...newProjectForm, deadline: e.target.value})} style={{ background: "white", border: newProjectErrors.deadline ? "1px solid var(--color-mm-red)" : "1px solid var(--color-mm-border)", borderRadius: "12px", padding: "10px 14px", color: "var(--color-mm-dark)", width: "100%", outline: "none" }} />
-                  {newProjectErrors.deadline && <div style={{ color: "var(--color-mm-red)", fontSize: "12px", marginTop: "4px" }}>Required.</div>}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label style={{ color: "var(--color-mm-gray)", fontWeight: 600, fontSize: "13px", display: "block", marginBottom: "4px" }}>Status*</label>
-                  <select 
-                    value={newProjectForm.status} 
-                    onChange={(e) => { setNewProjectForm({...newProjectForm, status: e.target.value}); setNewProjectErrors(prev => ({ ...prev, status: false })); }} 
-                    style={{ background: "white", border: newProjectErrors.status ? "1px solid var(--color-mm-red)" : "1px solid var(--color-mm-border)", borderRadius: "12px", padding: "10px 14px", color: "var(--color-mm-dark)", width: "100%", outline: "none" }} 
-                    onFocus={(e) => { if (!newProjectErrors.status) e.target.style.borderColor = "var(--color-mm-orange)" }} 
-                    onBlur={(e) => { if (!newProjectErrors.status) e.target.style.borderColor = "var(--color-mm-border)" }}
+                {newProjectErrors.domain && (
+                  <div
+                    style={{
+                      color: "var(--color-mm-red)",
+                      fontSize: "12px",
+                      marginTop: "4px",
+                    }}
                   >
-                    <option value="" disabled>Select status</option>
+                    Domain is required.
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label
+                  style={{
+                    color: "var(--color-mm-gray)",
+                    fontWeight: 600,
+                    fontSize: "13px",
+                    display: "block",
+                    marginBottom: "4px",
+                  }}
+                >
+                  Services*
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {["Website", "Marketing", "SEO", "Sales", "Automation"].map(
+                    (s) => {
+                      const isSelected = newProjectForm.services.includes(s);
+                      return (
+                        <button
+                          key={s}
+                          onClick={() => toggleService(s)}
+                          style={{
+                            background: isSelected
+                              ? "var(--color-mm-orange)"
+                              : "var(--color-mm-subtle)",
+                            border: isSelected
+                              ? "1px solid var(--color-mm-orange)"
+                              : "1px solid var(--color-mm-border)",
+                            color: isSelected
+                              ? "white"
+                              : "var(--color-mm-gray)",
+                            borderRadius: "999px",
+                            padding: "6px 12px",
+                            fontSize: "13px",
+                          }}
+                          className="transition-colors hover:opacity-90 cursor-pointer"
+                        >
+                          {s}
+                        </button>
+                      );
+                    },
+                  )}
+                </div>
+                {newProjectErrors.services && (
+                  <div
+                    style={{
+                      color: "var(--color-mm-red)",
+                      fontSize: "12px",
+                      marginTop: "4px",
+                    }}
+                  >
+                    Select at least one service.
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label
+                  style={{
+                    color: "var(--color-mm-gray)",
+                    fontWeight: 600,
+                    fontSize: "13px",
+                    display: "block",
+                    marginBottom: "4px",
+                  }}
+                >
+                  Assignee / Manager*
+                </label>
+                <input
+                  placeholder="Enter manager's name"
+                  value={newProjectForm.manager}
+                  onChange={(e) =>
+                    setNewProjectForm({
+                      ...newProjectForm,
+                      manager: e.target.value,
+                    })
+                  }
+                  style={{
+                    background: "white",
+                    border: newProjectErrors.manager
+                      ? "1px solid var(--color-mm-red)"
+                      : "1px solid var(--color-mm-border)",
+                    borderRadius: "12px",
+                    padding: "10px 14px",
+                    color: "var(--color-mm-dark)",
+                    width: "100%",
+                    outline: "none",
+                  }}
+                  onFocus={(e) => {
+                    if (!newProjectErrors.manager)
+                      e.target.style.borderColor = "var(--color-mm-orange)";
+                  }}
+                  onBlur={(e) => {
+                    if (!newProjectErrors.manager)
+                      e.target.style.borderColor = "var(--color-mm-border)";
+                  }}
+                />
+                {newProjectErrors.manager && (
+                  <div
+                    style={{
+                      color: "var(--color-mm-red)",
+                      fontSize: "12px",
+                      marginTop: "4px",
+                    }}
+                  >
+                    Assignee is required.
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label
+                    style={{
+                      color: "var(--color-mm-gray)",
+                      fontWeight: 600,
+                      fontSize: "13px",
+                      display: "block",
+                      marginBottom: "4px",
+                    }}
+                  >
+                    Start Date*
+                  </label>
+                  <input
+                    type="date"
+                    value={newProjectForm.startDate}
+                    onChange={(e) =>
+                      setNewProjectForm({
+                        ...newProjectForm,
+                        startDate: e.target.value,
+                      })
+                    }
+                    style={{
+                      background: "white",
+                      border: newProjectErrors.startDate
+                        ? "1px solid var(--color-mm-red)"
+                        : "1px solid var(--color-mm-border)",
+                      borderRadius: "12px",
+                      padding: "10px 14px",
+                      color: "var(--color-mm-dark)",
+                      width: "100%",
+                      outline: "none",
+                    }}
+                  />
+                  {newProjectErrors.startDate && (
+                    <div
+                      style={{
+                        color: "var(--color-mm-red)",
+                        fontSize: "12px",
+                        marginTop: "4px",
+                      }}
+                    >
+                      Required.
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label
+                    style={{
+                      color: "var(--color-mm-gray)",
+                      fontWeight: 600,
+                      fontSize: "13px",
+                      display: "block",
+                      marginBottom: "4px",
+                    }}
+                  >
+                    Deadline*
+                  </label>
+                  <input
+                    type="date"
+                    value={newProjectForm.deadline}
+                    onChange={(e) =>
+                      setNewProjectForm({
+                        ...newProjectForm,
+                        deadline: e.target.value,
+                      })
+                    }
+                    style={{
+                      background: "white",
+                      border: newProjectErrors.deadline
+                        ? "1px solid var(--color-mm-red)"
+                        : "1px solid var(--color-mm-border)",
+                      borderRadius: "12px",
+                      padding: "10px 14px",
+                      color: "var(--color-mm-dark)",
+                      width: "100%",
+                      outline: "none",
+                    }}
+                  />
+                  {newProjectErrors.deadline && (
+                    <div
+                      style={{
+                        color: "var(--color-mm-red)",
+                        fontSize: "12px",
+                        marginTop: "4px",
+                      }}
+                    >
+                      Required.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label
+                    style={{
+                      color: "var(--color-mm-gray)",
+                      fontWeight: 600,
+                      fontSize: "13px",
+                      display: "block",
+                      marginBottom: "4px",
+                    }}
+                  >
+                    Status*
+                  </label>
+                  <select
+                    value={newProjectForm.status}
+                    onChange={(e) => {
+                      setNewProjectForm({
+                        ...newProjectForm,
+                        status: e.target.value,
+                      });
+                      setNewProjectErrors((prev) => ({
+                        ...prev,
+                        status: false,
+                      }));
+                    }}
+                    style={{
+                      background: "white",
+                      border: newProjectErrors.status
+                        ? "1px solid var(--color-mm-red)"
+                        : "1px solid var(--color-mm-border)",
+                      borderRadius: "12px",
+                      padding: "10px 14px",
+                      color: "var(--color-mm-dark)",
+                      width: "100%",
+                      outline: "none",
+                    }}
+                    onFocus={(e) => {
+                      if (!newProjectErrors.status)
+                        e.target.style.borderColor = "var(--color-mm-orange)";
+                    }}
+                    onBlur={(e) => {
+                      if (!newProjectErrors.status)
+                        e.target.style.borderColor = "var(--color-mm-border)";
+                    }}
+                  >
+                    <option value="" disabled>
+                      Select status
+                    </option>
                     <option value="Pending">Pending</option>
                     <option value="In Progress">In Progress</option>
                     <option value="On Hold">On Hold</option>
                     <option value="Completed">Completed</option>
                     <option value="Cancelled">Cancelled</option>
                   </select>
-                  {newProjectErrors.status && <div style={{ color: "var(--color-mm-red)", fontSize: "12px", marginTop: "4px" }}>Status is required.</div>}
+                  {newProjectErrors.status && (
+                    <div
+                      style={{
+                        color: "var(--color-mm-red)",
+                        fontSize: "12px",
+                        marginTop: "4px",
+                      }}
+                    >
+                      Status is required.
+                    </div>
+                  )}
                 </div>
                 <div>
-                  <label style={{ color: "var(--color-mm-gray)", fontWeight: 600, fontSize: "13px", display: "block", marginBottom: "4px" }}>Priority*</label>
-                  <select 
-                    value={newProjectForm.priority} 
-                    onChange={(e) => { setNewProjectForm({...newProjectForm, priority: e.target.value}); setNewProjectErrors(prev => ({ ...prev, priority: false })); }} 
-                    style={{ background: "white", border: newProjectErrors.priority ? "1px solid var(--color-mm-red)" : "1px solid var(--color-mm-border)", borderRadius: "12px", padding: "10px 14px", color: "var(--color-mm-dark)", width: "100%", outline: "none" }} 
-                    onFocus={(e) => { if (!newProjectErrors.priority) e.target.style.borderColor = "var(--color-mm-orange)" }} 
-                    onBlur={(e) => { if (!newProjectErrors.priority) e.target.style.borderColor = "var(--color-mm-border)" }}
+                  <label
+                    style={{
+                      color: "var(--color-mm-gray)",
+                      fontWeight: 600,
+                      fontSize: "13px",
+                      display: "block",
+                      marginBottom: "4px",
+                    }}
                   >
-                    <option value="" disabled>Select priority</option>
+                    Priority*
+                  </label>
+                  <select
+                    value={newProjectForm.priority}
+                    onChange={(e) => {
+                      setNewProjectForm({
+                        ...newProjectForm,
+                        priority: e.target.value,
+                      });
+                      setNewProjectErrors((prev) => ({
+                        ...prev,
+                        priority: false,
+                      }));
+                    }}
+                    style={{
+                      background: "white",
+                      border: newProjectErrors.priority
+                        ? "1px solid var(--color-mm-red)"
+                        : "1px solid var(--color-mm-border)",
+                      borderRadius: "12px",
+                      padding: "10px 14px",
+                      color: "var(--color-mm-dark)",
+                      width: "100%",
+                      outline: "none",
+                    }}
+                    onFocus={(e) => {
+                      if (!newProjectErrors.priority)
+                        e.target.style.borderColor = "var(--color-mm-orange)";
+                    }}
+                    onBlur={(e) => {
+                      if (!newProjectErrors.priority)
+                        e.target.style.borderColor = "var(--color-mm-border)";
+                    }}
+                  >
+                    <option value="" disabled>
+                      Select priority
+                    </option>
                     <option value="Low">Low</option>
                     <option value="Medium">Medium</option>
                     <option value="High">High</option>
                   </select>
-                  {newProjectErrors.priority && <div style={{ color: "var(--color-mm-red)", fontSize: "12px", marginTop: "4px" }}>Priority is required.</div>}
+                  {newProjectErrors.priority && (
+                    <div
+                      style={{
+                        color: "var(--color-mm-red)",
+                        fontSize: "12px",
+                        marginTop: "4px",
+                      }}
+                    >
+                      Priority is required.
+                    </div>
+                  )}
                 </div>
               </div>
 
               <div>
-                <label style={{ color: "var(--color-mm-gray)", fontWeight: 600, fontSize: "13px", display: "block", marginBottom: "4px" }}>Description</label>
-                <textarea rows={3} placeholder="Describe the project scope..." value={newProjectForm.description} onChange={(e) => setNewProjectForm({...newProjectForm, description: e.target.value})} style={{ background: "white", border: "1px solid var(--color-mm-border)", borderRadius: "12px", padding: "10px 14px", color: "var(--color-mm-dark)", width: "100%", outline: "none", resize: "vertical" }} onFocus={(e) => e.target.style.borderColor = "var(--color-mm-orange)"} onBlur={(e) => e.target.style.borderColor = "var(--color-mm-border)"} />
+                <label
+                  style={{
+                    color: "var(--color-mm-gray)",
+                    fontWeight: 600,
+                    fontSize: "13px",
+                    display: "block",
+                    marginBottom: "4px",
+                  }}
+                >
+                  Description
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="Describe the project scope..."
+                  value={newProjectForm.description}
+                  onChange={(e) =>
+                    setNewProjectForm({
+                      ...newProjectForm,
+                      description: e.target.value,
+                    })
+                  }
+                  style={{
+                    background: "white",
+                    border: "1px solid var(--color-mm-border)",
+                    borderRadius: "12px",
+                    padding: "10px 14px",
+                    color: "var(--color-mm-dark)",
+                    width: "100%",
+                    outline: "none",
+                    resize: "vertical",
+                  }}
+                  onFocus={(e) =>
+                    (e.target.style.borderColor = "var(--color-mm-orange)")
+                  }
+                  onBlur={(e) =>
+                    (e.target.style.borderColor = "var(--color-mm-border)")
+                  }
+                />
               </div>
 
               <div>
-                <label style={{ color: "var(--color-mm-gray)", fontWeight: 600, fontSize: "13px", display: "block", marginBottom: "4px" }}>Notes</label>
-                <textarea rows={2} placeholder="Add additional project notes..." value={newProjectForm.notes} onChange={(e) => setNewProjectForm({...newProjectForm, notes: e.target.value})} style={{ background: "white", border: "1px solid var(--color-mm-border)", borderRadius: "12px", padding: "10px 14px", color: "var(--color-mm-dark)", width: "100%", outline: "none", resize: "vertical" }} onFocus={(e) => e.target.style.borderColor = "var(--color-mm-orange)"} onBlur={(e) => e.target.style.borderColor = "var(--color-mm-border)"} />
+                <label
+                  style={{
+                    color: "var(--color-mm-gray)",
+                    fontWeight: 600,
+                    fontSize: "13px",
+                    display: "block",
+                    marginBottom: "4px",
+                  }}
+                >
+                  Notes
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="Add additional project notes..."
+                  value={newProjectForm.notes}
+                  onChange={(e) =>
+                    setNewProjectForm({
+                      ...newProjectForm,
+                      notes: e.target.value,
+                    })
+                  }
+                  style={{
+                    background: "white",
+                    border: "1px solid var(--color-mm-border)",
+                    borderRadius: "12px",
+                    padding: "10px 14px",
+                    color: "var(--color-mm-dark)",
+                    width: "100%",
+                    outline: "none",
+                    resize: "vertical",
+                  }}
+                  onFocus={(e) =>
+                    (e.target.style.borderColor = "var(--color-mm-orange)")
+                  }
+                  onBlur={(e) =>
+                    (e.target.style.borderColor = "var(--color-mm-border)")
+                  }
+                />
               </div>
             </div>
 
-            <div className="mt-6 pt-4 flex justify-end gap-3" style={{ borderTop: "1px solid var(--color-mm-border)" }}>
-              <button onClick={() => setIsNewProjectOpen(false)} className="px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-80 transition-opacity" style={{ background: "white", border: "1px solid var(--color-mm-border)", color: "var(--color-mm-gray)" }}>Cancel</button>
-              <button onClick={handleCreateSubmit} className="px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity" style={{ background: "var(--color-mm-orange)", color: "white" }}>Create Project</button>
+            <div
+              className="mt-6 pt-4 flex justify-end gap-3"
+              style={{ borderTop: "1px solid var(--color-mm-border)" }}
+            >
+              <button
+                onClick={() => setIsNewProjectOpen(false)}
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-80 transition-opacity cursor-pointer"
+                style={{
+                  background: "white",
+                  border: "1px solid var(--color-mm-border)",
+                  color: "var(--color-mm-gray)",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateSubmit}
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity cursor-pointer"
+                style={{ background: "var(--color-mm-orange)", color: "white" }}
+              >
+                Create Project
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {confirmDelete && (() => {
-        const biz = typeof confirmDelete.businessId === "object" && confirmDelete.businessId !== null
-          ? confirmDelete.businessId
-          : businesses.find(b => b.id === confirmDelete.businessId);
-        const client = biz?.businessName || "No business";
-        return (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 animate-in fade-in duration-200" style={{ background: "rgba(0,0,0,0.3)" }}>
-            <div className="w-full max-w-sm rounded-2xl p-6 space-y-4 shadow-2xl" style={{ background: "white", border: "1px solid var(--color-mm-border)" }}>
-              <h3 className="font-bold text-lg" style={{ color: "var(--color-mm-dark)" }}>Delete Project?</h3>
-              <p className="text-sm" style={{ color: "var(--color-mm-gray)" }}>
-                Are you sure you want to delete project <strong>"{confirmDelete.id}"</strong> for client <strong>{client}</strong>? This action is permanent.
-              </p>
-              <div className="flex gap-3 justify-end pt-2">
-                <button 
-                  onClick={() => setConfirmDelete(null)} 
-                  className="px-4 py-2 rounded-xl text-sm font-semibold border border-mm-border hover:bg-mm-subtle" 
-                  style={{ background: "white", color: "var(--color-mm-gray)" }}
+      {confirmDelete &&
+        (() => {
+          const biz =
+            typeof confirmDelete.businessId === "object" &&
+            confirmDelete.businessId !== null
+              ? confirmDelete.businessId
+              : businesses.find((b) => b.id === confirmDelete.businessId);
+          const client = biz?.businessName || "No business";
+          return (
+            <div
+              className="fixed inset-0 z-[110] flex items-center justify-center p-4 animate-in fade-in duration-200"
+              style={{ background: "rgba(0,0,0,0.3)" }}
+            >
+              <div
+                className="w-full max-w-sm rounded-2xl p-6 space-y-4 shadow-2xl"
+                style={{
+                  background: "white",
+                  border: "1px solid var(--color-mm-border)",
+                }}
+              >
+                <h3
+                  className="font-bold text-lg"
+                  style={{ color: "var(--color-mm-dark)" }}
                 >
-                  Cancel
-                </button>
-                <button 
-                  onClick={() => handleDelete(confirmDelete)} 
-                  className="px-4 py-2 rounded-xl text-sm font-semibold hover:opacity-95 text-white" 
-                  style={{ background: "var(--color-mm-red)" }}
+                  Delete Project?
+                </h3>
+                <p
+                  className="text-sm"
+                  style={{ color: "var(--color-mm-gray)" }}
                 >
-                  Delete
-                </button>
+                  Are you sure you want to delete project{" "}
+                  <strong>"{confirmDelete.id}"</strong> for client{" "}
+                  <strong>{client}</strong>? This action is permanent.
+                </p>
+                <div className="flex gap-3 justify-end pt-2">
+                  <button
+                    onClick={() => setConfirmDelete(null)}
+                    className="px-4 py-2 rounded-xl text-sm font-semibold border border-mm-border hover:bg-mm-subtle cursor-pointer"
+                    style={{
+                      background: "white",
+                      color: "var(--color-mm-gray)",
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => handleDelete(confirmDelete)}
+                    className="px-4 py-2 rounded-xl text-sm font-semibold hover:opacity-95 text-white cursor-pointer"
+                    style={{ background: "var(--color-mm-red)" }}
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        );
-      })()}
+          );
+        })()}
 
       {toast && (
-        <div className="fixed bottom-6 right-6 z-[100] px-5 py-3 rounded-xl shadow-lg transition-all animate-in slide-in-from-bottom-5" style={{ background: "rgba(92, 177, 62, 0.1)", border: "1px solid var(--color-mm-green)", color: "var(--color-mm-green)", fontWeight: 600 }}>
+        <div
+          className="fixed bottom-6 right-6 z-[100] px-5 py-3 rounded-xl shadow-lg transition-all animate-in slide-in-from-bottom-5"
+          style={{
+            background: "rgba(92, 177, 62, 0.1)",
+            border: "1px solid var(--color-mm-green)",
+            color: "var(--color-mm-green)",
+            fontWeight: 600,
+          }}
+        >
           {toast}
         </div>
       )}

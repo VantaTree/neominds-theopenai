@@ -68,10 +68,10 @@ function PageTransitionWrapper({ children }: { children: React.ReactNode }) {
     setPrevChildren(null);
   };
 
-  const isChatRoute = location.pathname.startsWith("/admin/chat");
+  const is0PadRoute = location.pathname.startsWith("/admin/chat") || location.pathname.startsWith("/admin/projects");
 
   return (
-    <div className={`relative w-full ${isChatRoute ? "h-full flex flex-col overflow-hidden" : ""}`}>
+    <div className={`relative w-full ${is0PadRoute ? "h-full flex flex-col overflow-hidden" : ""}`}>
       <style>{`
         @keyframes slideOutToBottom {
           0% {
@@ -103,21 +103,21 @@ function PageTransitionWrapper({ children }: { children: React.ReactNode }) {
       `}</style>
 
       {animating ? (
-        <div className={`relative w-full overflow-hidden ${isChatRoute ? "flex-1 flex flex-col" : "min-h-[60vh]"}`}>
+        <div className={`relative w-full overflow-hidden ${is0PadRoute ? "flex-1 flex flex-col" : "min-h-[60vh]"}`}>
           {/* Old Page */}
-          <div className={`absolute inset-x-0 top-0 w-full page-exit ${isChatRoute ? "h-full flex flex-col overflow-hidden" : ""}`}>
+          <div className={`absolute inset-x-0 top-0 w-full page-exit ${is0PadRoute ? "h-full flex flex-col overflow-hidden" : ""}`}>
             {prevChildren}
           </div>
           {/* New Page */}
           <div
-            className={`w-full page-enter ${isChatRoute ? "flex-1 flex flex-col h-full overflow-hidden" : ""}`}
+            className={`w-full page-enter ${is0PadRoute ? "flex-1 flex flex-col h-full overflow-hidden" : ""}`}
             onAnimationEnd={handleAnimationEnd}
           >
             {displayChildren}
           </div>
         </div>
       ) : (
-        <div className={`w-full ${isChatRoute ? "flex-1 flex flex-col h-full overflow-hidden" : ""}`}>{displayChildren}</div>
+        <div className={`w-full ${is0PadRoute ? "flex-1 flex flex-col h-full overflow-hidden" : ""}`}>{displayChildren}</div>
       )}
     </div>
   );
@@ -126,18 +126,19 @@ function PageTransitionWrapper({ children }: { children: React.ReactNode }) {
 function RouteComponent() {
   const { queryClient } = Route.useRouteContext();
   const location = useLocation();
-  const isChatRoute = location.pathname.startsWith("/admin/chat");
+  const is0PadRoute = location.pathname.startsWith("/admin/chat") || location.pathname.startsWith("/admin/projects");
+  // const overflowRoute = location.pathname.startsWith("/admin/projects")
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className={`flex bg-white text-mm-dark font-sans flex-col md:flex-row ${isChatRoute ? "h-screen overflow-hidden" : "min-h-screen"}`}>
+      <div className={`flex bg-white text-mm-dark font-sans flex-col md:flex-row ${is0PadRoute ? "h-screen overflow-hidden" : "min-h-screen"}`}>
         {/* Responsive Sidebar & Mobile Header Bar */}
         <AdminAside />
 
         {/* Main Viewport Panel */}
-        <div className={`flex-1 flex flex-col min-w-0 bg-mm-bg-wrap ${isChatRoute ? "h-full overflow-hidden" : ""}`}>
+        <div className={`flex-1 flex flex-col min-w-0 bg-mm-bg-wrap ${is0PadRoute ? "h-full overflow-hidden" : ""}`}>
           {/* Content Area */}
-          <main className={`flex-1 ${isChatRoute ? "h-full overflow-hidden flex flex-col" : "overflow-y-auto px-6 py-8 md:px-12 md:py-10"}`}>
+          <main className={`flex-1 ${is0PadRoute ? "h-full overflow-hidden flex flex-col" : "overflow-y-auto px-6 py-8 md:px-12 md:py-10"}`}>
             <PageTransitionWrapper>
               <Outlet />
             </PageTransitionWrapper>
