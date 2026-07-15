@@ -109,7 +109,12 @@ function ProjectsPage() {
   const [businesses, setBusinesses] = useState<any[]>(initialBusinesses);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedBusinessId, setSelectedBusinessId] = useState<string | null>(
-    null,
+    () => {
+      if (typeof window !== "undefined") {
+        return localStorage.getItem("admin_last_selected_business_id");
+      }
+      return null;
+    }
   );
 
   const selectedBiz = useMemo(() => {
@@ -132,10 +137,19 @@ function ProjectsPage() {
   }, [initialProjects, initialUsers, initialBusinesses]);
 
   useEffect(() => {
-    if (initialBusinesses.length > 0 && !selectedBusinessId) {
-      setSelectedBusinessId(initialBusinesses[0].id);
+    if (initialBusinesses.length > 0) {
+      const exists = initialBusinesses.some((b) => b.id === selectedBusinessId);
+      if (!exists) {
+        setSelectedBusinessId(initialBusinesses[0].id);
+      }
     }
   }, [initialBusinesses, selectedBusinessId]);
+
+  useEffect(() => {
+    if (selectedBusinessId && typeof window !== "undefined") {
+      localStorage.setItem("admin_last_selected_business_id", selectedBusinessId);
+    }
+  }, [selectedBusinessId]);
 
   const activeBizProjects = useMemo(() => {
     if (!selectedBusinessId) return [];
@@ -238,27 +252,34 @@ function ProjectsPage() {
   };
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [typeFilter, setTypeFilter] = useState("All Projects");
+  const [domainFilter, setDomainFilter] = useState("All Domains");
+  const [businessSearchQuery, setBusinessSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All Status");
-  const [serviceFilter, setServiceFilter] = useState("All Services");
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [showCompleted, setShowCompleted] = useState(true);
 
-  const [isTypeOpen, setIsTypeOpen] = useState(false);
+  const [isDomainOpen, setIsDomainOpen] = useState(false);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
-  const [isServiceOpen, setIsServiceOpen] = useState(false);
+  const [isServiceSearchOpen, setIsServiceSearchOpen] = useState(false);
 
-  const typeRef = useRef<HTMLDivElement>(null);
+  const domainRef = useRef<HTMLDivElement>(null);
   const statusRef = useRef<HTMLDivElement>(null);
-  const serviceRef = useRef<HTMLDivElement>(null);
+  const serviceSearchRef = useRef<HTMLDivElement>(null);
+
+  const allAvailableServices = ["Website", "Marketing", "SEO", "Sales", "Automation"];
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (typeRef.current && !typeRef.current.contains(e.target as Node))
-        setIsTypeOpen(false);
+      if (domainRef.current && !domainRef.current.contains(e.target as Node))
+        setIsDomainOpen(false);
       if (statusRef.current && !statusRef.current.contains(e.target as Node))
         setIsStatusOpen(false);
-      if (serviceRef.current && !serviceRef.current.contains(e.target as Node))
-        setIsServiceOpen(false);
-
+      if (
+        serviceSearchRef.current &&
+        !serviceSearchRef.current.contains(e.target as Node)
+      ) {
+        setIsServiceSearchOpen(false);
+      }
       const target = e.target as HTMLElement;
       if (openDropdownId && !target.closest(".actions-dropdown-container")) {
         setOpenDropdownId(null);
@@ -423,26 +444,21 @@ function ProjectsPage() {
       else if (p.progress === 100) status = "Completed";
 
       let matchType = true;
-      if (typeFilter === "My Projects") matchType = manager === p.assignee;
-      else if (typeFilter === "AI Projects") matchType = true;
-      else if (typeFilter === "Website Projects")
-        matchType = p.services.includes("Website");
-      else if (typeFilter === "Marketing Projects")
-        matchType = p.services.includes("Marketing");
-      else if (typeFilter === "SEO Projects")
-        matchType = p.services.includes("SEO");
+      if (domainFilter !== "All Domains") {
+        matchType = p.domain === domainFilter;
+      }
 
       let matchStatus = true;
       if (statusFilter !== "All Status") matchStatus = status === statusFilter;
 
-      let matchService = true;
-      if (serviceFilter !== "All Services") {
-        if (serviceFilter === "Website + Marketing") {
-          matchService =
-            p.services.includes("Website") && p.services.includes("Marketing");
-        } else {
-          matchService = p.services.includes(serviceFilter);
-        }
+      let matchServices = true;
+      if (selectedServices.length > 0) {
+        matchServices = selectedServices.every((s) => p.services.includes(s));
+      }
+
+      let matchCompleted = true;
+      if (!showCompleted) {
+        matchCompleted = p.status !== "Completed" && p.progress !== 100;
       }
 
       let matchSearch = true;
@@ -461,6 +477,7 @@ function ProjectsPage() {
 
         matchSearch =
           p.id.toLowerCase().includes(term) ||
+          p.name.toLowerCase().includes(term) ||
           clientName.toLowerCase().includes(term) ||
           clientEmail.toLowerCase().includes(term) ||
           businessName.toLowerCase().includes(term) ||
@@ -468,13 +485,14 @@ function ProjectsPage() {
           manager.toLowerCase().includes(term);
       }
 
-      return matchType && matchStatus && matchService && matchSearch;
+      return matchType && matchStatus && matchServices && matchCompleted && matchSearch;
     });
   }, [
     sortedProjects,
-    typeFilter,
+    domainFilter,
     statusFilter,
-    serviceFilter,
+    selectedServices,
+    showCompleted,
     searchQuery,
     businesses,
     users,
@@ -482,28 +500,76 @@ function ProjectsPage() {
 
   const clearAllFilters = () => {
     setSearchQuery("");
-    setTypeFilter("All Projects");
+    setDomainFilter("All Domains");
     setStatusFilter("All Status");
-    setServiceFilter("All Services");
+    setSelectedServices([]);
+    setShowCompleted(true);
   };
 
   const hasActiveFilters =
     searchQuery ||
-    typeFilter !== "All Projects" ||
+    domainFilter !== "All Domains" ||
     statusFilter !== "All Status" ||
-    serviceFilter !== "All Services";
+    selectedServices.length > 0 ||
+    !showCompleted;
+
+  const filteredBusinesses = useMemo(() => {
+    return businesses.filter((biz) => {
+      const term = businessSearchQuery.toLowerCase();
+      if (!term) return true;
+
+      const bizName = biz.businessName || "";
+      const bizType = biz.businessType || "";
+      
+      const userIdStr = typeof biz.userId === "object" && biz.userId !== null ? biz.userId.id : biz.userId;
+      const client = users.find((u) => u.id === userIdStr);
+      const clientName = client?.fullName || "";
+
+      return (
+        bizName.toLowerCase().includes(term) ||
+        bizType.toLowerCase().includes(term) ||
+        clientName.toLowerCase().includes(term)
+      );
+    });
+  }, [businesses, businessSearchQuery, users]);
 
   return (
     <div className="flex flex-col md:flex-row bg-[#FCFDFE] h-full w-full overflow-hidden">
       {/* Business Sidebar - Desktop */}
       <div className="hidden md:flex flex-col w-[260px] lg:w-[300px] bg-white border-r border-mm-border shrink-0 select-none">
-        <div className="p-5 border-b border-mm-border/60">
+        <div className="p-5 border-b border-mm-border/60 space-y-3">
           <h2 className="text-xs font-black text-mm-gray uppercase tracking-wider">
             Businesses
           </h2>
+          <div className="relative">
+            <Search
+              size={14}
+              className="absolute left-2.5 top-1/2 -translate-y-1/2"
+              style={{ color: "var(--color-mm-gray)" }}
+            />
+            <input
+              type="text"
+              placeholder="Search business, industry, client..."
+              value={businessSearchQuery}
+              onChange={(e) => setBusinessSearchQuery(e.target.value)}
+              className="w-full text-xs pl-8 pr-6 py-2 rounded-lg border outline-none transition-all placeholder:text-mm-gray/45"
+              style={{
+                borderColor: "var(--color-mm-border)",
+                background: "rgba(250,249,246,0.5)",
+              }}
+            />
+            {businessSearchQuery && (
+              <button
+                onClick={() => setBusinessSearchQuery("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer"
+              >
+                <X size={12} style={{ color: "var(--color-mm-gray)" }} />
+              </button>
+            )}
+          </div>
         </div>
         <div className="flex-1 overflow-y-auto py-2">
-          {businesses.map((biz) => {
+          {filteredBusinesses.map((biz) => {
             const isSelected = selectedBusinessId === biz.id;
             const projectCount = projectList.filter((p) => {
               const bizId =
@@ -512,6 +578,9 @@ function ProjectsPage() {
                   : p.businessId;
               return bizId === biz.id;
             }).length;
+
+            const userIdStr = typeof biz.userId === "object" && biz.userId !== null ? biz.userId.id : biz.userId;
+            const clientUser = users.find((u) => u.id === userIdStr);
 
             return (
               <button
@@ -524,23 +593,40 @@ function ProjectsPage() {
                 }`}
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  {biz.image ? (
-                    <img
-                      src={biz.image}
-                      alt={biz.businessName}
-                      className="w-9 h-9 rounded-xl object-cover aspect-square shrink-0"
-                    />
-                  ) : (
-                    <Avatar name={biz.businessName} size={36} />
-                  )}
+                  {/* Overlapping Avatar Container */}
+                  <div className="relative shrink-0 w-10 h-10 select-none mr-1">
+                    {biz.image ? (
+                      <img
+                        src={biz.image}
+                        alt={biz.businessName}
+                        className="w-9 h-9 rounded-xl object-cover aspect-square"
+                      />
+                    ) : (
+                      <Avatar name={biz.businessName} size={36} />
+                    )}
+                    <div className="absolute bottom-0 right-0 translate-x-1.5 translate-y-1.5 border-2 border-white rounded-full overflow-hidden shadow-sm bg-white">
+                      {clientUser?.image ? (
+                        <img
+                          src={clientUser.image}
+                          alt={clientUser.fullName}
+                          className="w-4.5 h-4.5 rounded-full object-cover aspect-square"
+                        />
+                      ) : (
+                        <div className="w-4.5 h-4.5 rounded-full bg-mm-orange text-white text-[7px] font-black flex items-center justify-center">
+                          {clientUser?.fullName ? clientUser.fullName.charAt(0) : "U"}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
                   <div className="min-w-0">
                     <div
                       className={`text-xs font-bold truncate ${isSelected ? "text-mm-dark" : "text-mm-dark/80"}`}
                     >
                       {biz.businessName}
                     </div>
-                    <div className="text-[10px] text-mm-gray truncate mt-0.5 font-medium">
-                      {biz.businessType || "Consulting"}
+                    <div className="text-[9px] text-mm-gray truncate mt-0.5 font-medium">
+                      {biz.businessType || "Consulting"} • {clientUser?.fullName || "No Owner"}
                     </div>
                   </div>
                 </div>
@@ -564,8 +650,34 @@ function ProjectsPage() {
         <span className="text-[10px] font-black text-mm-gray uppercase tracking-wider">
           Select Business
         </span>
+        <div className="relative">
+          <Search
+            size={14}
+            className="absolute left-2.5 top-1/2 -translate-y-1/2"
+            style={{ color: "var(--color-mm-gray)" }}
+          />
+          <input
+            type="text"
+            placeholder="Search business, industry, client..."
+            value={businessSearchQuery}
+            onChange={(e) => setBusinessSearchQuery(e.target.value)}
+            className="w-full text-xs pl-8 pr-6 py-2 rounded-lg border outline-none transition-all placeholder:text-mm-gray/45"
+            style={{
+              borderColor: "var(--color-mm-border)",
+              background: "rgba(250,249,246,0.5)",
+            }}
+          />
+          {businessSearchQuery && (
+            <button
+              onClick={() => setBusinessSearchQuery("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer"
+            >
+              <X size={12} style={{ color: "var(--color-mm-gray)" }} />
+            </button>
+          )}
+        </div>
         <div className="flex gap-2 overflow-x-auto pb-1.5 scrollbar-none">
-          {businesses.map((biz) => {
+          {filteredBusinesses.map((biz) => {
             const isSelected = selectedBusinessId === biz.id;
             const projectCount = projectList.filter((p) => {
               const bizId =
@@ -575,26 +687,46 @@ function ProjectsPage() {
               return bizId === biz.id;
             }).length;
 
+            const userIdStr = typeof biz.userId === "object" && biz.userId !== null ? biz.userId.id : biz.userId;
+            const clientUser = users.find((u) => u.id === userIdStr);
+
             return (
               <button
                 key={biz.id}
                 onClick={() => setSelectedBusinessId(biz.id)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-xl border shrink-0 transition-all text-xs font-bold cursor-pointer ${
+                className={`flex items-center gap-2.5 px-3 py-2 rounded-xl border shrink-0 transition-all text-xs font-bold cursor-pointer ${
                   isSelected
                     ? "bg-mm-orange/10 border-mm-orange text-mm-orange"
                     : "bg-white border-mm-border/60 text-mm-gray hover:bg-mm-subtle/50"
                 }`}
               >
-                {biz.image ? (
-                  <img
-                    src={biz.image}
-                    alt={biz.businessName}
-                    className="w-5 h-5 rounded-md object-cover aspect-square"
-                  />
-                ) : (
-                  <Avatar name={biz.businessName} size={20} />
-                )}
-                <span>{biz.businessName}</span>
+                {/* Overlapping Avatar Container */}
+                <div className="relative shrink-0 w-6 h-6 select-none mr-0.5">
+                  {biz.image ? (
+                    <img
+                      src={biz.image}
+                      alt={biz.businessName}
+                      className="w-5 h-5 rounded-md object-cover aspect-square"
+                    />
+                  ) : (
+                    <Avatar name={biz.businessName} size={20} />
+                  )}
+                  <div className="absolute bottom-0 right-0 translate-x-1 translate-y-1 border border-white rounded-full overflow-hidden shadow-xs bg-white">
+                    {clientUser?.image ? (
+                      <img
+                        src={clientUser.image}
+                        alt={clientUser.fullName}
+                        className="w-2.5 h-2.5 rounded-full object-cover aspect-square"
+                      />
+                    ) : (
+                      <div className="w-2.5 h-2.5 rounded-full bg-mm-orange text-white text-[4px] font-black flex items-center justify-center">
+                        {clientUser?.fullName ? clientUser.fullName.charAt(0) : "U"}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <span>{biz.businessName} ({clientUser?.fullName || "No Owner"})</span>
                 <span
                   className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${
                     isSelected
@@ -713,33 +845,33 @@ function ProjectsPage() {
               )}
             </div>
 
-            <div className="relative w-full sm:w-auto" ref={typeRef}>
+            <div className="relative w-full sm:w-auto" ref={domainRef}>
               <button
-                onClick={() => setIsTypeOpen(!isTypeOpen)}
+                onClick={() => setIsDomainOpen(!isDomainOpen)}
                 className="inline-flex items-center justify-between sm:justify-start gap-2 px-4 py-2.5 rounded-xl text-sm transition-colors w-full sm:w-auto"
                 style={{
                   background: "white",
                   border:
-                    typeFilter === "All Projects"
+                    domainFilter === "All Domains"
                       ? "1px solid var(--color-mm-border)"
                       : "1px solid var(--color-mm-orange)",
                   color:
-                    typeFilter === "All Projects"
+                    domainFilter === "All Domains"
                       ? "var(--color-mm-gray)"
                       : "var(--color-mm-orange)",
                 }}
               >
-                <span className="truncate">{typeFilter}</span>
+                <span className="truncate">{domainFilter}</span>
                 <ChevronDown
                   size={14}
                   className="shrink-0"
                   style={{
-                    transform: isTypeOpen ? "rotate(180deg)" : "rotate(0deg)",
+                    transform: isDomainOpen ? "rotate(180deg)" : "rotate(0deg)",
                     transition: "transform 150ms ease",
                   }}
                 />
               </button>
-              {isTypeOpen && (
+              {isDomainOpen && (
                 <div
                   style={{
                     background: "white",
@@ -747,7 +879,7 @@ function ProjectsPage() {
                     borderRadius: "16px",
                     padding: "8px",
                     boxShadow: "0 8px 24px rgba(0,0,0,0.10)",
-                    minWidth: "220px",
+                    minWidth: "200px",
                     position: "absolute",
                     zIndex: 100,
                     marginTop: "4px",
@@ -755,42 +887,31 @@ function ProjectsPage() {
                   className="w-full sm:w-auto left-0"
                 >
                   {[
-                    { label: "All Projects", count: projectList.length },
+                    { label: "All Domains", count: projectList.length },
                     {
-                      label: "My Projects",
-                      count: projectList.filter(() => true).length,
-                    },
-                    { label: "AI Projects", count: projectList.length },
-                    {
-                      label: "Website Projects",
-                      count: projectList.filter((p) =>
-                        p.services.includes("Website"),
-                      ).length,
+                      label: "Website",
+                      count: projectList.filter((p) => p.domain === "Website").length,
                     },
                     {
-                      label: "Marketing Projects",
-                      count: projectList.filter((p) =>
-                        p.services.includes("Marketing"),
-                      ).length,
+                      label: "Marketing",
+                      count: projectList.filter((p) => p.domain === "Marketing").length,
                     },
                     {
-                      label: "SEO Projects",
-                      count: projectList.filter((p) =>
-                        p.services.includes("SEO"),
-                      ).length,
+                      label: "Automation",
+                      count: projectList.filter((p) => p.domain === "Automation").length,
                     },
                   ].map((opt) => (
                     <div
                       key={opt.label}
                       onClick={() => {
-                        setTypeFilter(opt.label);
-                        setIsTypeOpen(false);
+                        setDomainFilter(opt.label);
+                        setIsDomainOpen(false);
                       }}
                       style={{
                         padding: "10px 14px",
                         borderRadius: "10px",
                         color:
-                          typeFilter === opt.label
+                          domainFilter === opt.label
                             ? "var(--color-mm-orange)"
                             : "var(--color-mm-gray)",
                         fontSize: "14px",
@@ -799,20 +920,20 @@ function ProjectsPage() {
                         alignItems: "center",
                         justifyContent: "space-between",
                         background:
-                          typeFilter === opt.label
+                          domainFilter === opt.label
                             ? "rgba(224, 86, 36, 0.1)"
                             : "transparent",
-                        fontWeight: typeFilter === opt.label ? 600 : 400,
+                        fontWeight: domainFilter === opt.label ? 600 : 400,
                       }}
                       onMouseEnter={(e) => {
-                        if (typeFilter !== opt.label) {
+                        if (domainFilter !== opt.label) {
                           e.currentTarget.style.background =
                             "rgba(224, 86, 36, 0.1)";
                           e.currentTarget.style.color = "var(--color-mm-dark)";
                         }
                       }}
                       onMouseLeave={(e) => {
-                        if (typeFilter !== opt.label) {
+                        if (domainFilter !== opt.label) {
                           e.currentTarget.style.background = "transparent";
                           e.currentTarget.style.color = "var(--color-mm-gray)";
                         }
@@ -990,168 +1111,77 @@ function ProjectsPage() {
               )}
             </div>
 
-            <div className="relative w-full sm:w-auto" ref={serviceRef}>
-              <button
-                onClick={() => setIsServiceOpen(!isServiceOpen)}
-                className="inline-flex items-center justify-between sm:justify-start gap-2 px-4 py-2.5 rounded-xl text-sm transition-colors w-full sm:w-auto"
+            <div className="relative w-full sm:w-[220px]" ref={serviceSearchRef}>
+              <div
+                onClick={() => setIsServiceSearchOpen(!isServiceSearchOpen)}
+                className="flex flex-wrap items-center gap-1.5 px-3 py-2 border rounded-xl bg-white cursor-pointer min-h-[42px] transition-all w-full"
                 style={{
-                  background: "white",
-                  border:
-                    serviceFilter === "All Services"
-                      ? "1px solid var(--color-mm-border)"
-                      : "1px solid var(--color-mm-orange)",
-                  color:
-                    serviceFilter === "All Services"
-                      ? "var(--color-mm-gray)"
-                      : "var(--color-mm-orange)",
+                  borderColor: selectedServices.length > 0 ? "var(--color-mm-orange)" : "var(--color-mm-border)",
                 }}
               >
-                <span className="truncate">{serviceFilter}</span>
-                <ChevronDown
-                  size={14}
-                  className="shrink-0"
-                  style={{
-                    transform: isServiceOpen
-                      ? "rotate(180deg)"
-                      : "rotate(0deg)",
-                    transition: "transform 150ms ease",
-                  }}
-                />
-              </button>
-              {isServiceOpen && (
-                <div
-                  style={{
-                    background: "white",
-                    border: "1px solid var(--color-mm-border)",
-                    borderRadius: "16px",
-                    padding: "8px",
-                    boxShadow: "0 8px 24px rgba(0,0,0,0.10)",
-                    minWidth: "200px",
-                    position: "absolute",
-                    zIndex: 100,
-                    marginTop: "4px",
-                  }}
-                  className="w-full sm:w-auto left-0"
-                >
-                  {[
-                    { label: "All Services", chips: [] },
-                    {
-                      label: "Website",
-                      chips: [
-                        {
-                          bg: "rgba(59, 130, 246, 0.1)",
-                          color: "var(--color-mm-blue)",
-                          text: "Website",
-                        },
-                      ],
-                    },
-                    {
-                      label: "Marketing",
-                      chips: [
-                        {
-                          bg: "rgba(92, 177, 62, 0.1)",
-                          color: "var(--color-mm-green)",
-                          text: "Marketing",
-                        },
-                      ],
-                    },
-                    {
-                      label: "SEO",
-                      chips: [
-                        {
-                          bg: "rgba(224, 86, 36, 0.1)",
-                          color: "var(--color-mm-orange)",
-                          text: "SEO",
-                        },
-                      ],
-                    },
-                    {
-                      label: "Sales",
-                      chips: [
-                        {
-                          bg: "rgba(224, 86, 36, 0.1)",
-                          color: "var(--color-mm-red)",
-                          text: "Sales",
-                        },
-                      ],
-                    },
-                    {
-                      label: "Website + Marketing",
-                      chips: [
-                        {
-                          bg: "rgba(59, 130, 246, 0.1)",
-                          color: "var(--color-mm-blue)",
-                          text: "Website",
-                        },
-                        {
-                          bg: "rgba(92, 177, 62, 0.1)",
-                          color: "var(--color-mm-green)",
-                          text: "Marketing",
-                        },
-                      ],
-                    },
-                  ].map((opt) => (
-                    <div
-                      key={opt.label}
-                      onClick={() => {
-                        setServiceFilter(opt.label);
-                        setIsServiceOpen(false);
-                      }}
-                      style={{
-                        padding: "10px 14px",
-                        borderRadius: "10px",
-                        color:
-                          serviceFilter === opt.label
-                            ? "var(--color-mm-orange)"
-                            : "var(--color-mm-gray)",
-                        fontSize: "14px",
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        background:
-                          serviceFilter === opt.label
-                            ? "rgba(224, 86, 36, 0.1)"
-                            : "transparent",
-                        fontWeight: serviceFilter === opt.label ? 600 : 400,
-                      }}
-                      onMouseEnter={(e) => {
-                        if (serviceFilter !== opt.label) {
-                          e.currentTarget.style.background =
-                            "rgba(224, 86, 36, 0.1)";
-                          e.currentTarget.style.color = "var(--color-mm-dark)";
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (serviceFilter !== opt.label) {
-                          e.currentTarget.style.background = "transparent";
-                          e.currentTarget.style.color = "var(--color-mm-gray)";
-                        }
-                      }}
+                {selectedServices.length === 0 ? (
+                  <span className="text-sm text-mm-gray/60 font-medium">Services Filters...</span>
+                ) : (
+                  selectedServices.map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center gap-1 bg-mm-orange/10 text-mm-orange text-xs font-semibold px-2 py-0.5 rounded-full select-none"
                     >
-                      {opt.label}
-                      <div className="flex gap-1">
-                        {opt.chips.map((c, i) => (
-                          <span
-                            key={i}
-                            style={{
-                              background: c.bg,
-                              color: c.color,
-                              borderRadius: "999px",
-                              padding: "2px 8px",
-                              fontSize: "11px",
-                              fontWeight: 600,
-                            }}
-                          >
-                            {c.text}
-                          </span>
-                        ))}
-                      </div>
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedServices((prev) => prev.filter((t) => t !== tag));
+                        }}
+                        className="hover:text-mm-red font-black"
+                      >
+                        <X size={10} />
+                      </button>
+                    </span>
+                  ))
+                )}
+              </div>
+              {isServiceSearchOpen && (
+                <div
+                  className="absolute left-0 mt-1 w-full bg-white border border-mm-border rounded-xl shadow-lg py-1.5 z-50 animate-in fade-in slide-in-from-top-1 duration-150"
+                  style={{
+                    boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
+                  }}
+                >
+                  {allAvailableServices
+                    .filter((s) => !selectedServices.includes(s))
+                    .map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => {
+                          setSelectedServices((prev) => [...prev, s]);
+                          setIsServiceSearchOpen(false);
+                        }}
+                        className="w-full text-left px-3.5 py-2 text-sm text-mm-gray hover:bg-mm-orange/5 hover:text-mm-orange font-medium transition-colors"
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  {allAvailableServices.filter((s) => !selectedServices.includes(s)).length === 0 && (
+                    <div className="px-3.5 py-2 text-xs text-mm-gray/60 font-medium text-center">
+                      All services selected
                     </div>
-                  ))}
+                  )}
                 </div>
               )}
             </div>
+
+            <label className="inline-flex items-center gap-2 cursor-pointer select-none py-2 px-4 rounded-xl border border-mm-border/60 bg-white hover:bg-mm-subtle/30 transition-all w-full sm:w-auto h-[42px] shrink-0">
+              <input
+                type="checkbox"
+                checked={showCompleted}
+                onChange={(e) => setShowCompleted(e.target.checked)}
+                className="w-4 h-4 accent-mm-orange rounded border-mm-border text-mm-orange focus:ring-mm-orange"
+              />
+              <span className="text-sm font-bold text-mm-gray/80">Show Completed</span>
+            </label>
           </div>
 
           <div className="flex items-center justify-between sm:justify-end gap-3 w-full md:w-auto shrink-0">
