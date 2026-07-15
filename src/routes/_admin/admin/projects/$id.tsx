@@ -243,29 +243,44 @@ function ProjectDetail() {
   const clientName = activeBiz?.businessName || activeProject.name;
 
   return (
-    <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-6 pb-28">
+    <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-6 pb-28 overflow-y-scroll w-full">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div className="text-xs" style={{ color: "var(--color-mm-gray)" }}>
-            <Link
-              to="/admin/projects"
-              onClick={(e) => {
-                if (!confirmNavigation()) {
-                  e.preventDefault();
-                }
-              }}
-              className="hover:underline"
-            >
-              Projects
-            </Link>{" "}
-            / {activeProject.id}
-          </div>
-          <h1
-            className="text-xl font-bold mt-1"
-            style={{ color: "var(--color-mm-dark)" }}
+        <div className="flex items-center gap-3">
+          <Link
+            to="/admin/projects"
+            onClick={(e) => {
+              if (!confirmNavigation()) {
+                e.preventDefault();
+              }
+            }}
+            className="p-2 bg-white border border-mm-border hover:bg-mm-subtle/50 rounded-xl transition-all cursor-pointer text-mm-dark flex items-center justify-center shrink-0"
+            title="Back to Projects"
+            style={{ borderColor: "var(--color-mm-border)" }}
           >
-            {clientName} — {activeProject.services.join(" + ")}
-          </h1>
+            <ArrowLeft size={16} style={{ color: "var(--color-mm-gray)" }} />
+          </Link>
+          <div>
+            <div className="text-xs" style={{ color: "var(--color-mm-gray)" }}>
+              <Link
+                to="/admin/projects"
+                onClick={(e) => {
+                  if (!confirmNavigation()) {
+                    e.preventDefault();
+                  }
+                }}
+                className="hover:underline"
+              >
+                Projects
+              </Link>{" "}
+              / {activeProject.id}
+            </div>
+            <h1
+              className="text-xl font-bold mt-1"
+              style={{ color: "var(--color-mm-dark)" }}
+            >
+              {clientName} — {activeProject.services.join(" + ")}
+            </h1>
+          </div>
         </div>
         <div className="flex items-center gap-3">
           <StatusBadge status={activeProject.status} />

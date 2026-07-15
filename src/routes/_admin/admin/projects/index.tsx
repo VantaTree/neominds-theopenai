@@ -19,6 +19,7 @@ import {
 import {
   CheckCircle2,
   ArrowRight,
+  ArrowLeft,
   X,
   ChevronDown,
   SearchX,
@@ -168,6 +169,7 @@ function ProjectsPage() {
 
   const [isNewProjectOpen, setIsNewProjectOpen] = useState(false);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  const [dropdownCoords, setDropdownCoords] = useState<{ top: number; left: number } | null>(null);
   const [newProjectForm, setNewProjectForm] = useState({
     name: "",
     client: "",
@@ -262,8 +264,20 @@ function ProjectsPage() {
         setOpenDropdownId(null);
       }
     }
+
+    function handleScrollOrResize() {
+      setOpenDropdownId(null);
+    }
+
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    window.addEventListener("scroll", handleScrollOrResize, true);
+    window.addEventListener("resize", handleScrollOrResize);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("scroll", handleScrollOrResize, true);
+      window.removeEventListener("resize", handleScrollOrResize);
+    };
   }, [openDropdownId]);
 
   useEffect(() => {
@@ -1278,21 +1292,36 @@ function ProjectsPage() {
                         <td className="px-4 py-3">
                           <div className="relative inline-block actions-dropdown-container">
                             <button
-                              onClick={() =>
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                const dropdownHeight = 180;
+                                const dropdownWidth = 160;
+                                let top = rect.bottom;
+                                if (top + dropdownHeight > window.innerHeight) {
+                                  top = rect.top - dropdownHeight - 8;
+                                }
+                                let left = rect.right - dropdownWidth;
+                                if (left < 8) {
+                                  left = 8;
+                                }
+                                setDropdownCoords({ top, left });
                                 setOpenDropdownId(
                                   openDropdownId === p.id ? null : p.id,
-                                )
-                              }
+                                );
+                              }}
                               className="p-1.5 rounded-lg hover:bg-mm-subtle transition-colors cursor-pointer text-mm-gray hover:text-mm-dark flex items-center justify-center"
                               title="Actions"
                             >
                               <MoreVertical size={16} />
                             </button>
-                            {openDropdownId === p.id && (
+                            {openDropdownId === p.id && dropdownCoords && (
                               <div
-                                className="absolute right-0 mt-1 w-40 bg-white border border-mm-border rounded-xl shadow-lg py-1.5 z-50 animate-in fade-in slide-in-from-top-1 duration-150"
+                                className="fixed mt-1 w-40 bg-white border border-mm-border rounded-xl shadow-lg py-1.5 z-50 animate-in fade-in slide-in-from-top-1 duration-150"
                                 style={{
                                   boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+                                  top: `${dropdownCoords.top}px`,
+                                  left: `${dropdownCoords.left}px`,
                                 }}
                               >
                                 <Link

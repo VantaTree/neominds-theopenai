@@ -29,6 +29,8 @@ import {
   deleteUserFn,
   getBusinessesFn,
   saveBusinessFn,
+  deleteBusinessFn,
+  getReportsFn,
   setAdminClaimFn,
 } from "@/lib/server-functions";
 import { AdminLoader } from "@/components/AdminLoader";
@@ -38,14 +40,15 @@ export const Route = createFileRoute("/_admin/admin/users")({
   head: () => ({ meta: [{ title: "Users — GrowConsult AI" }] }),
   loader: async () => {
     try {
-      const [users, businesses] = await Promise.all([
+      const [users, businesses, reports] = await Promise.all([
         getUsersFn(),
         getBusinessesFn(),
+        getReportsFn(),
       ]);
-      return { users, businesses };
+      return { users, businesses, reports };
     } catch (err) {
-      console.error("Loader failed to fetch users/businesses data:", err);
-      return { users: [], businesses: [] };
+      console.error("Loader failed to fetch users/businesses/reports data:", err);
+      return { users: [], businesses: [], reports: [] };
     }
   },
   pendingComponent: AdminLoader,
@@ -71,19 +74,20 @@ interface MappedUser {
 }
 
 function UsersPage() {
-  const { users: initialUsers, businesses: initialBusinesses } =
+  const { users: initialUsers, businesses: initialBusinesses, reports: initialReports = [] } =
     Route.useLoaderData();
   const [users, setUsers] = useState<DBUser[]>(initialUsers);
   const [businesses, setBusinesses] = useState<DBBusiness[]>(initialBusinesses);
+  const [reports, setReports] = useState<any[]>(initialReports);
 
   useEffect(() => {
     setUsers(initialUsers);
     setBusinesses(initialBusinesses);
-  }, [initialUsers, initialBusinesses]);
+    setReports(initialReports);
+  }, [initialUsers, initialBusinesses, initialReports]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploadingUserAvatar, setIsUploadingUserAvatar] = useState(false);
-  const [isSavingUser, setIsSavingUser] = useState(false);
 
   const handleAvatarClick = () => {
     fileInputRef.current?.click();
@@ -128,6 +132,8 @@ function UsersPage() {
   const [isSavingBusiness, setIsSavingBusiness] = useState(false);
   const businessFileInputRef = useRef<HTMLInputElement>(null);
   const [isUploadingBusinessLogo, setIsUploadingBusinessLogo] = useState(false);
+  const [businessToDelete, setBusinessToDelete] = useState<DBBusiness | null>(null);
+  const [isDeletingBusiness, setIsDeletingBusiness] = useState(false);
 
   const handleBusinessAvatarClick = () => {
     businessFileInputRef.current?.click();
@@ -363,48 +369,40 @@ function UsersPage() {
       businessType: editForm.industry || "Consulting",
       contactEmail: editForm.email,
       contactPhone: editForm.phone,
-      websiteUrl: editForm.website || "",
+      websiteUrl: editForm.website || null,
       paymentStatus: matchedBiz ? matchedBiz.paymentStatus : "Paid",
       createdAt: matchedBiz ? matchedBiz.createdAt : new Date(),
       updatedAt: new Date(),
     };
 
-    setIsSavingUser(true);
     Promise.all([
       saveUserFn({ data: userSchemaData }),
       saveBusinessFn({ data: businessSchemaData }),
-    ])
-      .then(() => {
-        setIsSavingUser(false);
-        setUsers((prev) =>
-          prev.map((u) => (u.id === userId ? userSchemaData : u)),
-        );
-        setBusinesses((prev) =>
-          prev.map((b) => (b.id === bizId ? businessSchemaData : b)),
-        );
-        if (selectedUser?.id === userId) {
-          setSelectedUser({
-            ...selectedUser,
-            name: editForm.name,
-            business: editForm.business,
-            email: editForm.email,
-            phone: editForm.phone,
-            plan: editForm.plan,
-            status: editForm.status,
-            role: editingUser!.role,
-            industry: editForm.industry,
-            website: editForm.website,
-            image: editForm.image,
-          });
-        }
-        setEditingUser(null);
-        setToast({ title: "✓ User updated successfully!" });
-      })
-      .catch((err) => {
-        console.error("Failed to update user:", err);
-        setIsSavingUser(false);
-        setToast({ title: "✗ Failed to update user" });
-      });
+    ]).then(() => {
+      setUsers((prev) =>
+        prev.map((u) => (u.id === userId ? userSchemaData : u)),
+      );
+      setBusinesses((prev) =>
+        prev.map((b) => (b.id === bizId ? businessSchemaData : b)),
+      );
+      if (selectedUser?.id === userId) {
+        setSelectedUser({
+          ...selectedUser,
+          name: editForm.name,
+          business: editForm.business,
+          email: editForm.email,
+          phone: editForm.phone,
+          plan: editForm.plan,
+          status: editForm.status,
+          role: editingUser!.role,
+          industry: editForm.industry,
+          website: editForm.website,
+          image: editForm.image,
+        });
+      }
+      setEditingUser(null);
+      setToast({ title: "✓ User updated successfully!" });
+    });
   };
 
   const handleEditBusinessSubmit = () => {
@@ -491,6 +489,47 @@ function UsersPage() {
         });
       });
     }
+  };
+
+  const handleDeleteBusiness = () => {
+    if (!businessToDelete) return;
+    const bizId = businessToDelete.id;
+    const bizName = businessToDelete.businessName;
+    setIsDeletingBusiness(true);
+    deleteBusinessFn({ data: bizId })
+      .then(() => {
+        setBusinesses((prev) => prev.filter((b) => b.id !== bizId));
+        if (selectedUser) {
+          const updatedBizs = selectedUser.associatedBusinesses.filter(
+            (b) => b.id !== bizId,
+          );
+          const primaryBiz = updatedBizs[0];
+          const newPlan = primaryBiz
+            ? `${primaryBiz.plan || "Basic"} Plan`
+            : "Basic Plan";
+          setSelectedUser({
+            ...selectedUser,
+            business: primaryBiz ? primaryBiz.businessName : "No business",
+            plan: newPlan,
+            associatedBusinesses: updatedBizs,
+          });
+        }
+        setToast({
+          title: "✓ Business deleted successfully!",
+          sub: `${bizName} has been removed.`,
+        });
+        setBusinessToDelete(null);
+      })
+      .catch((err: any) => {
+        console.error("Failed to delete business:", err);
+        setToast({
+          title: "✗ Failed to delete business",
+          sub: err.message || "An error occurred.",
+        });
+      })
+      .finally(() => {
+        setIsDeletingBusiness(false);
+      });
   };
 
   const handleViewDocument = (name: string) => {
@@ -1271,8 +1310,8 @@ function UsersPage() {
                     {[
                       { label: "All Status", dot: null },
                       { label: "Active", dot: "var(--color-mm-green)" },
-                      { label: "Trial", dot: "var(--color-mm-orange)" },
                       { label: "Inactive", dot: "var(--color-mm-gray)" },
+                      { label: "Suspended", dot: "var(--color-mm-red)" },
                     ].map((opt) => {
                       const count =
                         opt.label === "All Status"
@@ -1491,15 +1530,6 @@ function UsersPage() {
                                     style={{ color: "var(--color-mm-gray)" }}
                                   />
                                 </button>
-                                <button
-                                  onClick={() => handleDeleteUser(u.id)}
-                                  className="hover:text-mm-red transition-colors cursor-pointer"
-                                >
-                                  <Trash2
-                                    size={16}
-                                    style={{ color: "var(--color-mm-gray)" }}
-                                  />
-                                </button>
                               </div>
                             </td>
                           </tr>
@@ -1550,146 +1580,178 @@ function UsersPage() {
                                           </tr>
                                         </thead>
                                         <tbody>
-                                          {u.associatedBusinesses.map((b) => (
-                                            <tr
-                                              key={b.id}
-                                              className="text-mm-dark border-b border-mm-subtle last:border-0"
-                                            >
-                                              <td className="py-2.5 font-medium">
-                                                <div className="flex items-center gap-2.5">
-                                                  {b.image &&
-                                                  b.image.trim() !== "" &&
-                                                  b.image !== "undefined" &&
-                                                  b.image !== "null" ? (
-                                                    <img
-                                                      src={b.image}
-                                                      alt={b.businessName}
-                                                      className="rounded-full object-cover aspect-square shrink-0"
-                                                      style={{
-                                                        width: 32,
-                                                        height: 32,
-                                                      }}
-                                                    />
-                                                  ) : (
-                                                    <Avatar
-                                                      name={b.businessName}
-                                                      size={32}
-                                                    />
-                                                  )}
-                                                  <div>
-                                                    <div className="font-semibold text-mm-dark">
-                                                      {b.businessName}
-                                                    </div>
-                                                    {b.contactEmail ? (
-                                                      <a
-                                                        href={`mailto:${b.contactEmail}`}
-                                                        className="text-[10px] text-mm-gray hover:text-mm-orange hover:underline block"
-                                                        onClick={(e) =>
-                                                          e.stopPropagation()
-                                                        }
-                                                      >
-                                                        {b.contactEmail}
-                                                      </a>
-                                                    ) : (
-                                                      <div className="text-[10px] text-mm-gray">
-                                                        No email
-                                                      </div>
-                                                    )}
-                                                  </div>
-                                                </div>
-                                              </td>
-                                              <td className="py-2.5 text-mm-gray">
-                                                {b.businessType || "Consulting"}
-                                              </td>
-                                              <td className="py-2.5 text-mm-gray">
-                                                {b.websiteUrl ? (
-                                                  <a
-                                                    href={
-                                                      b.websiteUrl.startsWith(
-                                                        "http",
-                                                      )
-                                                        ? b.websiteUrl
-                                                        : `https://${b.websiteUrl}`
-                                                    }
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="text-mm-orange hover:underline"
-                                                    onClick={(e) =>
-                                                      e.stopPropagation()
-                                                    }
-                                                  >
-                                                    {b.websiteUrl}
-                                                  </a>
-                                                ) : (
-                                                  "N/A"
-                                                )}
-                                              </td>
-                                              <td
-                                                className="py-2.5 text-mm-gray"
-                                                onClick={(e) =>
-                                                  e.stopPropagation()
-                                                }
+                                          {u.associatedBusinesses.map((b) => {
+                                            const report = reports.find((r) => r.businessId === b.id);
+                                            return (
+                                              <tr
+                                                key={b.id}
+                                                className="text-mm-dark border-b border-mm-subtle last:border-0"
                                               >
-                                                {b.contactPhone ? (
-                                                  <a
-                                                    href={`tel:${b.contactPhone}`}
-                                                    className="hover:text-mm-orange hover:underline"
-                                                  >
-                                                    {b.contactPhone}
-                                                  </a>
-                                                ) : (
-                                                  "N/A"
-                                                )}
-                                              </td>
-                                              <td className="py-2.5">
-                                                <PlanBadge plan={b.plan} />
-                                              </td>
-                                              <td className="py-2.5">
-                                                <StatusBadge
-                                                  status={b.paymentStatus}
-                                                />
-                                              </td>
-                                              <td className="py-2.5 text-right">
-                                                <div className="flex items-center justify-end gap-2">
-                                                  <Link
-                                                    to="/admin/chat"
-                                                    search={{
-                                                      user:
-                                                        typeof b.userId ===
-                                                        "string"
-                                                          ? b.userId
-                                                          : b.userId?.id || "",
-                                                      business: b.id,
-                                                    }}
-                                                    className="hover:text-mm-orange transition-colors cursor-pointer inline-flex items-center"
-                                                    title="Chat"
-                                                  >
-                                                    <MessageSquare
-                                                      size={14}
-                                                      style={{
-                                                        color:
-                                                          "var(--color-mm-gray)",
+                                                <td className="py-2.5 font-medium">
+                                                  <div className="flex items-center gap-2.5">
+                                                    {b.image &&
+                                                    b.image.trim() !== "" &&
+                                                    b.image !== "undefined" &&
+                                                    b.image !== "null" ? (
+                                                      <img
+                                                        src={b.image}
+                                                        alt={b.businessName}
+                                                        className="rounded-full object-cover aspect-square shrink-0"
+                                                        style={{
+                                                          width: 32,
+                                                          height: 32,
+                                                        }}
+                                                      />
+                                                    ) : (
+                                                      <Avatar
+                                                        name={b.businessName}
+                                                        size={32}
+                                                      />
+                                                    )}
+                                                    <div>
+                                                      <div className="font-semibold text-mm-dark">
+                                                        {b.businessName}
+                                                      </div>
+                                                      {b.contactEmail ? (
+                                                        <a
+                                                          href={`mailto:${b.contactEmail}`}
+                                                          className="text-[10px] text-mm-gray hover:text-mm-orange hover:underline block"
+                                                          onClick={(e) =>
+                                                            e.stopPropagation()
+                                                          }
+                                                        >
+                                                          {b.contactEmail}
+                                                        </a>
+                                                      ) : (
+                                                        <div className="text-[10px] text-mm-gray">
+                                                          No email
+                                                        </div>
+                                                      )}
+                                                    </div>
+                                                  </div>
+                                                </td>
+                                                <td className="py-2.5 text-mm-gray">
+                                                  {b.businessType || "Consulting"}
+                                                </td>
+                                                <td className="py-2.5 text-mm-gray">
+                                                  {b.websiteUrl ? (
+                                                    <a
+                                                      href={
+                                                        b.websiteUrl.startsWith(
+                                                          "http",
+                                                        )
+                                                          ? b.websiteUrl
+                                                          : `https://${b.websiteUrl}`
+                                                      }
+                                                      target="_blank"
+                                                      rel="noopener noreferrer"
+                                                      className="text-mm-orange hover:underline"
+                                                      onClick={(e) =>
+                                                        e.stopPropagation()
+                                                      }
+                                                    >
+                                                      {b.websiteUrl}
+                                                    </a>
+                                                  ) : (
+                                                    "N/A"
+                                                  )}
+                                                </td>
+                                                <td
+                                                  className="py-2.5 text-mm-gray"
+                                                  onClick={(e) =>
+                                                    e.stopPropagation()
+                                                  }
+                                                >
+                                                  {b.contactPhone ? (
+                                                    <a
+                                                      href={`tel:${b.contactPhone}`}
+                                                      className="hover:text-mm-orange hover:underline"
+                                                    >
+                                                      {b.contactPhone}
+                                                    </a>
+                                                  ) : (
+                                                    "N/A"
+                                                  )}
+                                                </td>
+                                                <td className="py-2.5">
+                                                  <PlanBadge plan={b.plan} />
+                                                </td>
+                                                <td className="py-2.5">
+                                                  <StatusBadge
+                                                    status={b.paymentStatus}
+                                                  />
+                                                </td>
+                                                <td className="py-2.5 text-right">
+                                                  <div className="flex items-center justify-end gap-2">
+                                                    <Link
+                                                      to="/admin/chat"
+                                                      search={{
+                                                        user:
+                                                          typeof b.userId ===
+                                                          "string"
+                                                            ? b.userId
+                                                            : b.userId?.id || "",
+                                                        business: b.id,
                                                       }}
-                                                    />
-                                                  </Link>
-                                                  <button
-                                                    onClick={() =>
-                                                      handleEditBusinessClick(b)
-                                                    }
-                                                    className="hover:text-mm-orange transition-colors cursor-pointer inline-flex items-center"
-                                                  >
-                                                    <Edit2
-                                                      size={14}
-                                                      style={{
-                                                        color:
-                                                          "var(--color-mm-gray)",
-                                                      }}
-                                                    />
-                                                  </button>
-                                                </div>
-                                              </td>
-                                            </tr>
-                                          ))}
+                                                      className="hover:text-mm-orange transition-colors cursor-pointer inline-flex items-center"
+                                                      title="Chat"
+                                                    >
+                                                      <MessageSquare
+                                                        size={14}
+                                                        style={{
+                                                          color:
+                                                            "var(--color-mm-gray)",
+                                                        }}
+                                                      />
+                                                    </Link>
+                                                    <button
+                                                      onClick={() =>
+                                                        handleEditBusinessClick(b)
+                                                      }
+                                                      className="hover:text-mm-orange transition-colors cursor-pointer inline-flex items-center"
+                                                    >
+                                                      <Edit2
+                                                        size={14}
+                                                        style={{
+                                                          color:
+                                                            "var(--color-mm-gray)",
+                                                        }}
+                                                      />
+                                                    </button>
+                                                    {report && (
+                                                      <Link
+                                                        to="/admin/reports/$id"
+                                                        params={{ id: report.id }}
+                                                        className="hover:text-mm-orange transition-colors cursor-pointer inline-flex items-center"
+                                                        title="View Report"
+                                                      >
+                                                        <FileText
+                                                          size={14}
+                                                          style={{
+                                                            color:
+                                                              "var(--color-mm-gray)",
+                                                          }}
+                                                        />
+                                                      </Link>
+                                                    )}
+                                                    <button
+                                                      onClick={() => setBusinessToDelete(b)}
+                                                      className="hover:text-mm-red transition-colors cursor-pointer inline-flex items-center"
+                                                      title="Delete Business"
+                                                    >
+                                                      <Trash2
+                                                        size={14}
+                                                        style={{
+                                                          color:
+                                                            "var(--color-mm-gray)",
+                                                        }}
+                                                      />
+                                                    </button>
+                                                  </div>
+                                                </td>
+                                              </tr>
+                                            );
+                                          })}
                                         </tbody>
                                       </table>
                                     </div>
@@ -2116,8 +2178,8 @@ function UsersPage() {
                   }}
                 >
                   <option>Active</option>
-                  <option>Trial</option>
                   <option>Inactive</option>
+                  <option>Suspended</option>
                 </select>
               </div>
 
@@ -2140,15 +2202,12 @@ function UsersPage() {
                 Cancel
               </button>
               <button
-                disabled={isSavingUser || isUploadingUserAvatar}
+                disabled={isUploadingUserAvatar}
                 onClick={handleEditSubmit}
-                className="px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ background: "var(--color-mm-orange)", color: "white" }}
               >
-                {isSavingUser && (
-                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                )}
-                {isSavingUser ? "Saving..." : "Save Changes"}
+                Save Changes
               </button>
             </div>
           </div>
@@ -2541,13 +2600,93 @@ function UsersPage() {
               <button
                 disabled={isSavingBusiness || isUploadingBusinessLogo}
                 onClick={handleEditBusinessSubmit}
-                className="px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity cursor-pointer flex items-center justify-center gap-2 min-w-[120px] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity cursor-pointer flex items-center justify-center min-w-[120px] disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ background: "var(--color-mm-orange)", color: "white" }}
               >
-                {isSavingBusiness && (
-                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                )}
                 {isSavingBusiness ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── DELETE BUSINESS CONFIRM MODAL ── */}
+      {businessToDelete && (
+        <div
+          className="fixed inset-0 z-100 flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.2)", backdropFilter: "blur(4px)" }}
+          onClick={() => setBusinessToDelete(null)}
+        >
+          <div
+            className="w-full"
+            style={{
+              background: "white",
+              borderRadius: "24px",
+              border: "1px solid var(--color-mm-border)",
+              maxWidth: "440px",
+              padding: "32px",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.15)",
+              width: "90%",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2
+                style={{
+                  color: "var(--color-mm-dark)",
+                  fontWeight: 700,
+                  fontSize: "20px",
+                }}
+              >
+                Delete Business
+              </h2>
+              <button
+                onClick={() => setBusinessToDelete(null)}
+                className="hover:opacity-70 transition-opacity cursor-pointer"
+              >
+                <X
+                  size={20}
+                  style={{ color: "var(--color-mm-gray)" }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.color = "var(--color-mm-red)")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.color = "var(--color-mm-gray)")
+                  }
+                />
+              </button>
+            </div>
+
+            <p className="text-sm leading-relaxed mb-6" style={{ color: "var(--color-mm-gray)" }}>
+              Are you sure you want to delete <strong style={{ color: "var(--color-mm-dark)" }}>{businessToDelete.businessName}</strong>? This action cannot be undone and will remove all data associated with this business.
+            </p>
+
+            <div
+              className="pt-4 flex justify-end gap-3"
+              style={{ borderTop: "1px solid var(--color-mm-border)" }}
+            >
+              <button
+                onClick={() => setBusinessToDelete(null)}
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-80 transition-opacity cursor-pointer"
+                style={{
+                  background: "white",
+                  border: "1px solid var(--color-mm-border)",
+                  color: "var(--color-mm-gray)",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                disabled={isDeletingBusiness}
+                onClick={handleDeleteBusiness}
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity cursor-pointer flex items-center justify-center min-w-[100px] disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ background: "var(--color-mm-red)", color: "white" }}
+              >
+                {isDeletingBusiness ? (
+                  <Loader2 className="w-4 h-4 animate-spin mr-1" />
+                ) : (
+                  "Delete"
+                )}
               </button>
             </div>
           </div>
