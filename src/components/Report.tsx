@@ -8,6 +8,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, 
 import AnimatedPlanCard from "./AnimatedPlanCard";
 import PLANS from "@/data/plans";
 import { useRazorpayCheckout } from "@/hooks/use-razorpay-checkout";
+import { downloadReportAsPDF } from "@/utils/downloadReport";
 
 const ScorecardCircularProgress = ({ score }: { score: number }) => {
   const radius = 45;
@@ -262,6 +263,18 @@ export default function Report({ initialData, businessId, isAdmin }: ReportProps
   const [data, setData] = useState<typeof DUMMY_REPORT>(initialData || DUMMY_REPORT);
   const { handleSelectPlan, renderModals } = useRazorpayCheckout();
   const [loading, setLoading] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownloadPDF = async () => {
+    try {
+      setDownloading(true);
+      await downloadReportAsPDF(data);
+    } catch (err) {
+      console.error("Error downloading PDF:", err);
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   // States for slide dot indicators
   const [activeSwotIndex, setActiveSwotIndex] = useState(0);
@@ -479,8 +492,26 @@ export default function Report({ initialData, businessId, isAdmin }: ReportProps
 
   return (
     <div className="w-full space-y-12 text-mm-dark font-sans animate-fadeIn pb-12">
+      {/* Top action header containing Download PDF button */}
+      <div className="flex justify-end items-center gap-4 no-print">
+        <button
+          onClick={handleDownloadPDF}
+          disabled={downloading}
+          className="flex items-center gap-2 px-5 py-2.5 bg-mm-dark hover:bg-mm-dark/90 text-white rounded-xl text-xs font-bold tracking-wider uppercase shadow-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed select-none"
+        >
+          {downloading ? (
+            <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5" className="stroke-white">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+            </svg>
+          )}
+          <span>{downloading ? "Generating PDF..." : "Download Report"}</span>
+        </button>
+      </div>
+
       {/* Right-side Green Scroll Progress Line */}
-      <div className="fixed top-0 right-0 w-2 h-full bg-gray-100/30 z-9999 pointer-events-none rounded-l-md overflow-hidden">
+      <div className="fixed top-0 right-0 w-2 h-full bg-gray-100/30 z-9999 pointer-events-none rounded-l-md overflow-hidden no-print">
         <div
           className="w-full bg-[#10B981] rounded-l-md transition-all duration-75"
           style={{ height: `${scrollProgress}%` }}
@@ -1226,7 +1257,11 @@ export default function Report({ initialData, businessId, isAdmin }: ReportProps
                 i={matchedIndex} 
                 cardType={cardType} 
                 animate={false} 
-                onSelectPlan={(planName) => !isAdmin && handleSelectPlan(planName, businessId)} 
+                onSelectPlan={() => {
+                  if (!isAdmin) {
+                    window.location.href = "https://neominds.theopenai.vercel.app/plans";
+                  }
+                }} 
                 disabled={isAdmin}
               />
             </div>
