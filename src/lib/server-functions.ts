@@ -87,5 +87,6 @@ export {
   getAuthUrlFn,
   exchangeAuthCodeFn,
   getDashboardInsightsFn,
+  activatePlusPlatformFn,
 } from "./server-functions/integrations";
 

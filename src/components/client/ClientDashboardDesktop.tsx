@@ -1,19 +1,20 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Store, Globe, Instagram, Facebook } from "lucide-react";
+import { Store, Globe, Instagram, Facebook, Lock } from "lucide-react";
 import Insight from "./insight";
 import InsightConnectionGate from "./InsightConnectionGate";
 import BusinessTaskCard from "./BusinessTaskCard";
 import UpgradeCard from "./UpgradeCard";
 import PlanGate from "./PlanGate";
 import { useBusiness } from "@/hooks/use-business";
-import { getAuthUrlFn, getDashboardInsightsFn } from "@/lib/server-functions";
+import { getAuthUrlFn, getDashboardInsightsFn, activatePlusPlatformFn } from "@/lib/server-functions";
 
 export default function ClientDashboardDesktop() {
   const navigate = useNavigate();
   const { activeBusiness, loading: businessLoading } = useBusiness();
   const [insights, setInsights] = useState<any>(null);
   const [insightsLoading, setInsightsLoading] = useState(true);
+  const [activating, setActivating] = useState(false);
 
   useEffect(() => {
     async function loadInsights() {
@@ -51,7 +52,7 @@ export default function ClientDashboardDesktop() {
     }
   };
 
-  const handleUpgrade = (targetPlan: "Plus" | "Pro") => {
+  const handleUpgrade = (targetPlan: "Basic" | "Plus" | "Pro") => {
     if (activeBusiness?.id) {
       navigate({
         to: "/plans",
@@ -59,6 +60,26 @@ export default function ClientDashboardDesktop() {
       });
     } else {
       navigate({ to: "/plans" });
+    }
+  };
+
+  const handleActivatePlusPlatform = async (platform: "instagram" | "facebook") => {
+    if (!activeBusiness?.id || activating) return;
+    try {
+      setActivating(true);
+      await activatePlusPlatformFn({
+        data: {
+          businessId: activeBusiness.id,
+          platform,
+        },
+      });
+      // Refetch insights to update dashboard
+      const data = await getDashboardInsightsFn({ data: activeBusiness.id });
+      setInsights(data);
+    } catch (err) {
+      console.error("Failed to activate social platform:", err);
+    } finally {
+      setActivating(false);
     }
   };
 
@@ -85,19 +106,10 @@ export default function ClientDashboardDesktop() {
       }
     } else if (plan === "Plus") {
       if (platformKey === "instagram" || platformKey === "facebook") {
-        const isInstagramConnected = !!insights?.integrations?.instagram?.isConnected;
-        const isFacebookConnected = !!insights?.integrations?.facebook?.isConnected;
-
-        if (isInstagramConnected && isFacebookConnected) {
-          isLocked = false;
-        } else if (isInstagramConnected && platformKey === "facebook") {
+        const activatedPlatform = insights?.integrations?.instagram?.activatedPlatform;
+        if (activatedPlatform && activatedPlatform !== platformKey) {
           isLocked = true;
           actualRequiredPlan = "Pro";
-        } else if (isFacebookConnected && platformKey === "instagram") {
-          isLocked = true;
-          actualRequiredPlan = "Pro";
-        } else {
-          isLocked = false;
         }
       }
     } else if (plan === "Pro") {
@@ -208,6 +220,117 @@ export default function ClientDashboardDesktop() {
     ));
   };
 
+  const renderUnifiedConnectionGate = (
+    title: string,
+    description: string,
+    buttonLabel: string,
+    onConnect: () => void,
+    icon: any,
+    borderColor: string,
+    isLocked: boolean = false,
+    requiredPlan?: "Basic" | "Plus" | "Pro"
+  ) => {
+    const IconComponent = icon;
+    
+    return (
+      <div
+        style={{ borderColor: isLocked ? "#E5E7EB" : borderColor }}
+        className={`col-span-full bg-white rounded-3xl p-8 flex flex-col md:flex-row items-center justify-between shadow-[0_8px_30px_rgba(0,0,0,0.015)] border ${
+          isLocked ? "border-solid" : "border-dashed"
+        } relative overflow-hidden select-none min-h-[160px] gap-6`}
+      >
+        <div className="flex items-start gap-4 flex-1">
+          <div className="p-3 rounded-2xl bg-mm-subtle flex items-center justify-center shrink-0">
+            <IconComponent className="h-6 w-6 text-mm-dark/70" />
+          </div>
+          <div className="space-y-1">
+            <h4 className="text-sm font-bold text-mm-dark">{title}</h4>
+            <p className="text-xs text-mm-gray leading-relaxed max-w-2xl">{description}</p>
+          </div>
+        </div>
+
+        <div className="shrink-0 z-10">
+          {isLocked ? (
+            <button
+              onClick={() => handleUpgrade(requiredPlan || "Basic")}
+              className="flex items-center gap-1.5 px-5 py-2.5 bg-mm-dark text-white font-extrabold text-xs rounded-xl hover:bg-mm-dark/90 transition-all cursor-pointer shadow-md"
+            >
+              <span>Upgrade to {requiredPlan}</span>
+            </button>
+          ) : (
+            <button
+              onClick={onConnect}
+              className="flex items-center gap-1.5 px-5 py-2.5 bg-blue-600 text-white font-extrabold text-xs rounded-xl hover:bg-blue-700 transition-all cursor-pointer shadow-md"
+            >
+              <span>{buttonLabel}</span>
+            </button>
+          )}
+        </div>
+
+        {isLocked && (
+          <div className="absolute inset-0 bg-white/70 backdrop-blur-[3px] flex flex-col items-center justify-center transition-all duration-300">
+            <div className="flex flex-col items-center space-y-2.5 p-4 text-center">
+              <div className="h-9 w-9 rounded-xl bg-mm-dark flex items-center justify-center shadow-md">
+                <Lock className="h-4.5 w-4.5 text-white" />
+              </div>
+              <p className="text-xs font-bold text-mm-dark tracking-wide uppercase">
+                {requiredPlan} Feature
+              </p>
+              <p className="text-[11px] text-mm-gray max-w-[280px]">
+                {requiredPlan === "Basic" 
+                  ? "Upgrade to Basic to connect Google services."
+                  : "Upgrade to Plus to integrate Meta (Instagram & Facebook) social insights."}
+              </p>
+              <button
+                onClick={() => handleUpgrade(requiredPlan || "Basic")}
+                className="mt-1.5 flex items-center gap-1 px-4 py-1.5 bg-mm-dark hover:bg-mm-dark/90 text-white text-[10px] font-extrabold rounded-lg transition-all shadow-sm"
+              >
+                <span>Upgrade Plan</span>
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderPlusPlatformSelector = () => {
+    return (
+      <div className="col-span-full bg-white rounded-3xl p-8 flex flex-col items-center justify-center shadow-[0_8px_30px_rgba(0,0,0,0.015)] border border-dashed border-mm-orange/40 relative overflow-hidden select-none min-h-[180px] text-center space-y-4">
+        <div className="space-y-1">
+          <span className="text-[10px] font-extrabold text-mm-orange tracking-wider uppercase">
+            Plus Plan Activation
+          </span>
+          <h4 className="text-sm font-bold text-mm-dark">Select Your Connected Platform</h4>
+          <p className="text-xs text-mm-gray leading-relaxed max-w-md mx-auto">
+            Under the Plus plan, you can integrate **one** social network. Choose the platform you wish to activate below (the other will be lock-gated).
+          </p>
+        </div>
+
+        <div className="flex items-center gap-4 mt-2 z-10">
+          <button
+            onClick={() => handleActivatePlusPlatform("instagram")}
+            className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white font-extrabold text-xs rounded-xl shadow-md transition-all duration-300 cursor-pointer"
+          >
+            <Instagram className="h-4 w-4" />
+            <span>Activate Instagram</span>
+          </button>
+          <button
+            onClick={() => handleActivatePlusPlatform("facebook")}
+            className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all duration-300 cursor-pointer"
+          >
+            <Facebook className="h-4 w-4" />
+            <span>Activate Facebook</span>
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  const googleConnected = !!insights?.integrations?.google?.isConnected;
+  const metaConnected = !!insights?.integrations?.instagram?.isConnected;
+  const activatedPlatform = insights?.integrations?.instagram?.activatedPlatform;
+
   return (
     <div className="flex-1 w-full px-6 py-8 md:px-8 md:py-10 space-y-8">
       {/* Analytics Section - Gated by Subscription Plan Tier */}
@@ -238,10 +361,65 @@ export default function ClientDashboardDesktop() {
           </div>
         ) : (
           <>
-            {renderPlatformInsights("website", "Website Analytics", Globe, "#5CB13E")}
-            {renderPlatformInsights("google", "Google Business", Store, "#3B82F6")}
-            {renderPlatformInsights("instagram", "Instagram", Instagram, "#FF7DD3", "Plus")}
-            {renderPlatformInsights("facebook", "Facebook", Facebook, "#1877F2", "Plus")}
+            {/* 1. Google Services Block */}
+            {plan === "None" ? (
+              renderUnifiedConnectionGate(
+                "Connect Google Services",
+                "Link your Google account to fetch Analytics (GA4) and Google Business Profile performance metrics.",
+                "Connect Google",
+                () => handleConnect("google"),
+                Globe,
+                "#3B82F6",
+                true,
+                "Basic"
+              )
+            ) : !googleConnected ? (
+              renderUnifiedConnectionGate(
+                "Connect Google Services",
+                "Link your Google account to fetch Analytics (GA4) and Google Business Profile performance metrics.",
+                "Connect Google",
+                () => handleConnect("google"),
+                Globe,
+                "#3B82F6",
+                false
+              )
+            ) : (
+              <>
+                {renderPlatformInsights("website", "Website Analytics", Globe, "#5CB13E")}
+                {renderPlatformInsights("google", "Google Business", Store, "#3B82F6")}
+              </>
+            )}
+
+            {/* 2. Meta Social Services Block */}
+            {plan === "None" || plan === "Basic" ? (
+              renderUnifiedConnectionGate(
+                "Connect Meta Services",
+                "Link your Meta account to integrate Instagram and Facebook social insights.",
+                "Connect Meta",
+                () => handleConnect("meta"),
+                Instagram,
+                "#FF7DD3",
+                true,
+                "Plus"
+              )
+            ) : !metaConnected ? (
+              renderUnifiedConnectionGate(
+                "Connect Meta Services",
+                "Link your Meta account to integrate Instagram and Facebook social insights.",
+                "Connect Meta",
+                () => handleConnect("meta"),
+                Instagram,
+                "#FF7DD3",
+                false
+              )
+            ) : plan === "Plus" && !activatedPlatform ? (
+              renderPlusPlatformSelector()
+            ) : (
+              <>
+                {renderPlatformInsights("instagram", "Instagram", Instagram, "#FF7DD3", "Plus")}
+                {renderPlatformInsights("facebook", "Facebook", Facebook, "#1877F2", "Plus")}
+              </>
+            )}
           </>
         )}
       </section>

@@ -29,6 +29,7 @@ export const IntegrationDetailsSchema = z.object({
   updatedAt: z.string().optional().nullable(),
   instagramBusinessId: z.string().optional().nullable(),
   facebookPageId: z.string().optional().nullable(),
+  activatedPlatform: z.string().optional().nullable(),
 });
 export type IntegrationDetails = z.infer<typeof IntegrationDetailsSchema>;
 
