@@ -6,9 +6,10 @@ type Props = {
   plan: Plan;
   buttonRef: React.RefObject<HTMLButtonElement | null>;
   buttonCanvasRef: React.RefObject<HTMLCanvasElement | null>;
+  disabled?: boolean;
 }
 
-const CustomPlanCard = ({ plan, buttonRef, buttonCanvasRef }: Props) => {
+const CustomPlanCard = ({ plan, buttonRef, buttonCanvasRef, disabled }: Props) => {
   const [selectedBase, setSelectedBase] = useState<string>("Basic");
   const [extraFeatures, setExtraFeatures] = useState<string[]>([]);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -53,6 +54,7 @@ const CustomPlanCard = ({ plan, buttonRef, buttonCanvasRef }: Props) => {
 
   const handleContactUs = (e: React.MouseEvent) => {
     e.preventDefault();
+    if (disabled) return;
     if (!showContactForm) {
       setShowContactForm(true);
       return;
@@ -145,8 +147,11 @@ const CustomPlanCard = ({ plan, buttonRef, buttonCanvasRef }: Props) => {
             {/* Dropdown Button Trigger */}
             <button
               type="button"
-              onClick={() => setDropdownOpen(!dropdownOpen)}
-              className="w-full bg-white/10 text-white border border-white/20 rounded-xl px-3.5 py-2.5 text-xs font-black flex items-center justify-between hover:bg-white/20 active:scale-[0.99] transition-all cursor-pointer select-none"
+              onClick={() => !disabled && setDropdownOpen(!dropdownOpen)}
+              disabled={disabled}
+              className={`w-full bg-white/10 text-white border border-white/20 rounded-xl px-3.5 py-2.5 text-xs font-black flex items-center justify-between transition-all select-none ${
+                disabled ? "cursor-not-allowed opacity-70" : "hover:bg-white/20 active:scale-[0.99] cursor-pointer"
+              }`}
             >
               <span>{selectedBase}</span>
               <span className={`transform transition-transform duration-200 ${dropdownOpen ? "rotate-180" : ""}`}>
@@ -192,21 +197,22 @@ const CustomPlanCard = ({ plan, buttonRef, buttonCanvasRef }: Props) => {
                 return (
                   <div
                     key={f}
-                    onClick={() => handleToggleFeature(f)}
-                    className={`flex items-center justify-between gap-3 text-xs font-bold transition-all duration-200 rounded-xl px-3.5 py-2.5 cursor-pointer select-none border ${
+                    onClick={() => !disabled && handleToggleFeature(f)}
+                    className={`flex items-center justify-between gap-3 text-xs font-bold transition-all duration-200 rounded-xl px-3.5 py-2.5 select-none border ${
                       isAdded
                         ? "bg-white border-white text-[#FF5924] shadow-md scale-[1.01]"
                         : "text-white bg-white/5 border-white/10 hover:bg-white/15 hover:border-white/20"
-                    }`}
+                    } ${disabled ? "cursor-not-allowed opacity-70" : "cursor-pointer"}`}
                   >
                     <span className="flex-1 pr-1">{f}</span>
                     <button
                       type="button"
-                      className={`h-5 w-5 rounded-full flex items-center justify-center shrink-0 border transition-all text-xs font-black select-none cursor-pointer ${
+                      disabled={disabled}
+                      className={`h-5 w-5 rounded-full flex items-center justify-center shrink-0 border transition-all text-xs font-black select-none ${
                         isAdded
                           ? "bg-[#FF5924] text-white border-transparent"
-                          : "border-white/40 text-white/80 hover:border-white"
-                      }`}
+                          : "border-white/40 text-white/80"
+                      } ${disabled ? "cursor-not-allowed" : "cursor-pointer hover:border-white"}`}
                     >
                       {isAdded ? "−" : "+"}
                     </button>
@@ -275,7 +281,10 @@ const CustomPlanCard = ({ plan, buttonRef, buttonCanvasRef }: Props) => {
         ref={buttonRef}
         // href="#"
         onClick={handleContactUs}
-        className="flex items-center justify-center rounded-full py-3 text-xs font-bold uppercase tracking-widest transition-all duration-200 hover:opacity-95 hover:scale-[1.01] active:scale-[0.99] relative overflow-hidden mt-auto shadow-md"
+        disabled={disabled}
+        className={`flex items-center justify-center rounded-full py-3 text-xs font-bold uppercase tracking-widest transition-all duration-200 relative overflow-hidden mt-auto shadow-md ${
+          disabled ? "opacity-50 cursor-not-allowed" : "hover:opacity-95 hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
+        }`}
         style={{
           background: "#111418",
           color: "#ffffff",

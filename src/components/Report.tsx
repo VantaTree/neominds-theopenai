@@ -255,9 +255,10 @@ const DUMMY_REPORT = {
 interface ReportProps {
   initialData?: typeof DUMMY_REPORT;
   businessId?: string;
+  isAdmin?: boolean;
 }
 
-export default function Report({ initialData, businessId }: ReportProps) {
+export default function Report({ initialData, businessId, isAdmin }: ReportProps) {
   const [data, setData] = useState<typeof DUMMY_REPORT>(initialData || DUMMY_REPORT);
   const { handleSelectPlan, renderModals } = useRazorpayCheckout();
   const [loading, setLoading] = useState(false);
@@ -1225,7 +1226,8 @@ export default function Report({ initialData, businessId }: ReportProps) {
                 i={matchedIndex} 
                 cardType={cardType} 
                 animate={false} 
-                onSelectPlan={(planName) => handleSelectPlan(planName, businessId)} 
+                onSelectPlan={(planName) => !isAdmin && handleSelectPlan(planName, businessId)} 
+                disabled={isAdmin}
               />
             </div>
           </div>
@@ -1353,7 +1355,7 @@ export default function Report({ initialData, businessId }: ReportProps) {
       </div>
 
       {/* Dynamic Checkout Modals */}
-      {renderModals()}
+      {!isAdmin && renderModals()}
     </div>
   );
 }

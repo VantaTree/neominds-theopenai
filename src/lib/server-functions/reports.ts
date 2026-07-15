@@ -6,6 +6,7 @@ import {
   SaveReportSchema,
   DeleteReportSchema,
   SubmitAssessmentSchema,
+  GetReportSchema,
 } from "../schemas/api/reports";
 
 export const getReportsFn = createServerFn({ method: "GET" })
@@ -14,6 +15,15 @@ export const getReportsFn = createServerFn({ method: "GET" })
     const { ReportService } = await import("../server/services/report.service");
     const reportService = new ReportService();
     return reportService.getReports();
+  });
+
+export const getReportFn = createServerFn({ method: "GET" })
+  .validator((d: any) => GetReportSchema.parse(d))
+  .middleware([adminMiddleware])
+  .handler(async ({ data }) => {
+    const { ReportService } = await import("../server/services/report.service");
+    const reportService = new ReportService();
+    return reportService.getReport(data);
   });
 
 export const getReportsByUserFn = createServerFn({ method: "GET" })

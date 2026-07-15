@@ -56,6 +56,7 @@ export {
 
 export {
   getReportsFn,
+  getReportFn,
   getReportsByUserFn,
   getReportsByBusinessFn,
   saveReportFn,

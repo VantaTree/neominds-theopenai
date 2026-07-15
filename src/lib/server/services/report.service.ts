@@ -14,6 +14,10 @@ export class ReportService {
     return this.reportRepo.getReports();
   }
 
+  async getReport(reportId: string): Promise<Report | null> {
+    return this.reportRepo.getReport(reportId);
+  }
+
   async getReportsByUser(uid: string): Promise<Report[]> {
     return this.reportRepo.getReportsByUser(uid);
   }

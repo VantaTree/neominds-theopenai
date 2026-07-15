@@ -36,11 +36,12 @@ import { Route as AdminAdminUsersRouteImport } from './routes/_admin/admin/users
 import { Route as AdminAdminTemplatesRouteImport } from './routes/_admin/admin/templates'
 import { Route as AdminAdminSupportRouteImport } from './routes/_admin/admin/support'
 import { Route as AdminAdminSettingsRouteImport } from './routes/_admin/admin/settings'
-import { Route as AdminAdminReportsRouteImport } from './routes/_admin/admin/reports'
 import { Route as AdminAdminPaymentsRouteImport } from './routes/_admin/admin/payments'
 import { Route as AdminAdminChatRouteImport } from './routes/_admin/admin/chat'
+import { Route as AdminAdminReportsIndexRouteImport } from './routes/_admin/admin/reports/index'
 import { Route as AdminAdminProjectsIndexRouteImport } from './routes/_admin/admin/projects/index'
 import { Route as AdminAdminBlogsIndexRouteImport } from './routes/_admin/admin/blogs/index'
+import { Route as AdminAdminReportsIdRouteImport } from './routes/_admin/admin/reports/$id'
 import { Route as AdminAdminProjectsIdRouteImport } from './routes/_admin/admin/projects/$id'
 import { Route as AdminAdminBlogsIdRouteImport } from './routes/_admin/admin/blogs/$id'
 
@@ -177,11 +178,6 @@ const AdminAdminSettingsRoute = AdminAdminSettingsRouteImport.update({
   path: '/admin/settings',
   getParentRoute: () => AdminRouteRoute,
 } as any)
-const AdminAdminReportsRoute = AdminAdminReportsRouteImport.update({
-  id: '/admin/reports',
-  path: '/admin/reports',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
 const AdminAdminPaymentsRoute = AdminAdminPaymentsRouteImport.update({
   id: '/admin/payments',
   path: '/admin/payments',
@@ -192,6 +188,11 @@ const AdminAdminChatRoute = AdminAdminChatRouteImport.update({
   path: '/admin/chat',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const AdminAdminReportsIndexRoute = AdminAdminReportsIndexRouteImport.update({
+  id: '/admin/reports/',
+  path: '/admin/reports/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const AdminAdminProjectsIndexRoute = AdminAdminProjectsIndexRouteImport.update({
   id: '/admin/projects/',
   path: '/admin/projects/',
@@ -200,6 +201,11 @@ const AdminAdminProjectsIndexRoute = AdminAdminProjectsIndexRouteImport.update({
 const AdminAdminBlogsIndexRoute = AdminAdminBlogsIndexRouteImport.update({
   id: '/admin/blogs/',
   path: '/admin/blogs/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminAdminReportsIdRoute = AdminAdminReportsIdRouteImport.update({
+  id: '/admin/reports/$id',
+  path: '/admin/reports/$id',
   getParentRoute: () => AdminRouteRoute,
 } as any)
 const AdminAdminProjectsIdRoute = AdminAdminProjectsIdRouteImport.update({
@@ -234,7 +240,6 @@ export interface FileRoutesByFullPath {
   '/blogs/': typeof BlogsIndexRoute
   '/admin/chat': typeof AdminAdminChatRoute
   '/admin/payments': typeof AdminAdminPaymentsRoute
-  '/admin/reports': typeof AdminAdminReportsRoute
   '/admin/settings': typeof AdminAdminSettingsRoute
   '/admin/support': typeof AdminAdminSupportRoute
   '/admin/templates': typeof AdminAdminTemplatesRoute
@@ -244,8 +249,10 @@ export interface FileRoutesByFullPath {
   '/chat/': typeof ClientChatIndexRoute
   '/admin/blogs/$id': typeof AdminAdminBlogsIdRoute
   '/admin/projects/$id': typeof AdminAdminProjectsIdRoute
+  '/admin/reports/$id': typeof AdminAdminReportsIdRoute
   '/admin/blogs/': typeof AdminAdminBlogsIndexRoute
   '/admin/projects/': typeof AdminAdminProjectsIndexRoute
+  '/admin/reports/': typeof AdminAdminReportsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -266,7 +273,6 @@ export interface FileRoutesByTo {
   '/blogs': typeof BlogsIndexRoute
   '/admin/chat': typeof AdminAdminChatRoute
   '/admin/payments': typeof AdminAdminPaymentsRoute
-  '/admin/reports': typeof AdminAdminReportsRoute
   '/admin/settings': typeof AdminAdminSettingsRoute
   '/admin/support': typeof AdminAdminSupportRoute
   '/admin/templates': typeof AdminAdminTemplatesRoute
@@ -276,8 +282,10 @@ export interface FileRoutesByTo {
   '/chat': typeof ClientChatIndexRoute
   '/admin/blogs/$id': typeof AdminAdminBlogsIdRoute
   '/admin/projects/$id': typeof AdminAdminProjectsIdRoute
+  '/admin/reports/$id': typeof AdminAdminReportsIdRoute
   '/admin/blogs': typeof AdminAdminBlogsIndexRoute
   '/admin/projects': typeof AdminAdminProjectsIndexRoute
+  '/admin/reports': typeof AdminAdminReportsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -303,7 +311,6 @@ export interface FileRoutesById {
   '/blogs/': typeof BlogsIndexRoute
   '/_admin/admin/chat': typeof AdminAdminChatRoute
   '/_admin/admin/payments': typeof AdminAdminPaymentsRoute
-  '/_admin/admin/reports': typeof AdminAdminReportsRoute
   '/_admin/admin/settings': typeof AdminAdminSettingsRoute
   '/_admin/admin/support': typeof AdminAdminSupportRoute
   '/_admin/admin/templates': typeof AdminAdminTemplatesRoute
@@ -313,8 +320,10 @@ export interface FileRoutesById {
   '/_client/chat/': typeof ClientChatIndexRoute
   '/_admin/admin/blogs/$id': typeof AdminAdminBlogsIdRoute
   '/_admin/admin/projects/$id': typeof AdminAdminProjectsIdRoute
+  '/_admin/admin/reports/$id': typeof AdminAdminReportsIdRoute
   '/_admin/admin/blogs/': typeof AdminAdminBlogsIndexRoute
   '/_admin/admin/projects/': typeof AdminAdminProjectsIndexRoute
+  '/_admin/admin/reports/': typeof AdminAdminReportsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -339,7 +348,6 @@ export interface FileRouteTypes {
     | '/blogs/'
     | '/admin/chat'
     | '/admin/payments'
-    | '/admin/reports'
     | '/admin/settings'
     | '/admin/support'
     | '/admin/templates'
@@ -349,8 +357,10 @@ export interface FileRouteTypes {
     | '/chat/'
     | '/admin/blogs/$id'
     | '/admin/projects/$id'
+    | '/admin/reports/$id'
     | '/admin/blogs/'
     | '/admin/projects/'
+    | '/admin/reports/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -371,7 +381,6 @@ export interface FileRouteTypes {
     | '/blogs'
     | '/admin/chat'
     | '/admin/payments'
-    | '/admin/reports'
     | '/admin/settings'
     | '/admin/support'
     | '/admin/templates'
@@ -381,8 +390,10 @@ export interface FileRouteTypes {
     | '/chat'
     | '/admin/blogs/$id'
     | '/admin/projects/$id'
+    | '/admin/reports/$id'
     | '/admin/blogs'
     | '/admin/projects'
+    | '/admin/reports'
   id:
     | '__root__'
     | '/'
@@ -407,7 +418,6 @@ export interface FileRouteTypes {
     | '/blogs/'
     | '/_admin/admin/chat'
     | '/_admin/admin/payments'
-    | '/_admin/admin/reports'
     | '/_admin/admin/settings'
     | '/_admin/admin/support'
     | '/_admin/admin/templates'
@@ -417,8 +427,10 @@ export interface FileRouteTypes {
     | '/_client/chat/'
     | '/_admin/admin/blogs/$id'
     | '/_admin/admin/projects/$id'
+    | '/_admin/admin/reports/$id'
     | '/_admin/admin/blogs/'
     | '/_admin/admin/projects/'
+    | '/_admin/admin/reports/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -625,13 +637,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdminSettingsRouteImport
       parentRoute: typeof AdminRouteRoute
     }
-    '/_admin/admin/reports': {
-      id: '/_admin/admin/reports'
-      path: '/admin/reports'
-      fullPath: '/admin/reports'
-      preLoaderRoute: typeof AdminAdminReportsRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
     '/_admin/admin/payments': {
       id: '/_admin/admin/payments'
       path: '/admin/payments'
@@ -646,6 +651,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdminChatRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/_admin/admin/reports/': {
+      id: '/_admin/admin/reports/'
+      path: '/admin/reports'
+      fullPath: '/admin/reports/'
+      preLoaderRoute: typeof AdminAdminReportsIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/_admin/admin/projects/': {
       id: '/_admin/admin/projects/'
       path: '/admin/projects'
@@ -658,6 +670,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/blogs'
       fullPath: '/admin/blogs/'
       preLoaderRoute: typeof AdminAdminBlogsIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/_admin/admin/reports/$id': {
+      id: '/_admin/admin/reports/$id'
+      path: '/admin/reports/$id'
+      fullPath: '/admin/reports/$id'
+      preLoaderRoute: typeof AdminAdminReportsIdRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     '/_admin/admin/projects/$id': {
@@ -680,7 +699,6 @@ declare module '@tanstack/react-router' {
 interface AdminRouteRouteChildren {
   AdminAdminChatRoute: typeof AdminAdminChatRoute
   AdminAdminPaymentsRoute: typeof AdminAdminPaymentsRoute
-  AdminAdminReportsRoute: typeof AdminAdminReportsRoute
   AdminAdminSettingsRoute: typeof AdminAdminSettingsRoute
   AdminAdminSupportRoute: typeof AdminAdminSupportRoute
   AdminAdminTemplatesRoute: typeof AdminAdminTemplatesRoute
@@ -688,14 +706,15 @@ interface AdminRouteRouteChildren {
   AdminAdminIndexRoute: typeof AdminAdminIndexRoute
   AdminAdminBlogsIdRoute: typeof AdminAdminBlogsIdRoute
   AdminAdminProjectsIdRoute: typeof AdminAdminProjectsIdRoute
+  AdminAdminReportsIdRoute: typeof AdminAdminReportsIdRoute
   AdminAdminBlogsIndexRoute: typeof AdminAdminBlogsIndexRoute
   AdminAdminProjectsIndexRoute: typeof AdminAdminProjectsIndexRoute
+  AdminAdminReportsIndexRoute: typeof AdminAdminReportsIndexRoute
 }
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminAdminChatRoute: AdminAdminChatRoute,
   AdminAdminPaymentsRoute: AdminAdminPaymentsRoute,
-  AdminAdminReportsRoute: AdminAdminReportsRoute,
   AdminAdminSettingsRoute: AdminAdminSettingsRoute,
   AdminAdminSupportRoute: AdminAdminSupportRoute,
   AdminAdminTemplatesRoute: AdminAdminTemplatesRoute,
@@ -703,8 +722,10 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminAdminIndexRoute: AdminAdminIndexRoute,
   AdminAdminBlogsIdRoute: AdminAdminBlogsIdRoute,
   AdminAdminProjectsIdRoute: AdminAdminProjectsIdRoute,
+  AdminAdminReportsIdRoute: AdminAdminReportsIdRoute,
   AdminAdminBlogsIndexRoute: AdminAdminBlogsIndexRoute,
   AdminAdminProjectsIndexRoute: AdminAdminProjectsIndexRoute,
+  AdminAdminReportsIndexRoute: AdminAdminReportsIndexRoute,
 }
 
 const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(

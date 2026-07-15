@@ -5,6 +5,7 @@ export const GetReportsByUserSchema = z.string().min(1, "User ID is required");
 export const GetReportsByBusinessSchema = z.string().min(1, "Business ID is required");
 export const SaveReportSchema = ReportSchema;
 export const DeleteReportSchema = z.string().min(1, "Report ID is required");
+export const GetReportSchema = z.string().min(1, "Report ID is required");
 
 export const SubmitAssessmentSchema = z.object({
   businessName: z.string().min(1, "Business name is required"),

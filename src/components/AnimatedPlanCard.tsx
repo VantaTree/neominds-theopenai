@@ -11,13 +11,14 @@ type Props = {
   animate?: boolean;
   onSelectPlan?: (planName: string) => void;
   isCurrent?: boolean;
+  disabled?: boolean;
 };
 
 const simWidth = 96;
 const simHeight = 144;
 const size = simWidth * simHeight;
 
-export default function AnimatedPlanCard({ plan, i, cardType = "default", animate = true, onSelectPlan, isCurrent }: Props) {
+export default function AnimatedPlanCard({ plan, i, cardType = "default", animate = true, onSelectPlan, isCurrent, disabled }: Props) {
   const [isWarping, setIsWarping] = useState(false);
 
   const cardRef = useRef<HTMLDivElement | null>(null);
@@ -513,9 +514,9 @@ export default function AnimatedPlanCard({ plan, i, cardType = "default", animat
       )}
 
       {cardType === "custom" ?
-        (<CustomPlanCard plan={plan} buttonRef={buttonRef} buttonCanvasRef={buttonCanvasRef} />)
+        (<CustomPlanCard plan={plan} buttonRef={buttonRef} buttonCanvasRef={buttonCanvasRef} disabled={disabled} />)
         : (
-          <PlanCard plan={plan} buttonRef={buttonRef} buttonCanvasRef={buttonCanvasRef} onSelectPlan={onSelectPlan} isCurrent={isCurrent} />
+          <PlanCard plan={plan} buttonRef={buttonRef} buttonCanvasRef={buttonCanvasRef} onSelectPlan={onSelectPlan} isCurrent={isCurrent} disabled={disabled} />
         )
       }
 

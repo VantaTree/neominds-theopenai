@@ -210,7 +210,10 @@ export default function BlogListPage({
                 : "bg-white border-mm-border text-mm-gray hover:text-mm-dark"
             }`}
           >
-            <Star size={12} className={showOnlyFeatured ? "fill-current" : ""} />
+            <Star
+              size={12}
+              className={showOnlyFeatured ? "fill-current" : ""}
+            />
             Featured Only
           </button>
 
@@ -269,9 +272,7 @@ export default function BlogListPage({
                   />
                   <div className="absolute top-3 right-3 flex items-center gap-1.5">
                     {b.featured && (
-                      <span
-                        className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider shadow-sm border flex items-center gap-0.5 bg-yellow-50 text-yellow-600 border-yellow-200"
-                      >
+                      <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider shadow-sm border flex items-center gap-0.5 bg-yellow-50 text-yellow-600 border-yellow-200">
                         <Star size={8} className="fill-current" />
                         Featured
                       </span>

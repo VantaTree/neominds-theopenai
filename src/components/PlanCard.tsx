@@ -6,9 +6,10 @@ type Props = {
   buttonCanvasRef: React.RefObject<HTMLCanvasElement | null>;
   onSelectPlan?: (planName: string) => void;
   isCurrent?: boolean;
+  disabled?: boolean;
 }
 
-const PlanCard = ({ plan, buttonRef, buttonCanvasRef, onSelectPlan, isCurrent }: Props) => {
+const PlanCard = ({ plan, buttonRef, buttonCanvasRef, onSelectPlan, isCurrent, disabled }: Props) => {
   return (
     <div className="p-6 sm:p-7 flex flex-col flex-1 relative z-10">
         <p
@@ -68,11 +69,12 @@ const PlanCard = ({ plan, buttonRef, buttonCanvasRef, onSelectPlan, isCurrent }:
           ref={buttonRef}
           onClick={(e) => {
             e.preventDefault();
-            if (isCurrent) return;
+            if (isCurrent || disabled) return;
             if (onSelectPlan) onSelectPlan(plan.name);
           }}
+          disabled={isCurrent || disabled}
           className={`flex items-center justify-center rounded-full py-3 text-xs font-bold uppercase tracking-widest transition-all duration-200 relative overflow-hidden ${
-            isCurrent ? "opacity-50 cursor-not-allowed" : "hover:opacity-90 cursor-pointer"
+            (isCurrent || disabled) ? "opacity-50 cursor-not-allowed" : "hover:opacity-90 cursor-pointer"
           }`}
           style={{
             background: plan.highlight ? "#fff" : "#FF5924",
