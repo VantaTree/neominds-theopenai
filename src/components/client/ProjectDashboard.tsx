@@ -307,6 +307,8 @@ export function ProjectDashboard({
             <option value="Pending">Pending</option>
             <option value="On Hold">On Hold</option>
             <option value="Cancelled">Cancelled</option>
+            <option value="User Draft">User Draft</option>
+            <option value="Requested">Requested</option>
           </select>
         </div>
 

@@ -11,6 +11,8 @@ export const ProjectStatusEnum = z.enum([
   "Pending",
   "On Hold",
   "Cancelled",
+  "User Draft",
+  "Requested",
 ]);
 export type ProjectStatus = z.infer<typeof ProjectStatusEnum>;
 
@@ -37,6 +39,7 @@ export const ProjectSchema = z.object({
   priority: ProjectPriorityEnum.default("Medium"),
   notes: z.string().default(""),
   updates: z.array(ProjectUpdateSchema).default([]),
+  assets: z.array(z.string()).default([]),
   completedAt: TimestampSchema.nullable().optional(),
   deadline: TimestampSchema.nullable().optional(),
   startDate: DateField,

@@ -8,6 +8,10 @@ export class ProjectService {
     return this.projectRepo.getProjects();
   }
 
+  async getProjectById(projectId: string): Promise<Project | null> {
+    return this.projectRepo.getProjectById(projectId);
+  }
+
   async saveProject(project: Project): Promise<void> {
     project.updatedAt = new Date();
     await this.projectRepo.saveProject(project);

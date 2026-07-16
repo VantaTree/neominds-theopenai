@@ -277,6 +277,17 @@ function ProjectsPage() {
   const [statusFilter, setStatusFilter] = useState("All Status");
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [showCompleted, setShowCompleted] = useState(false);
+  const [previousShowCompleted, setPreviousShowCompleted] = useState(false);
+
+  const handleSetStatusFilter = (newStatus: string) => {
+    if (newStatus === "Completed" && statusFilter !== "Completed") {
+      setPreviousShowCompleted(showCompleted);
+      setShowCompleted(true);
+    } else if (newStatus !== "Completed" && statusFilter === "Completed") {
+      setShowCompleted(previousShowCompleted);
+    }
+    setStatusFilter(newStatus);
+  };
 
   const [isDomainOpen, setIsDomainOpen] = useState(false);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
@@ -539,9 +550,10 @@ function ProjectsPage() {
   const clearAllFilters = () => {
     setSearchQuery("");
     setDomainFilter("All Domains");
-    setStatusFilter("All Status");
+    handleSetStatusFilter("All Status");
     setSelectedServices([]);
     setShowCompleted(false);
+    setPreviousShowCompleted(false);
   };
 
   const hasActiveFilters =
@@ -1104,23 +1116,29 @@ function ProjectsPage() {
                       bg: "var(--color-mm-subtle)",
                       color: "var(--color-mm-gray)",
                     },
+                    {
+                      label: "User Draft",
+                      bg: "var(--color-mm-subtle)",
+                      color: "var(--color-mm-gray)",
+                    },
+                    {
+                      label: "Requested",
+                      bg: "rgba(59, 130, 246, 0.1)",
+                      color: "var(--color-mm-blue)",
+                    },
                   ].map((opt) => {
                     const count =
                       opt.label === "All Status"
                         ? projectList.length
                         : projectList.filter((p) => {
-                            let status:
-                              "Pending" | "In Progress" | "Completed" =
-                              "In Progress";
-                            if (p.progress === 0) status = "Pending";
-                            else if (p.progress === 100) status = "Completed";
+                            const status = p.status || (p.progress === 100 ? "Completed" : p.progress === 0 ? "Pending" : "In Progress");
                             return status === opt.label;
                           }).length;
                     return (
                       <div
                         key={opt.label}
                         onClick={() => {
-                          setStatusFilter(opt.label);
+                          handleSetStatusFilter(opt.label);
                           setIsStatusOpen(false);
                         }}
                         style={{
@@ -1255,7 +1273,12 @@ function ProjectsPage() {
               <input
                 type="checkbox"
                 checked={showCompleted}
-                onChange={(e) => setShowCompleted(e.target.checked)}
+                onChange={(e) => {
+                  setShowCompleted(e.target.checked);
+                  if (statusFilter !== "Completed") {
+                    setPreviousShowCompleted(e.target.checked);
+                  }
+                }}
                 className="w-4 h-4 accent-mm-orange rounded border-mm-border text-mm-orange focus:ring-mm-orange"
               />
               <span className="text-sm font-bold text-mm-gray/80">Show Completed</span>
@@ -1297,7 +1320,7 @@ function ProjectsPage() {
             {statusFilter !== "All Status" && (
               <span className="inline-flex items-center gap-1 bg-mm-blue/10 text-mm-blue text-xs font-medium px-2.5 py-1 rounded-lg animate-in fade-in duration-100">
                 Status: {statusFilter}
-                <button onClick={() => setStatusFilter("All Status")} className="hover:text-mm-red cursor-pointer">
+                <button onClick={() => handleSetStatusFilter("All Status")} className="hover:text-mm-red cursor-pointer">
                   <X size={10} />
                 </button>
               </span>
@@ -2124,6 +2147,8 @@ function ProjectsPage() {
                     <option value="On Hold">On Hold</option>
                     <option value="Completed">Completed</option>
                     <option value="Cancelled">Cancelled</option>
+                    <option value="User Draft">User Draft</option>
+                    <option value="Requested">Requested</option>
                   </select>
                   {newProjectErrors.status && (
                     <div

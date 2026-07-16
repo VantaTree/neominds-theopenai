@@ -925,6 +925,8 @@ function ProgressTab({
                   "Completed",
                   "On Hold",
                   "Cancelled",
+                  "User Draft",
+                  "Requested",
                 ].map((s) => (
                   <option key={s}>{s}</option>
                 ))}

@@ -21,6 +21,11 @@ export class ProjectRepository {
     return snap.docs.map((d) => d.data());
   }
 
+  async getProjectById(projectId: string): Promise<Project | null> {
+    const snap = await this.collection.doc(projectId).get();
+    return snap.exists ? snap.data() || null : null;
+  }
+
   async saveProject(project: Project): Promise<void> {
     await this.collection.doc(project.id).set(project, { merge: true });
   }

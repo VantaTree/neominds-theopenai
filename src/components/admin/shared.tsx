@@ -148,6 +148,8 @@ export function StatusBadge({ status }: { status: string }) {
     Danger: { bg: "rgba(239, 83, 80, 0.1)", text: "var(--color-mm-red)" },
     Trial: { bg: "var(--color-mm-subtle)", text: "var(--color-mm-gray)" },
     Cancelled: { bg: "var(--color-mm-subtle)", text: "var(--color-mm-gray)" },
+    "User Draft": { bg: "var(--color-mm-subtle)", text: "var(--color-mm-gray)" },
+    Requested: { bg: "rgba(59, 130, 246, 0.1)", text: "var(--color-mm-blue)" },
     Inactive: { bg: "var(--color-mm-subtle)", text: "var(--color-mm-gray)" },
   };
   const c = map[status] ?? map["Pending"];

@@ -15,6 +15,7 @@ import {
   getProjectsFn,
   getProjectsByBusinessFn,
   saveProjectFn,
+  clientSaveProjectFn,
   deleteProjectFn,
   getPaymentsFn,
   savePaymentsFn,
@@ -231,6 +232,27 @@ export const useSaveProject = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: dbKeys.projects() });
+    },
+  });
+};
+
+export const useClientSaveProject = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (project: Project) => {
+      const res = await clientSaveProjectFn({ data: project as any });
+      return res;
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: dbKeys.projects() });
+      const businessId = typeof variables.businessId === "object" && variables.businessId !== null
+        ? (variables.businessId as any).id
+        : String(variables.businessId || "");
+      if (businessId) {
+        queryClient.invalidateQueries({
+          queryKey: dbKeys.projectsByBusiness(businessId),
+        });
+      }
     },
   });
 };

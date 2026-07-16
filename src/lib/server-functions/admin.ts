@@ -207,6 +207,7 @@ export const seedDatabaseFn = createServerFn({ method: "POST" })
         priority: p.priority,
         notes: p.notes,
         updates: [],
+        assets: [],
         startDate: new Date(p.startDate),
         createdAt: new Date(p.joinedOn),
         updatedAt: new Date(),

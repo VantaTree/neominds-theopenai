@@ -28,6 +28,7 @@ export {
   saveProjectFn,
   deleteProjectFn,
   getProjectsByBusinessFn,
+  clientSaveProjectFn,
 } from "./server-functions/projects";
 
 export {
