@@ -1,7 +1,7 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth, onAuthStateChanged, User, sendPasswordResetEmail, confirmPasswordReset } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 
 // 1. Safe ESM polyfill for Server-Side rendering environment only
 if (typeof window === 'undefined') {
@@ -43,15 +43,33 @@ if (isFirebaseConfigured) {
   );
 }
 
+export async function deleteFileFromStorage(fileUrl: string): Promise<void> {
+  if (!isFirebaseConfigured || !storage) {
+    console.warn("Firebase not configured. Mocking file deletion for URL:", fileUrl);
+    return;
+  }
+  if (!fileUrl || typeof fileUrl !== "string" || !fileUrl.startsWith("http")) {
+    return;
+  }
+  try {
+    const fileRef = ref(storage, fileUrl);
+    await deleteObject(fileRef);
+    console.log(`Successfully deleted file from storage: ${fileUrl}`);
+  } catch (error) {
+    console.error(`Failed to delete file from storage (${fileUrl}):`, error);
+  }
+}
+
 export async function uploadFileToStorage(
   file: File,
-  entityType: "users" | "businesses" | "blogs",
+  entityType: "users" | "businesses" | "blogs" | "projects",
   entityId: string,
-  folderName: "profileImg" | "businessImg" | "blogImg"
+  folderName: "profileImg" | "businessImg" | "blogImg" | "projectImg",
+  oldImageUrl?: string
 ): Promise<string> {
   if (!isFirebaseConfigured || !storage) {
     console.warn("Firebase not configured. Using fallback local base64 for preview.");
-    return new Promise((resolve, reject) => {
+    const mockUrl = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onloadend = () => {
         if (typeof reader.result === "string") {
@@ -63,6 +81,11 @@ export async function uploadFileToStorage(
       reader.onerror = () => reject(reader.error);
       reader.readAsDataURL(file);
     });
+
+    if (oldImageUrl) {
+      await deleteFileFromStorage(oldImageUrl);
+    }
+    return mockUrl;
   }
 
   const fileExtension = file.name.split(".").pop() || "png";
@@ -73,6 +96,11 @@ export async function uploadFileToStorage(
   const storageRef = ref(storage, `${entityType}/${entityId}/${folderName}/${filename}`);
   await uploadBytes(storageRef, file);
   const downloadUrl = await getDownloadURL(storageRef);
+
+  if (oldImageUrl) {
+    await deleteFileFromStorage(oldImageUrl);
+  }
+
   return downloadUrl;
 }
 

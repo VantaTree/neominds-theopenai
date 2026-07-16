@@ -105,6 +105,7 @@ function UsersPage() {
           "users",
           editingUser.id,
           "profileImg",
+          editingUser.image || undefined
         );
         setEditForm((prev: any) => ({ ...prev, image: url }));
       } catch (err: any) {
@@ -153,6 +154,7 @@ function UsersPage() {
           "businesses",
           editingBusiness.id,
           "businessImg",
+          editingBusiness.image || undefined
         );
         setEditBusinessForm((prev: any) => ({ ...prev, image: url }));
       } catch (err: any) {
@@ -995,7 +997,7 @@ function UsersPage() {
             {activeTab === "Account" && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">
                 <button
-                  onClick={handleResetPassword}
+                  onClick={() => handleResetPassword()}
                   className="w-full text-left p-5 rounded-xl border hover:opacity-80 transition-opacity cursor-pointer"
                   style={{
                     borderColor: "var(--color-mm-border)",

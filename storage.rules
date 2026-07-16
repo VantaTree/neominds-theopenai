@@ -37,5 +37,14 @@ service firebase.storage {
       allow read: if true;
       allow write: if isAdmin();
     }
+
+    // Projects images/assets
+    match /projects/{projectId}/projectImg/{filename} {
+      allow read: if true;
+      allow write: if isAdmin() || (request.auth != null && (
+        !firestore.exists(/databases/(default)/documents/projects/$(projectId)) ||
+        isBusinessOwner(firestore.get(/databases/(default)/documents/projects/$(projectId)).data.businessId)
+      ));
+    }
   }
 }

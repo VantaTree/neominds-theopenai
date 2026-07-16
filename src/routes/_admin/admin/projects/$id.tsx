@@ -26,6 +26,7 @@ import {
   PlanBadge,
 } from "@/components/admin/shared";
 import { getProjectsFn, saveProjectFn, getUsersFn, getBusinessesFn } from "@/lib/server-functions";
+import { uploadFileToStorage, deleteFileFromStorage } from "@/lib/firebase";
 import type {
   Project,
   ProjectStatus,
@@ -69,6 +70,7 @@ function ProjectDetail() {
   const [activeProject, setActiveProject] = useState<Project | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [parentLightboxImage, setParentLightboxImage] = useState<string | null>(null);
 
   useEffect(() => {
     setProjectList(initialProjects);
@@ -325,20 +327,23 @@ function ProjectDetail() {
         ))}
       </div>
 
-      {tab === "overview" && <OverviewTab project={activeProject} />}
-      {tab === "progress" && (
+      {tab === "overview" && activeProject && (
+        <OverviewTab project={activeProject} onViewImage={setParentLightboxImage} />
+      )}
+      {tab === "progress" && activeProject && (
         <ProgressTab
           project={activeProject}
           onDetailsChange={onChange}
           onMilestonesChange={handleDirectSave}
+          onViewImage={setParentLightboxImage}
         />
       )}
-      {tab === "detailed" && (
-        <DetailedTab project={activeProject} />
+      {tab === "detailed" && activeProject && (
+        <DetailedTab project={activeProject} onViewImage={setParentLightboxImage} />
       )}
 
       {/* Floating Save Changes Bar */}
-      {isDirty && (
+      {isDirty && activeProject && (
         <div
           className="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center justify-between gap-6 px-6 py-4 rounded-2xl shadow-xl border border-mm-orange/20 animate-in slide-in-from-bottom-4"
           style={{
@@ -395,12 +400,43 @@ function ProjectDetail() {
           {toast}
         </div>
       )}
+
+      {/* Lightbox Modal */}
+      {parentLightboxImage && (
+        <div
+          className="fixed inset-0 z-120 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setParentLightboxImage(null)}
+        >
+          <div
+            className="relative max-w-4xl max-h-[85vh] overflow-hidden rounded-2xl shadow-2xl bg-white border border-mm-border"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setParentLightboxImage(null)}
+              className="absolute top-3 right-3 p-2 bg-white/90 hover:bg-white text-mm-dark rounded-full shadow-md z-10 transition-colors cursor-pointer"
+            >
+              <X size={18} />
+            </button>
+            <img
+              src={parentLightboxImage}
+              alt="Project asset preview"
+              className="w-full h-auto max-h-[80vh] object-contain rounded-2xl"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 /* ============ Overview ============ */
-function OverviewTab({ project }: { project: Project }) {
+function OverviewTab({
+  project,
+  onViewImage,
+}: {
+  project: Project;
+  onViewImage: (url: string) => void;
+}) {
   const biz =
     typeof project.businessId === "object" && project.businessId !== null
       ? project.businessId
@@ -592,6 +628,38 @@ function OverviewTab({ project }: { project: Project }) {
           )}
         </div>
       </Card>
+
+      {/* Project Images & Assets (View Only) */}
+      {project.assets && project.assets.length > 0 && (
+        <Card>
+          <h3
+            className="font-bold text-base mb-4 pb-2 border-b border-mm-border"
+            style={{ color: "var(--color-mm-dark)" }}
+          >
+            Project Images & Assets
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 animate-in fade-in">
+            {project.assets.map((url, idx) => (
+              <div
+                key={url + idx}
+                className="group relative aspect-square rounded-2xl overflow-hidden border border-mm-border bg-mm-subtle/30 transition-all hover:shadow-md cursor-pointer"
+                onClick={() => onViewImage(url)}
+              >
+                <img
+                  src={url}
+                  alt={`Asset ${idx + 1}`}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <div className="p-2 bg-white/95 text-mm-dark rounded-xl shadow transition-colors">
+                    <Eye size={16} />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
     </div>
   );
 }
@@ -724,16 +792,60 @@ function ProgressTab({
   project,
   onDetailsChange,
   onMilestonesChange,
+  onViewImage,
 }: {
   project: Project;
   onDetailsChange: (p: Project) => void;
   onMilestonesChange: (p: Project) => void;
+  onViewImage: (url: string) => void;
 }) {
   const [newMsg, setNewMsg] = useState("");
   const [newDesig, setNewDesig] = useState("Manager");
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editMsg, setEditMsg] = useState("");
   const [editDesig, setEditDesig] = useState("");
+
+  const [imageUploading, setImageUploading] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImageUploading(true);
+    try {
+      const url = await uploadFileToStorage(file, "projects", project.id, "projectImg");
+      const currentAssets = project.assets || [];
+      onDetailsChange({
+        ...project,
+        assets: [...currentAssets, url],
+      });
+      setToast("✓ Image uploaded successfully!");
+    } catch (err) {
+      console.error("Image upload failed:", err);
+      setToast("✗ Failed to upload image.");
+    } finally {
+      setImageUploading(false);
+    }
+  };
+
+  const handleRemoveImage = async (urlToRemove: string) => {
+    if (window.confirm("Are you sure you want to remove this image?")) {
+      await deleteFileFromStorage(urlToRemove);
+      const currentAssets = project.assets || [];
+      onDetailsChange({
+        ...project,
+        assets: currentAssets.filter((url) => url !== urlToRemove),
+      });
+      setToast("✓ Image removed successfully!");
+    }
+  };
+
+  useEffect(() => {
+    if (toast) {
+      const t = setTimeout(() => setToast(null), 3000);
+      return () => clearTimeout(t);
+    }
+  }, [toast]);
 
   const toggleService = (s: string) => {
     const nextServices = project.services.includes(s)
@@ -788,182 +900,255 @@ function ProgressTab({
   return (
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-start">
       {/* Left Column: Project Configuration Details */}
-      <Card className="space-y-6 border border-mm-border rounded-2xl bg-white p-6 shadow-sm">
-        <div className="flex items-center justify-between pb-3 border-b border-mm-border">
-          <h3
-            className="font-bold text-base"
-            style={{ color: "var(--color-mm-dark)" }}
-          >
-            Project Configuration
-          </h3>
-          <span className="text-xs text-mm-gray font-medium">
-            ID: {project.id}
-          </span>
-        </div>
-        <div className="space-y-4">
-          <Field label="Project Name" error={nameError}>
-            <input
-              className="input-field"
-              value={project.name}
-              onChange={(e) => onDetailsChange({ ...project, name: e.target.value })}
-              style={
-                nameError ? { borderColor: "var(--color-mm-red)" } : undefined
-              }
-            />
-            {nameError && (
-              <p
-                className="text-xs mt-1"
-                style={{ color: "var(--color-mm-red)" }}
-              >
-                Required
-              </p>
-            )}
-          </Field>
-          <Field label="Project Domain">
-            <select
-              className="input-field"
-              value={project.domain}
-              onChange={(e) =>
-                onDetailsChange({ ...project, domain: e.target.value as any })
-              }
+      <div className="space-y-6">
+        <Card className="space-y-6 border border-mm-border rounded-2xl bg-white p-6 shadow-sm">
+          <div className="flex items-center justify-between pb-3 border-b border-mm-border">
+            <h3
+              className="font-bold text-base"
+              style={{ color: "var(--color-mm-dark)" }}
             >
-              {["Website", "Marketing", "Automation"].map((d) => (
-                <option key={d}>{d}</option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Services">
-            <div className="flex flex-wrap gap-2">
-              {["Website", "Marketing", "SEO", "Sales", "Automation"].map(
-                (s) => {
-                  const on = project.services.includes(s);
-                  return (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => toggleService(s)}
-                      className="px-3 py-1.5 rounded-full text-xs font-semibold transition-colors cursor-pointer"
-                      style={
-                        on
-                          ? {
-                              background:
-                                "color-mix(in oklch, var(--color-mm-orange) 8%, white)",
-                              border: "1px solid var(--color-mm-orange)",
-                              color: "var(--color-mm-orange)",
-                            }
-                          : {
-                              background: "var(--color-mm-subtle)",
-                              border: "1px solid var(--color-mm-border)",
-                              color: "var(--color-mm-gray)",
-                            }
-                      }
-                    >
-                      {s}
-                    </button>
-                  );
-                },
+              Project Configuration
+            </h3>
+            <span className="text-xs text-mm-gray font-medium">
+              ID: {project.id}
+            </span>
+          </div>
+          <div className="space-y-4">
+            <Field label="Project Name" error={nameError}>
+              <input
+                className="input-field"
+                value={project.name}
+                onChange={(e) => onDetailsChange({ ...project, name: e.target.value })}
+                style={
+                  nameError ? { borderColor: "var(--color-mm-red)" } : undefined
+                }
+              />
+              {nameError && (
+                <p
+                  className="text-xs mt-1"
+                  style={{ color: "var(--color-mm-red)" }}
+                >
+                  Required
+                </p>
               )}
+            </Field>
+            <Field label="Project Domain">
+              <select
+                className="input-field"
+                value={project.domain}
+                onChange={(e) =>
+                  onDetailsChange({ ...project, domain: e.target.value as any })
+                }
+              >
+                {["Website", "Marketing", "Automation"].map((d) => (
+                  <option key={d}>{d}</option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Services">
+              <div className="flex flex-wrap gap-2">
+                {["Website", "Marketing", "SEO", "Sales", "Automation"].map(
+                  (s) => {
+                    const on = project.services.includes(s);
+                    return (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => toggleService(s)}
+                        className="px-3 py-1.5 rounded-full text-xs font-semibold transition-colors cursor-pointer"
+                        style={
+                          on
+                            ? {
+                                background:
+                                  "color-mix(in oklch, var(--color-mm-orange) 8%, white)",
+                                border: "1px solid var(--color-mm-orange)",
+                                color: "var(--color-mm-orange)",
+                              }
+                            : {
+                                background: "var(--color-mm-subtle)",
+                                border: "1px solid var(--color-mm-border)",
+                                color: "var(--color-mm-gray)",
+                              }
+                        }
+                      >
+                        {s}
+                      </button>
+                    );
+                  },
+                )}
+              </div>
+            </Field>
+            <Field label="Project Manager / Assignee" error={assigneeError}>
+              <input
+                className="input-field"
+                value={project.assignee}
+                onChange={(e) => onDetailsChange({ ...project, assignee: e.target.value })}
+                style={
+                  assigneeError
+                    ? { borderColor: "var(--color-mm-red)" }
+                    : undefined
+                }
+              />
+              {assigneeError && (
+                <p
+                  className="text-xs mt-1"
+                  style={{ color: "var(--color-mm-red)" }}
+                >
+                  Required
+                </p>
+              )}
+            </Field>
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Start Date">
+                <input
+                  type="date"
+                  className="input-field"
+                  value={toInputDate(project.startDate)}
+                  onChange={(e) =>
+                    onDetailsChange({ ...project, startDate: new Date(e.target.value) })
+                  }
+                />
+              </Field>
+              <Field label="Deadline">
+                <input
+                  type="date"
+                  className="input-field"
+                  value={toInputDate(project.deadline)}
+                  onChange={(e) =>
+                    onDetailsChange({
+                      ...project,
+                      deadline: e.target.value ? new Date(e.target.value) : null,
+                    })
+                  }
+                />
+              </Field>
             </div>
-          </Field>
-          <Field label="Project Manager / Assignee" error={assigneeError}>
-            <input
-              className="input-field"
-              value={project.assignee}
-              onChange={(e) => onDetailsChange({ ...project, assignee: e.target.value })}
-              style={
-                assigneeError
-                  ? { borderColor: "var(--color-mm-red)" }
-                  : undefined
-              }
-            />
-            {assigneeError && (
-              <p
-                className="text-xs mt-1"
-                style={{ color: "var(--color-mm-red)" }}
-              >
-                Required
-              </p>
-            )}
-          </Field>
-          <div className="grid grid-cols-2 gap-4">
-            <Field label="Start Date">
-              <input
-                type="date"
-                className="input-field"
-                value={toInputDate(project.startDate)}
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Status">
+                <select
+                  className="input-field"
+                  value={project.status}
+                  onChange={(e) =>
+                    onDetailsChange({ ...project, status: e.target.value as any })
+                  }
+                >
+                  {[
+                    "Pending",
+                    "In Progress",
+                    "Completed",
+                    "On Hold",
+                    "Cancelled",
+                    "User Draft",
+                    "Requested",
+                  ].map((s) => (
+                    <option key={s}>{s}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Priority">
+                <select
+                  className="input-field"
+                  value={project.priority}
+                  onChange={(e) =>
+                    onDetailsChange({ ...project, priority: e.target.value as any })
+                  }
+                >
+                  {["Low", "Medium", "High"].map((p) => (
+                    <option key={p}>{p}</option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+            <Field label="Description">
+              <textarea
+                className="input-field min-h-[100px]"
+                value={project.description}
                 onChange={(e) =>
-                  onDetailsChange({ ...project, startDate: new Date(e.target.value) })
+                  onDetailsChange({ ...project, description: e.target.value })
                 }
               />
             </Field>
-            <Field label="Deadline">
-              <input
-                type="date"
-                className="input-field"
-                value={toInputDate(project.deadline)}
-                onChange={(e) =>
-                  onDetailsChange({
-                    ...project,
-                    deadline: e.target.value ? new Date(e.target.value) : null,
-                  })
-                }
+            <Field label="Notes">
+              <textarea
+                className="input-field min-h-[80px]"
+                value={project.notes}
+                onChange={(e) => onDetailsChange({ ...project, notes: e.target.value })}
               />
             </Field>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <Field label="Status">
-              <select
-                className="input-field"
-                value={project.status}
-                onChange={(e) =>
-                  onDetailsChange({ ...project, status: e.target.value as any })
-                }
-              >
-                {[
-                  "Pending",
-                  "In Progress",
-                  "Completed",
-                  "On Hold",
-                  "Cancelled",
-                  "User Draft",
-                  "Requested",
-                ].map((s) => (
-                  <option key={s}>{s}</option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Priority">
-              <select
-                className="input-field"
-                value={project.priority}
-                onChange={(e) =>
-                  onDetailsChange({ ...project, priority: e.target.value as any })
-                }
-              >
-                {["Low", "Medium", "High"].map((p) => (
-                  <option key={p}>{p}</option>
-                ))}
-              </select>
-            </Field>
+        </Card>
+
+        {/* Project Images & Assets Card */}
+        <Card className="border border-mm-border rounded-2xl bg-white p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-4 pb-2 border-b border-mm-border animate-in fade-in">
+            <h3
+              className="font-bold text-base"
+              style={{ color: "var(--color-mm-dark)" }}
+            >
+              Project Images & Assets
+            </h3>
+            <label className="px-4 py-2 bg-white border border-mm-border hover:bg-mm-subtle text-mm-gray font-medium rounded-xl transition-colors inline-flex items-center gap-2 text-sm cursor-pointer shadow-sm">
+              {imageUploading ? (
+                <Loader2 size={14} className="animate-spin text-mm-orange" />
+              ) : (
+                <Plus size={14} className="text-mm-orange" />
+              )}
+              {imageUploading ? "Uploading..." : "Add Image"}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleImageUpload}
+                disabled={imageUploading}
+              />
+            </label>
           </div>
-          <Field label="Description">
-            <textarea
-              className="input-field min-h-[100px]"
-              value={project.description}
-              onChange={(e) =>
-                onDetailsChange({ ...project, description: e.target.value })
-              }
-            />
-          </Field>
-          <Field label="Notes">
-            <textarea
-              className="input-field min-h-[80px]"
-              value={project.notes}
-              onChange={(e) => onDetailsChange({ ...project, notes: e.target.value })}
-            />
-          </Field>
-        </div>
-      </Card>
+
+          {(!project.assets || project.assets.length === 0) ? (
+            <div
+              className="flex flex-col items-center justify-center p-8 border border-dashed rounded-2xl text-center"
+              style={{ borderColor: "var(--color-mm-border)", background: "var(--color-mm-subtle)/10" }}
+            >
+              <UploadCloud size={32} className="text-mm-gray mb-2" />
+              <p className="text-sm font-semibold text-mm-dark">No images uploaded yet</p>
+              <p className="text-xs text-mm-gray mt-1">Upload project screenshots, designs, or mockups</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              {project.assets.map((url, idx) => (
+                <div
+                  key={url + idx}
+                  className="group relative aspect-square rounded-2xl overflow-hidden border border-mm-border bg-mm-subtle/30 transition-all hover:shadow-md"
+                >
+                  <img
+                    src={url}
+                    alt={`Asset ${idx + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => onViewImage(url)}
+                      className="p-2 bg-white/95 hover:bg-white text-mm-dark rounded-xl shadow transition-colors cursor-pointer"
+                      title="View Image"
+                    >
+                      <Eye size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveImage(url)}
+                      className="p-2 bg-red-600 hover:bg-red-700 text-white rounded-xl shadow transition-colors cursor-pointer"
+                      title="Remove Image"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      </div>
 
       {/* Right Column: Milestones & Progress Slider */}
       <div className="space-y-6">
@@ -1185,168 +1370,11 @@ function ProgressTab({
 /* ============ Detailed Info ============ */
 function DetailedTab({
   project,
+  onViewImage,
 }: {
   project: Project;
+  onViewImage: (url: string) => void;
 }) {
-  const [toast, setToast] = useState<string | null>(null);
-
-  const [filesList, setFilesList] = useState([
-    {
-      id: 1,
-      name: "Project_Requirement.pdf",
-      type: "PDF",
-      size: "2.4 MB",
-      date: "Uploaded May 15, 2024",
-      by: "by John Smith",
-      icon: FileText,
-      color: "var(--color-mm-red)",
-      tagBg: "rgba(224, 86, 36, 0.1)",
-      tagColor: "var(--color-mm-red)",
-    },
-    {
-      id: 2,
-      name: "Brand_Guidelines.pdf",
-      type: "PDF",
-      size: "1.8 MB",
-      date: "Uploaded May 18, 2024",
-      by: "by Sarah Wilson",
-      icon: FileText,
-      color: "var(--color-mm-red)",
-      tagBg: "rgba(224, 86, 36, 0.1)",
-      tagColor: "var(--color-mm-red)",
-    },
-    {
-      id: 3,
-      name: "Content_Document.docx",
-      type: "DOC",
-      size: "3.2 MB",
-      date: "Uploaded May 20, 2024",
-      by: "by Mike Johnson",
-      icon: FileText,
-      color: "var(--color-mm-blue)",
-      tagBg: "rgba(59, 130, 246, 0.1)",
-      tagColor: "var(--color-mm-blue)",
-    },
-    {
-      id: 4,
-      name: "Project_Timeline.xlsx",
-      type: "XLS",
-      size: "1.2 MB",
-      date: "Uploaded May 22, 2024",
-      by: "by John Smith",
-      icon: FileText,
-      color: "var(--color-mm-green)",
-      tagBg: "rgba(92, 177, 62, 0.1)",
-      tagColor: "var(--color-mm-green)",
-    },
-    {
-      id: 5,
-      name: "Design_Brief.pdf",
-      type: "PDF",
-      size: "0.8 MB",
-      date: "Uploaded May 25, 2024",
-      by: "by Sarah Wilson",
-      icon: FileText,
-      color: "var(--color-mm-red)",
-      tagBg: "rgba(224, 86, 36, 0.1)",
-      tagColor: "var(--color-mm-red)",
-    },
-    {
-      id: 6,
-      name: "Meeting_Notes.docx",
-      type: "DOC",
-      size: "0.3 MB",
-      date: "Uploaded May 28, 2024",
-      by: "by Mike Johnson",
-      icon: FileText,
-      color: "var(--color-mm-blue)",
-      tagBg: "rgba(59, 130, 246, 0.1)",
-      tagColor: "var(--color-mm-blue)",
-    },
-  ]);
-  const [isFileUploadOpen, setIsFileUploadOpen] = useState(false);
-  const [isFileModalOpen, setIsFileModalOpen] = useState(false);
-  const [fileSearch, setFileSearch] = useState("");
-  const [fileFilter, setFileFilter] = useState("All Files");
-  const [previewFile, setPreviewFile] = useState<any>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [downloadingFile, setDownloadingFile] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (toast) {
-      const t = setTimeout(() => setToast(null), 3000);
-      return () => clearTimeout(t);
-    }
-  }, [toast]);
-
-
-
-  const handleDownload = (filename: string) => {
-    setDownloadingFile(filename);
-    setTimeout(() => {
-      const blob = new Blob([`Dummy PDF content for ${filename}`], {
-        type: "application/pdf",
-      });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      setDownloadingFile(null);
-      setToast(`✓ File downloaded successfully!`);
-    }, 1000);
-  };
-
-  const filteredModalFiles = filesList.filter((f) => {
-    if (fileFilter === "PDF" && f.type !== "PDF") return false;
-    if (fileFilter === "Documents" && f.type !== "DOC") return false;
-    if (fileFilter === "Spreadsheets" && f.type !== "XLS") return false;
-    if (fileFilter === "Images" && f.type !== "IMG") return false;
-    if (
-      fileSearch.trim() &&
-      !f.name.toLowerCase().includes(fileSearch.toLowerCase())
-    )
-      return false;
-    return true;
-  });
-
-  const handleDeleteFile = (id: number) => {
-    setFilesList(filesList.filter((f) => f.id !== id));
-    setToast("✓ File deleted successfully!");
-  };
-
-  const handleUpload = () => {
-    if (!selectedFile) return;
-    setIsUploading(true);
-    setTimeout(() => {
-      const newFile = {
-        id: Date.now(),
-        name: selectedFile.name,
-        type: selectedFile.name.endsWith(".pdf")
-          ? "PDF"
-          : selectedFile.name.endsWith(".docx")
-            ? "DOC"
-            : "FILE",
-        size: (selectedFile.size / 1024 / 1024).toFixed(1) + " MB",
-        date: "Uploaded Today",
-        by: "by You",
-        icon: FileText,
-        color: "var(--color-mm-gray)",
-        tagBg: "var(--color-mm-subtle)",
-        tagColor: "var(--color-mm-gray)",
-      };
-      setFilesList([newFile, ...filesList]);
-      setIsUploading(false);
-      setIsFileUploadOpen(false);
-      setSelectedFile(null);
-      setToast("✓ File uploaded successfully!");
-    }, 1500);
-  };
-
   const { users = [], businesses = [] } = Route.useLoaderData();
 
   const biz =
@@ -1548,77 +1576,54 @@ function DetailedTab({
         </p>
       </Card>
 
-      <Card>
-        <h3
-          className="font-semibold mb-3"
-          style={{ color: "var(--color-mm-dark)" }}
-        >
-          Files & Documents
-        </h3>
-        <div className="space-y-1">
-          {filesList
-            .map((f) => {
-              const Icon = f.icon;
-              const isDownloading = downloadingFile === f.name;
-              return (
-                <div
-                  key={f.name}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors hover:bg-mm-subtle"
-                >
-                  <Icon size={20} style={{ color: f.color }} />
-                  <div className="flex-1">
-                    <div
-                      className="text-sm font-semibold"
-                      style={{ color: "var(--color-mm-dark)" }}
-                    >
-                      {f.name}
-                    </div>
-                    <div
-                      className="text-xs"
-                      style={{ color: "var(--color-mm-gray)" }}
-                    >
-                      {f.size}
-                    </div>
+      {/* Project Images & Assets (View Only) */}
+      {project.assets && project.assets.length > 0 ? (
+        <Card>
+          <h3
+            className="font-semibold mb-3"
+            style={{ color: "var(--color-mm-dark)" }}
+          >
+            Project Images & Assets
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {project.assets.map((url, idx) => (
+              <div
+                key={url + idx}
+                className="group relative aspect-square rounded-2xl overflow-hidden border border-mm-border bg-mm-subtle/30 transition-all hover:shadow-md cursor-pointer animate-in fade-in"
+                onClick={() => onViewImage(url)}
+              >
+                <img
+                  src={url}
+                  alt={`Asset ${idx + 1}`}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <div className="p-2 bg-white/95 text-mm-dark rounded-xl shadow transition-colors">
+                    <Eye size={16} />
                   </div>
-                  <button
-                    onClick={() => handleDownload(f.name)}
-                    disabled={isDownloading}
-                    className="hover:opacity-70 cursor-pointer"
-                  >
-                    {isDownloading ? (
-                      <Loader2
-                        size={16}
-                        className="animate-spin"
-                        style={{ color: "var(--color-mm-orange)" }}
-                      />
-                    ) : (
-                      <Download
-                        size={16}
-                        style={{ color: "var(--color-mm-gray)" }}
-                      />
-                    )}
-                  </button>
                 </div>
-              );
-            })
-            .slice(0, 4)}
-        </div>
-        <div className="flex items-center gap-3 mt-4">
-          <button
-            onClick={() => setIsFileUploadOpen(true)}
-            className="px-4 py-2 bg-white border border-mm-border hover:bg-mm-subtle text-mm-gray font-medium rounded-xl transition-colors inline-flex items-center gap-2 text-sm cursor-pointer"
+              </div>
+            ))}
+          </div>
+        </Card>
+      ) : (
+        <Card>
+          <h3
+            className="font-semibold mb-3"
+            style={{ color: "var(--color-mm-dark)" }}
           >
-            <Plus size={14} /> Upload File
-          </button>
-          <button
-            onClick={() => setIsFileModalOpen(true)}
-            className="text-sm font-semibold hover:underline cursor-pointer"
-            style={{ color: "var(--color-mm-orange)" }}
+            Project Images & Assets
+          </h3>
+          <div
+            className="flex flex-col items-center justify-center p-8 border border-dashed rounded-2xl text-center"
+            style={{ borderColor: "var(--color-mm-border)", background: "var(--color-mm-subtle)/10" }}
           >
-            View All Files →
-          </button>
-        </div>
-      </Card>
+            <UploadCloud size={32} className="text-mm-gray mb-2 animate-in fade-in" />
+            <p className="text-sm font-semibold text-mm-dark">No images available</p>
+            <p className="text-xs text-mm-gray mt-1">Images uploaded in the Progress tab will appear here</p>
+          </div>
+        </Card>
+      )}
 
       <Card>
         <h3
@@ -1634,515 +1639,6 @@ function DetailedTab({
           {project.notes || "No notes set."}
         </p>
       </Card>
-
-      {/* File Upload Modal */}
-      {isFileUploadOpen && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4"
-          style={{ background: "rgba(0,0,0,0.2)", backdropFilter: "blur(4px)" }}
-          onClick={() => setIsFileUploadOpen(false)}
-        >
-          <div
-            className="w-full"
-            style={{
-              background: "white",
-              borderRadius: "24px",
-              border: "1px solid var(--color-mm-border)",
-              maxWidth: "560px",
-              padding: "32px",
-              boxShadow: "0 20px 60px rgba(0,0,0,0.15)",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-6">
-              <h2
-                style={{
-                  color: "var(--color-mm-dark)",
-                  fontWeight: 700,
-                  fontSize: "20px",
-                }}
-              >
-                Upload File
-              </h2>
-              <button
-                onClick={() => setIsFileUploadOpen(false)}
-                className="hover:opacity-70 transition-opacity cursor-pointer"
-              >
-                <X size={20} style={{ color: "var(--color-mm-gray)" }} />
-              </button>
-            </div>
-
-            <label
-              className="flex flex-col items-center justify-center border-2 border-dashed rounded-2xl cursor-pointer"
-              style={{
-                borderColor: "var(--color-mm-border)",
-                background: "white",
-                padding: "40px",
-                transition: "all 0.2s",
-              }}
-              onDragOver={(e) => {
-                e.preventDefault();
-                e.currentTarget.style.borderColor = "var(--color-mm-orange)";
-                e.currentTarget.style.background = "rgba(224, 86, 36, 0.1)";
-              }}
-              onDragLeave={(e) => {
-                e.preventDefault();
-                e.currentTarget.style.borderColor = "var(--color-mm-border)";
-                e.currentTarget.style.background = "white";
-              }}
-              onDrop={(e) => {
-                e.preventDefault();
-                e.currentTarget.style.borderColor = "var(--color-mm-border)";
-                e.currentTarget.style.background = "white";
-                if (e.dataTransfer.files?.[0])
-                  setSelectedFile(e.dataTransfer.files[0]);
-              }}
-            >
-              <div
-                className="w-12 h-12 rounded-full mb-4 flex items-center justify-center"
-                style={{ background: "var(--color-mm-subtle)" }}
-              >
-                <Plus size={24} style={{ color: "var(--color-mm-orange)" }} />
-              </div>
-              <div
-                style={{
-                  color: "var(--color-mm-gray)",
-                  fontWeight: 600,
-                  fontSize: "14px",
-                }}
-              >
-                Drag & Drop file here
-              </div>
-              <div
-                style={{
-                  color: "var(--color-mm-gray)",
-                  fontSize: "12px",
-                  marginTop: "4px",
-                }}
-              >
-                or click to browse from your computer
-              </div>
-              <input
-                type="file"
-                className="hidden"
-                onChange={(e) => {
-                  if (e.target.files?.[0]) setSelectedFile(e.target.files[0]);
-                }}
-              />
-            </label>
-
-            {selectedFile && (
-              <div
-                className="mt-4 p-3 rounded-xl flex items-center justify-between"
-                style={{
-                  background: "var(--color-mm-subtle)",
-                  border: "1px solid var(--color-mm-border)",
-                }}
-              >
-                <div className="flex items-center gap-3">
-                  <FileText
-                    size={20}
-                    style={{ color: "var(--color-mm-orange)" }}
-                  />
-                  <div>
-                    <div
-                      style={{
-                        color: "var(--color-mm-dark)",
-                        fontSize: "13px",
-                        fontWeight: 600,
-                      }}
-                    >
-                      {selectedFile.name}
-                    </div>
-                    <div
-                      style={{
-                        color: "var(--color-mm-gray)",
-                        fontSize: "11px",
-                      }}
-                    >
-                      {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                    </div>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setSelectedFile(null)}
-                  className="hover:opacity-70 cursor-pointer"
-                >
-                  <X size={16} style={{ color: "var(--color-mm-gray)" }} />
-                </button>
-              </div>
-            )}
-
-            <div
-              className="mt-6 pt-4 flex justify-end gap-3"
-              style={{ borderTop: "1px solid var(--color-mm-border)" }}
-            >
-              <button
-                onClick={() => setIsFileUploadOpen(false)}
-                className="px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-80 transition-opacity cursor-pointer"
-                style={{
-                  background: "white",
-                  border: "1px solid var(--color-mm-border)",
-                  color: "var(--color-mm-gray)",
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleUpload}
-                disabled={!selectedFile || isUploading}
-                className="px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity flex items-center gap-2 cursor-pointer"
-                style={{
-                  background: "var(--color-mm-orange)",
-                  color: "white",
-                  opacity: !selectedFile || isUploading ? 0.6 : 1,
-                }}
-              >
-                {isUploading && <Loader2 size={16} className="animate-spin" />}
-                {isUploading ? "Uploading..." : "Upload File"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Files List Modal */}
-      {isFileModalOpen && (
-        <div
-          className="fixed inset-0 z-[120] flex items-center justify-center p-4 transition-opacity duration-300"
-          style={{ background: "rgba(0,0,0,0.3)", backdropFilter: "blur(6px)" }}
-          onClick={() => setIsFileModalOpen(false)}
-        >
-          <div
-            className="w-full relative transition-all duration-300"
-            style={{
-              background: "white",
-              borderRadius: "24px",
-              border: "1px solid var(--color-mm-border)",
-              maxWidth: "900px",
-              boxShadow: "0 20px 60px rgba(0,0,0,0.15)",
-              height: "80vh",
-              display: "flex",
-              flexDirection: "column",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div
-              className="p-6 border-b flex justify-between items-center"
-              style={{ borderColor: "var(--color-mm-border)" }}
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center"
-                  style={{ background: "rgba(224, 86, 36, 0.1)" }}
-                >
-                  <FileSearch
-                    size={20}
-                    style={{ color: "var(--color-mm-orange)" }}
-                  />
-                </div>
-                <h2
-                  className="text-xl font-bold"
-                  style={{ color: "var(--color-mm-dark)" }}
-                >
-                  All Files & Documents
-                </h2>
-              </div>
-              <button
-                onClick={() => setIsFileModalOpen(false)}
-                className="hover:opacity-70 cursor-pointer"
-              >
-                <X size={20} style={{ color: "var(--color-mm-gray)" }} />
-              </button>
-            </div>
-
-            <div
-              className="p-5 border-b flex flex-wrap gap-4 items-center justify-between"
-              style={{
-                borderColor: "var(--color-mm-border)",
-                background: "white",
-              }}
-            >
-              <div className="flex gap-2">
-                {[
-                  "All Files",
-                  "PDF",
-                  "Documents",
-                  "Spreadsheets",
-                  "Images",
-                ].map((filter) => (
-                  <button
-                    key={filter}
-                    onClick={() => setFileFilter(filter)}
-                    className="px-4 py-2 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
-                    style={{
-                      background:
-                        fileFilter === filter
-                          ? "var(--color-mm-dark)"
-                          : "var(--color-mm-subtle)",
-                      color:
-                        fileFilter === filter
-                          ? "white"
-                          : "var(--color-mm-gray)",
-                      border:
-                        fileFilter === filter
-                          ? "1px solid var(--color-mm-dark)"
-                          : "1px solid var(--color-mm-border)",
-                    }}
-                  >
-                    {filter}
-                  </button>
-                ))}
-              </div>
-              <div className="relative">
-                <Search
-                  size={16}
-                  className="absolute left-3 top-1/2 -translate-y-1/2"
-                  style={{ color: "var(--color-mm-gray)" }}
-                />
-                <input
-                  type="text"
-                  placeholder="Search files..."
-                  value={fileSearch}
-                  onChange={(e) => setFileSearch(e.target.value)}
-                  className="pl-9 pr-4 py-2 rounded-xl text-sm outline-none transition-colors"
-                  style={{
-                    background: "white",
-                    border: "1px solid var(--color-mm-border)",
-                    color: "var(--color-mm-dark)",
-                    width: "240px",
-                  }}
-                  onFocus={(e) =>
-                    (e.target.style.borderColor = "var(--color-mm-orange)")
-                  }
-                  onBlur={(e) =>
-                    (e.target.style.borderColor = "var(--color-mm-border)")
-                  }
-                />
-              </div>
-            </div>
-
-            <div
-              className="flex-1 overflow-y-auto p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-              style={{ background: "white" }}
-            >
-              {filteredModalFiles.map((f) => (
-                <div
-                  key={f.id}
-                  className="p-4 rounded-xl transition-all cursor-pointer hover:scale-[1.02]"
-                  style={{
-                    background: "white",
-                    border: "1px solid var(--color-mm-border)",
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.03)",
-                  }}
-                >
-                  <div className="flex justify-between items-start mb-3">
-                    <div
-                      className="w-10 h-10 rounded-xl flex items-center justify-center"
-                      style={{ background: f.tagBg }}
-                    >
-                      <f.icon size={20} style={{ color: f.color }} />
-                    </div>
-                    <span
-                      className="px-2.5 py-1 rounded-full text-[10px] font-bold"
-                      style={{ background: f.tagBg, color: f.tagColor }}
-                    >
-                      {f.type}
-                    </span>
-                  </div>
-                  <div
-                    className="font-semibold text-[14px] mb-1 truncate"
-                    style={{ color: "var(--color-mm-dark)" }}
-                    title={f.name}
-                  >
-                    {f.name}
-                  </div>
-                  <div
-                    className="flex justify-between items-center text-[11px]"
-                    style={{ color: "var(--color-mm-gray)" }}
-                  >
-                    <span>{f.size}</span>
-                    <span>{f.by}</span>
-                  </div>
-                  <div
-                    className="mt-4 pt-3 flex justify-between items-center"
-                    style={{ borderTop: "1px dashed var(--color-mm-border)" }}
-                  >
-                    <div
-                      className="text-[10px]"
-                      style={{ color: "var(--color-mm-gray)" }}
-                    >
-                      {f.date}
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setPreviewFile(f)}
-                        className="p-1.5 rounded-lg hover:bg-mm-subtle transition-colors cursor-pointer"
-                        title="Preview"
-                      >
-                        <Eye
-                          size={14}
-                          style={{ color: "var(--color-mm-gray)" }}
-                        />
-                      </button>
-                      <button
-                        onClick={() => handleDownload(f.name)}
-                        className="p-1.5 rounded-lg hover:bg-mm-subtle transition-colors cursor-pointer"
-                        title="Download"
-                      >
-                        <Download
-                          size={14}
-                          style={{ color: "var(--color-mm-gray)" }}
-                        />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteFile(f.id)}
-                        className="p-1.5 rounded-lg hover:bg-mm-red/10 transition-colors cursor-pointer"
-                        title="Delete"
-                      >
-                        <Trash2
-                          size={14}
-                          style={{ color: "var(--color-mm-red)" }}
-                        />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-              {filteredModalFiles.length === 0 && (
-                <div className="col-span-full py-12 flex flex-col items-center justify-center text-center">
-                  <FileSearch
-                    size={48}
-                    style={{
-                      color: "var(--color-mm-border)",
-                      marginBottom: "16px",
-                    }}
-                  />
-                  <div
-                    className="font-bold text-[16px]"
-                    style={{ color: "var(--color-mm-gray)" }}
-                  >
-                    No files found
-                  </div>
-                  <div
-                    className="text-[13px] mt-1"
-                    style={{ color: "var(--color-mm-gray)" }}
-                  >
-                    Try adjusting your search or filters.
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div
-              className="p-5 border-t flex justify-between items-center"
-              style={{
-                borderColor: "var(--color-mm-border)",
-                background: "white",
-                borderBottomLeftRadius: "24px",
-                borderBottomRightRadius: "24px",
-              }}
-            >
-              <div
-                className="text-sm font-semibold"
-                style={{ color: "var(--color-mm-gray)" }}
-              >
-                {filteredModalFiles.length} files found
-              </div>
-              <button
-                onClick={() => {
-                  setIsFileModalOpen(false);
-                  setIsFileUploadOpen(true);
-                }}
-                className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 hover:opacity-90 cursor-pointer"
-                style={{ background: "var(--color-mm-orange)", color: "white" }}
-              >
-                <UploadCloud size={16} /> Upload New File
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* File Preview Modal */}
-      {previewFile && (
-        <div
-          className="fixed inset-0 z-[130] flex items-center justify-center p-4"
-          style={{ background: "rgba(0,0,0,0.8)", backdropFilter: "blur(8px)" }}
-          onClick={() => setPreviewFile(null)}
-        >
-          <div
-            className="relative w-full max-w-4xl h-[85vh] flex flex-col bg-neutral-900 border border-neutral-800 rounded-2xl overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="p-4 flex justify-between items-center bg-neutral-800 border-b border-neutral-700/50">
-              <div className="flex items-center gap-3 text-white">
-                <previewFile.icon
-                  size={20}
-                  style={{ color: previewFile.color }}
-                />
-                <span className="font-semibold text-[14px]">
-                  {previewFile.name}
-                </span>
-                <span className="px-2 py-0.5 rounded text-[10px] bg-neutral-700 text-neutral-400">
-                  {previewFile.size}
-                </span>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handleDownload(previewFile.name)}
-                  className="p-2 rounded-lg hover:bg-neutral-800 text-white transition-colors cursor-pointer"
-                  title="Download"
-                >
-                  <Download size={16} />
-                </button>
-                <button
-                  onClick={() => setPreviewFile(null)}
-                  className="p-2 rounded-lg hover:bg-neutral-800 text-white transition-colors cursor-pointer"
-                  title="Close Preview"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-            </div>
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center">
-                <previewFile.icon
-                  size={64}
-                  style={{
-                    color: previewFile.color,
-                    margin: "0 auto 16px",
-                    opacity: 0.5,
-                  }}
-                />
-                <div className="text-neutral-400 text-sm">
-                  Preview not available for this file type.
-                </div>
-                <button
-                  onClick={() => handleDownload(previewFile.name)}
-                  className="mt-4 px-4 py-2 rounded-lg text-sm font-semibold bg-neutral-800 hover:bg-neutral-700 text-white transition-colors cursor-pointer"
-                >
-                  Download File
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {toast && (
-        <div
-          className="fixed bottom-6 right-6 z-[100] px-5 py-3 rounded-xl shadow-lg transition-all animate-in slide-in-from-bottom-5"
-          style={{
-            background: "rgba(92, 177, 62, 0.1)",
-            border: "1px solid var(--color-mm-green)",
-            color: "var(--color-mm-green)",
-            fontWeight: 600,
-          }}
-        >
-          {toast}
-        </div>
-      )}
     </div>
   );
 }

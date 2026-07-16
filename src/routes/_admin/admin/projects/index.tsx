@@ -23,6 +23,8 @@ import {
   X,
   ChevronDown,
   SearchX,
+  UploadCloud,
+  Loader2,
 } from "lucide-react";
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import {
@@ -34,7 +36,7 @@ import {
   getBusinessesFn,
 } from "@/lib/server-functions";
 import { AdminLoader } from "@/components/AdminLoader";
-import { db } from "@/lib/firebase";
+import { db, uploadFileToStorage, deleteFileFromStorage } from "@/lib/firebase";
 import { collection, doc } from "firebase/firestore";
 
 // Helper to generate a Firestore auto ID safely
@@ -205,6 +207,7 @@ function ProjectsPage() {
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [dropdownCoords, setDropdownCoords] = useState<{ top: number; left: number } | null>(null);
   const [newProjectForm, setNewProjectForm] = useState({
+    id: "",
     name: "",
     client: "",
     businessId: "",
@@ -217,6 +220,7 @@ function ProjectsPage() {
     priority: "" as any,
     description: "",
     notes: "",
+    assets: [] as string[],
   });
   const [newProjectErrors, setNewProjectErrors] = useState<
     Record<string, boolean>
@@ -230,6 +234,7 @@ function ProjectsPage() {
         : selectedBiz.userId?.id
       : "";
     setNewProjectForm({
+      id: generateFirestoreAutoId(),
       name: "",
       client: linkedUserId || "",
       businessId: selectedBusinessId || "",
@@ -242,6 +247,7 @@ function ProjectsPage() {
       priority: "" as any,
       description: "",
       notes: "",
+      assets: [],
     });
     setNewProjectErrors({});
     setIsNewProjectOpen(true);
@@ -250,6 +256,39 @@ function ProjectsPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Project | null>(null);
 
+  const [imageUploading, setImageUploading] = useState(false);
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+
+  const handleModalImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImageUploading(true);
+    try {
+      const url = await uploadFileToStorage(file, "projects", newProjectForm.id, "projectImg");
+      setNewProjectForm((prev) => ({
+        ...prev,
+        assets: [...prev.assets, url],
+      }));
+      setToast("✓ Image uploaded successfully!");
+    } catch (err) {
+      console.error("Image upload failed:", err);
+      setToast("✗ Failed to upload image.");
+    } finally {
+      setImageUploading(false);
+    }
+  };
+
+  const handleModalRemoveImage = async (urlToRemove: string) => {
+    if (window.confirm("Are you sure you want to remove this image?")) {
+      await deleteFileFromStorage(urlToRemove);
+      setNewProjectForm((prev) => ({
+        ...prev,
+        assets: prev.assets.filter((url) => url !== urlToRemove),
+      }));
+      setToast("✓ Image removed successfully!");
+    }
+  };
+
   const handleDelete = async (p: Project) => {
     const biz =
       typeof p.businessId === "object" && p.businessId !== null
@@ -257,6 +296,12 @@ function ProjectsPage() {
         : businesses.find((b) => b.id === p.businessId);
     const client = biz?.businessName || "No business";
     const manager = p.assignee;
+    
+    // Delete all assets from Firebase Storage
+    if (p.assets && p.assets.length > 0) {
+      await Promise.all(p.assets.map((url) => deleteFileFromStorage(url)));
+    }
+
     await deleteProjectFn({ data: p.id });
     await logAuditEventFn({
       data: {
@@ -420,7 +465,7 @@ function ProjectsPage() {
     }
 
     const newPrjSchema = {
-      id: generateFirestoreAutoId(),
+      id: newProjectForm.id,
       businessId: newProjectForm.businessId,
       name: newProjectForm.name,
       description: newProjectForm.description,
@@ -432,6 +477,7 @@ function ProjectsPage() {
       priority: newProjectForm.priority,
       notes: newProjectForm.notes,
       updates: [],
+      assets: newProjectForm.assets,
       startDate: newProjectForm.startDate
         ? new Date(newProjectForm.startDate)
         : null,
@@ -446,6 +492,7 @@ function ProjectsPage() {
       refreshProjects().then(() => {
         setIsNewProjectOpen(false);
         setNewProjectForm({
+          id: "",
           name: "",
           client: "",
           businessId: "",
@@ -458,6 +505,7 @@ function ProjectsPage() {
           priority: "" as any,
           description: "",
           notes: "",
+          assets: [],
         });
         setToast("✓ Project created successfully!");
       });
@@ -2308,6 +2356,80 @@ function ProjectsPage() {
                   }
                 />
               </div>
+
+              {/* Project Images & Assets */}
+              <div className="pt-2 border-t border-mm-border animate-in fade-in">
+                <div className="flex items-center justify-between mb-2">
+                  <label
+                    style={{
+                      color: "var(--color-mm-gray)",
+                      fontWeight: 600,
+                      fontSize: "13px",
+                      display: "block",
+                    }}
+                  >
+                    Project Images & Assets
+                  </label>
+                  <label className="px-3 py-1.5 bg-white border border-mm-border hover:bg-mm-subtle text-mm-gray font-semibold rounded-lg transition-colors inline-flex items-center gap-1 text-xs cursor-pointer">
+                    {imageUploading ? (
+                      <Loader2 size={12} className="animate-spin text-mm-orange" />
+                    ) : (
+                      <Plus size={12} />
+                    )}
+                    {imageUploading ? "Uploading..." : "Add Image"}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleModalImageUpload}
+                      disabled={imageUploading}
+                    />
+                  </label>
+                </div>
+
+                {(!newProjectForm.assets || newProjectForm.assets.length === 0) ? (
+                  <div
+                    className="flex flex-col items-center justify-center p-6 border border-dashed rounded-xl text-center"
+                    style={{ borderColor: "var(--color-mm-border)", background: "var(--color-mm-subtle)/5" }}
+                  >
+                    <UploadCloud size={24} className="text-mm-gray mb-1.5" />
+                    <span className="text-xs font-semibold text-mm-dark">No images uploaded yet</span>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                    {newProjectForm.assets.map((url, idx) => (
+                      <div
+                        key={url + idx}
+                        className="group relative aspect-square rounded-xl overflow-hidden border border-mm-border bg-mm-subtle/30"
+                      >
+                        <img
+                          src={url}
+                          alt={`Asset ${idx + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setLightboxImage(url)}
+                            className="p-1 bg-white hover:bg-neutral-100 text-mm-dark rounded-md shadow cursor-pointer"
+                            title="View"
+                          >
+                            <Eye size={12} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleModalRemoveImage(url)}
+                            className="p-1 bg-red-600 hover:bg-red-700 text-white rounded-md shadow cursor-pointer"
+                            title="Remove"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div
@@ -2394,6 +2516,31 @@ function ProjectsPage() {
             </div>
           );
         })()}
+
+      {/* Lightbox Modal */}
+      {lightboxImage && (
+        <div
+          className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setLightboxImage(null)}
+        >
+          <div
+            className="relative max-w-4xl max-h-[85vh] overflow-hidden rounded-2xl shadow-2xl bg-white border border-mm-border"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setLightboxImage(null)}
+              className="absolute top-3 right-3 p-2 bg-white/90 hover:bg-white text-mm-dark rounded-full shadow-md z-10 transition-colors cursor-pointer"
+            >
+              <X size={18} />
+            </button>
+            <img
+              src={lightboxImage}
+              alt="Project asset preview"
+              className="w-full h-auto max-h-[80vh] object-contain rounded-2xl"
+            />
+          </div>
+        </div>
+      )}
 
       {toast && (
         <div

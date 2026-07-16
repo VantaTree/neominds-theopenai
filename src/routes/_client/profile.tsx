@@ -115,7 +115,13 @@ function RouteComponent() {
     if (file && currentUser) {
       setIsUploadingAvatar(true);
       try {
-        const url = await uploadFileToStorage(file, "users", currentUser.uid, "profileImg");
+        const url = await uploadFileToStorage(
+          file,
+          "users",
+          currentUser.uid,
+          "profileImg",
+          formData.avatar || undefined
+        );
         setFormData((prev) => ({ ...prev, avatar: url }));
       } catch (err: any) {
         console.error("Failed to upload avatar:", err);

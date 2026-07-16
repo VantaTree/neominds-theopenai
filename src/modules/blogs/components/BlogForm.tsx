@@ -5,7 +5,7 @@ import {
   Code2, Quote, Minus, Image, Sparkles
 } from "lucide-react";
 import { type Blog, type BlogStatus } from "@/lib/schemas";
-import { uploadFileToStorage } from "@/lib/firebase";
+import { uploadFileToStorage, deleteFileFromStorage } from "@/lib/firebase";
 
 export type CreateBlogInput = Omit<Blog, "id" | "createdAt" | "updatedAt">;
 
@@ -203,12 +203,19 @@ export default function BlogForm({
     setUploadError("");
     try {
       const blogId = initialBlog?.id || slug || "new";
-      const url = await uploadFileToStorage(file, "blogs", blogId, "blogImg");
+      const url = await uploadFileToStorage(file, "blogs", blogId, "blogImg", coverImageUrl || undefined);
       setCoverImageUrl(url);
     } catch (err: any) {
       setUploadError(err.message || "Failed to upload image");
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  const handleRemoveCoverImage = async () => {
+    if (coverImageUrl) {
+      await deleteFileFromStorage(coverImageUrl);
+      setCoverImageUrl("");
     }
   };
 
@@ -438,7 +445,7 @@ export default function BlogForm({
                 <img src={coverImageUrl} alt="Cover Preview" className="w-full h-full object-cover" />
                 <button
                   type="button"
-                  onClick={() => setCoverImageUrl("")}
+                  onClick={handleRemoveCoverImage}
                   className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs font-bold transition-all"
                 >
                   Change Image

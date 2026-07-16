@@ -96,7 +96,13 @@ function RouteComponent() {
     if (file && activeBusiness) {
       setIsUploadingAvatar(true);
       try {
-        const url = await uploadFileToStorage(file, "businesses", activeBusiness.id, "businessImg");
+        const url = await uploadFileToStorage(
+          file,
+          "businesses",
+          activeBusiness.id,
+          "businessImg",
+          formData.image || undefined
+        );
         setFormData((prev) => ({ ...prev, image: url }));
       } catch (err: any) {
         console.error("Failed to upload logo:", err);
