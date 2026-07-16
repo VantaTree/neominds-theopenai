@@ -14,4 +14,5 @@ export const SubmitAssessmentSchema = z.object({
   websiteUrl: z.string().url("Invalid website URL").optional().nullable().or(z.literal("")),
   primaryGoal: z.string().min(1, "Primary goal is required"),
   targetAudience: z.string().min(1, "Target audience is required"),
+  location: z.string().min(1, "Location is required"),
 });

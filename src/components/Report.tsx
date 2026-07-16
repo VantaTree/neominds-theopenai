@@ -666,7 +666,7 @@ export default function Report({ initialData, businessId, isAdmin }: ReportProps
                     data={scorecardChartData}
                     layout="horizontal"
                     barCategoryGap="5%"
-                    margin={{ top: 15, right: 15, left: 15, bottom: 40 }}
+                    margin={{ top: 15, right: 15, left: 15, bottom: 48 }}
                   >
                     <defs>
                       <linearGradient id="excellentGrad" x1="0" y1="1" x2="0" y2="0">

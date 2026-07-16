@@ -21,6 +21,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { Link } from "@tanstack/react-router";
 import ProjectLogo from "./ProjectLogo";
 import Report from "../Report";
+import WebsiteDescriber from "./WebsiteDescriber";
 import PlanGate, { hasPlanAccess } from "./PlanGate";
 import { useBusiness } from "@/hooks/use-business";
 import { type Project } from "@/lib/schemas";
@@ -93,6 +94,7 @@ export function ProjectDashboard({
 
   // Selected project state for sliding details drawer
   const [activeDrawerProject, setActiveDrawerProject] = useState<Project | null>(null);
+  const [isDescribingWebsite, setIsDescribingWebsite] = useState(false);
 
   const drawerProjectDomain = activeDrawerProject?.domain;
   const drawerProjectThemeKey =
@@ -118,13 +120,14 @@ export function ProjectDashboard({
     new Set(domainProjects.flatMap((p) => p.services || []))
   );
 
-  // Reset local filters and drawer when tab changes
+  // Reset local filters, drawer, and builder when tab changes
   useEffect(() => {
     setStatusFilter("All");
     setPriorityFilter("All");
     setSelectedServices([]);
     setDateFilter("All Time");
     setActiveDrawerProject(null);
+    setIsDescribingWebsite(false);
   }, [activeTab]);
 
   // Date range checking helpers
@@ -209,7 +212,7 @@ export function ProjectDashboard({
   };
 
   const renderTabSwitcher = () => (
-    <div className="flex border-b border-[#E2E6EE] gap-6 pb-px overflow-x-auto no-scrollbar">
+    <div className="flex border-b border-[#E2E6EE] gap-6 pb-px overflow-x-auto no-scrollbar w-full">
       {TABS.map((tab) => {
         const isActive = activeTab === tab.id;
         const isTabLocked =
@@ -273,20 +276,31 @@ export function ProjectDashboard({
         Ready to take your digital experience to the next level? Connect with our team to start a new campaign, audit, or development project.
       </p>
 
-      <Link
-        to="/chat/$domain"
-        params={{ domain: activeTab.toLowerCase() }}
-        className={`inline-flex items-center justify-center gap-2 font-extrabold text-xs px-6 py-3 rounded-xl transition-all active:scale-95 shadow-sm border ${
-          activeTab === "Website"
-            ? "bg-blue-500 hover:bg-blue-600 border-blue-600 text-white"
-            : activeTab === "Marketing"
-              ? "bg-red-500 hover:bg-red-600 border-red-600 text-white"
-              : "bg-purple-500 hover:bg-purple-600 border-purple-600 text-white"
-        }`}
-      >
-        <MessageSquare className="h-4 w-4" />
-        Start a Conversation
-      </Link>
+      <div className="flex flex-wrap gap-4 justify-center">
+        <Link
+          to="/chat/$domain"
+          params={{ domain: activeTab.toLowerCase() }}
+          className={`inline-flex items-center justify-center gap-2 font-extrabold text-xs px-6 py-3 rounded-xl transition-all active:scale-95 shadow-sm border ${
+            activeTab === "Website"
+              ? "bg-blue-500 hover:bg-blue-600 border-blue-600 text-white"
+              : activeTab === "Marketing"
+                ? "bg-red-500 hover:bg-red-600 border-red-600 text-white"
+                : "bg-purple-500 hover:bg-purple-600 border-purple-600 text-white"
+          }`}
+        >
+          <MessageSquare className="h-4 w-4" />
+          Start a Conversation
+        </Link>
+        
+        {activeTab === "Website" && (
+          <button
+            onClick={() => setIsDescribingWebsite(true)}
+            className="inline-flex items-center justify-center gap-2 bg-white hover:bg-blue-50/50 border border-blue-200 text-blue-600 font-extrabold text-xs px-6 py-3 rounded-xl transition-all active:scale-95 shadow-xs cursor-pointer"
+          >
+            Describe Your Website
+          </button>
+        )}
+      </div>
     </div>
   );
 
@@ -631,18 +645,45 @@ export function ProjectDashboard({
 
   return (
     <div className="w-full flex flex-col gap-8 relative">
-      {renderTabSwitcher()}
+      {!isDescribingWebsite && renderTabSwitcher()}
 
-      {activeTab === "report" && <Report initialData={initialReportData} businessId={activeBusiness?.id} />}
-
-      {activeTab === "Automation" && (
-        <PlanGate requiredPlan="Pro" fallback={planGateFallback}>
-          {domainProjects.length === 0 ? emptyState : renderProjectsContent()}
-        </PlanGate>
+      {activeTab === "Website" && !isDescribingWebsite && (
+        <div className="flex items-center justify-between bg-white py-2 px-1 -mt-8 mb-4 w-full gap-2 animate-in fade-in duration-300">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="hidden sm:inline-block h-2 w-2 rounded-full bg-blue-500 shrink-0" />
+            <span className="text-[10px] sm:text-xs md:text-sm font-bold text-mm-dark truncate">
+              Customize your website brief and structure
+            </span>
+          </div>
+          <button
+            onClick={() => setIsDescribingWebsite(true)}
+            className="inline-flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-[9px] sm:text-xs px-3 py-1.5 sm:px-5 sm:py-2 rounded-full transition-all active:scale-95 shadow-sm border border-blue-600 cursor-pointer shrink-0"
+          >
+            Describe Your Website
+          </button>
+        </div>
       )}
 
-      {activeTab !== "report" && activeTab !== "Automation" && (
-        domainProjects.length === 0 ? emptyState : renderProjectsContent()
+      {activeTab === "Website" && isDescribingWebsite ? (
+        <WebsiteDescriber activeBusiness={activeBusiness} onClose={() => setIsDescribingWebsite(false)} />
+      ) : (
+        <>
+          {activeTab === "report" && <Report initialData={initialReportData} businessId={activeBusiness?.id} />}
+
+          {activeTab === "Automation" && (
+            <PlanGate requiredPlan="Pro" fallback={planGateFallback}>
+              {domainProjects.length === 0 ? emptyState : renderProjectsContent()}
+            </PlanGate>
+          )}
+
+          {activeTab !== "report" && activeTab !== "Automation" && activeTab !== "Website" && (
+            domainProjects.length === 0 ? emptyState : renderProjectsContent()
+          )}
+
+          {activeTab === "Website" && (
+            domainProjects.length === 0 ? emptyState : renderProjectsContent()
+          )}
+        </>
       )}
 
       {/* Sliding Details Drawer overlay */}
