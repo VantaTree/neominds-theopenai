@@ -195,6 +195,7 @@ function ProjectDetail() {
     const mergedProject = {
       ...originalProject,
       updates: next.updates,
+      assets: next.assets || [],
     };
 
     const businessIdStr =
@@ -213,9 +214,11 @@ function ProjectDetail() {
         setProjectList((list) =>
           list.map((p) => (p.id === mergedProject.id ? mergedProject : p)),
         );
-        setActiveProject((prev) => prev ? { ...prev, updates: next.updates } : next);
+        setActiveProject((prev) =>
+          prev ? { ...prev, updates: next.updates, assets: next.assets || [] } : next
+        );
         setIsSaving(false);
-        setToast("✓ Updates saved directly!");
+        setToast("✓ Project updated successfully!");
       })
       .catch((err) => {
         console.error("Save failed:", err);
@@ -815,10 +818,11 @@ function ProgressTab({
     try {
       const url = await uploadFileToStorage(file, "projects", project.id, "projectImg");
       const currentAssets = project.assets || [];
-      onDetailsChange({
+      const updatedProject = {
         ...project,
         assets: [...currentAssets, url],
-      });
+      };
+      onMilestonesChange(updatedProject);
       setToast("✓ Image uploaded successfully!");
     } catch (err) {
       console.error("Image upload failed:", err);
@@ -832,10 +836,11 @@ function ProgressTab({
     if (window.confirm("Are you sure you want to remove this image?")) {
       await deleteFileFromStorage(urlToRemove);
       const currentAssets = project.assets || [];
-      onDetailsChange({
+      const updatedProject = {
         ...project,
         assets: currentAssets.filter((url) => url !== urlToRemove),
-      });
+      };
+      onMilestonesChange(updatedProject);
       setToast("✓ Image removed successfully!");
     }
   };

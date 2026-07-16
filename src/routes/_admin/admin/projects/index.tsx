@@ -256,37 +256,45 @@ function ProjectsPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Project | null>(null);
 
+  const [modalFiles, setModalFiles] = useState<File[]>([]);
+  const [isCreatingProject, setIsCreatingProject] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
 
-  const handleModalImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleModalImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setImageUploading(true);
-    try {
-      const url = await uploadFileToStorage(file, "projects", newProjectForm.id, "projectImg");
-      setNewProjectForm((prev) => ({
-        ...prev,
-        assets: [...prev.assets, url],
-      }));
-      setToast("✓ Image uploaded successfully!");
-    } catch (err) {
-      console.error("Image upload failed:", err);
-      setToast("✗ Failed to upload image.");
-    } finally {
-      setImageUploading(false);
-    }
+    setModalFiles((prev) => [...prev, file]);
+    const previewUrl = URL.createObjectURL(file);
+    setNewProjectForm((prev) => ({
+      ...prev,
+      assets: [...prev.assets, previewUrl],
+    }));
   };
 
-  const handleModalRemoveImage = async (urlToRemove: string) => {
-    if (window.confirm("Are you sure you want to remove this image?")) {
-      await deleteFileFromStorage(urlToRemove);
+  const handleModalRemoveImage = (urlToRemove: string) => {
+    if (urlToRemove.startsWith("blob:")) {
+      URL.revokeObjectURL(urlToRemove);
+    }
+    const idx = newProjectForm.assets.indexOf(urlToRemove);
+    if (idx !== -1) {
       setNewProjectForm((prev) => ({
         ...prev,
-        assets: prev.assets.filter((url) => url !== urlToRemove),
+        assets: prev.assets.filter((_, i) => i !== idx),
       }));
-      setToast("✓ Image removed successfully!");
+      setModalFiles((prev) => prev.filter((_, i) => i !== idx));
     }
+    setToast("✓ Image removed.");
+  };
+
+  const handleCloseModal = () => {
+    newProjectForm.assets.forEach((url) => {
+      if (url.startsWith("blob:")) {
+        URL.revokeObjectURL(url);
+      }
+    });
+    setModalFiles([]);
+    setIsNewProjectOpen(false);
   };
 
   const handleDelete = async (p: Project) => {
@@ -446,7 +454,7 @@ function ProjectsPage() {
     }));
   };
 
-  const handleCreateSubmit = () => {
+  const handleCreateSubmit = async () => {
     const errs: Record<string, boolean> = {};
     if (!newProjectForm.name.trim()) errs.name = true;
     if (!newProjectForm.client) errs.client = true;
@@ -464,52 +472,74 @@ function ProjectsPage() {
       return;
     }
 
-    const newPrjSchema = {
-      id: newProjectForm.id,
-      businessId: newProjectForm.businessId,
-      name: newProjectForm.name,
-      description: newProjectForm.description,
-      domain: newProjectForm.domain,
-      services: newProjectForm.services,
-      progress: 0,
-      assignee: newProjectForm.manager,
-      status: newProjectForm.status,
-      priority: newProjectForm.priority,
-      notes: newProjectForm.notes,
-      updates: [],
-      assets: newProjectForm.assets,
-      startDate: newProjectForm.startDate
-        ? new Date(newProjectForm.startDate)
-        : null,
-      deadline: newProjectForm.deadline
-        ? new Date(newProjectForm.deadline)
-        : null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+    setIsCreatingProject(true);
+    try {
+      // Upload modal images to Firebase Storage
+      const uploadedUrls = await Promise.all(
+        modalFiles.map((file) =>
+          uploadFileToStorage(file, "projects", newProjectForm.id, "projectImg")
+        )
+      );
 
-    saveProjectFn({ data: newPrjSchema as any }).then(() => {
-      refreshProjects().then(() => {
-        setIsNewProjectOpen(false);
-        setNewProjectForm({
-          id: "",
-          name: "",
-          client: "",
-          businessId: "",
-          services: [],
-          domain: "" as any,
-          manager: "",
-          startDate: "",
-          deadline: "",
-          status: "" as any,
-          priority: "" as any,
-          description: "",
-          notes: "",
-          assets: [],
-        });
-        setToast("✓ Project created successfully!");
+      const newPrjSchema = {
+        id: newProjectForm.id,
+        businessId: newProjectForm.businessId,
+        name: newProjectForm.name,
+        description: newProjectForm.description,
+        domain: newProjectForm.domain,
+        services: newProjectForm.services,
+        progress: 0,
+        assignee: newProjectForm.manager,
+        status: newProjectForm.status,
+        priority: newProjectForm.priority,
+        notes: newProjectForm.notes,
+        updates: [],
+        assets: uploadedUrls,
+        startDate: newProjectForm.startDate
+          ? new Date(newProjectForm.startDate)
+          : null,
+        deadline: newProjectForm.deadline
+          ? new Date(newProjectForm.deadline)
+          : null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      await saveProjectFn({ data: newPrjSchema as any });
+
+      // Clean up local preview object URLs
+      newProjectForm.assets.forEach((url) => {
+        if (url.startsWith("blob:")) {
+          URL.revokeObjectURL(url);
+        }
       });
-    });
+
+      await refreshProjects();
+      setIsNewProjectOpen(false);
+      setModalFiles([]);
+      setNewProjectForm({
+        id: "",
+        name: "",
+        client: "",
+        businessId: "",
+        services: [],
+        domain: "" as any,
+        manager: "",
+        startDate: "",
+        deadline: "",
+        status: "" as any,
+        priority: "" as any,
+        description: "",
+        notes: "",
+        assets: [],
+      });
+      setToast("✓ Project created successfully!");
+    } catch (err: any) {
+      console.error("Create project failed:", err);
+      setToast("✗ Failed to create project.");
+    } finally {
+      setIsCreatingProject(false);
+    }
   };
 
   const getFilteredProjectsForBusiness = useCallback((bizId: string) => {
@@ -1646,7 +1676,7 @@ function ProjectsPage() {
         <div
           className="fixed inset-0 z-100 flex items-center justify-center p-4"
           style={{ background: "rgba(0,0,0,0.2)", backdropFilter: "blur(4px)" }}
-          onClick={() => setIsNewProjectOpen(false)}
+          onClick={handleCloseModal}
         >
           <div
             className="w-full"
@@ -1674,7 +1704,7 @@ function ProjectsPage() {
                 Create New Project
               </h2>
               <button
-                onClick={() => setIsNewProjectOpen(false)}
+                onClick={handleCloseModal}
                 className="hover:opacity-70 transition-opacity cursor-pointer"
               >
                 <X
@@ -2437,8 +2467,9 @@ function ProjectsPage() {
               style={{ borderTop: "1px solid var(--color-mm-border)" }}
             >
               <button
-                onClick={() => setIsNewProjectOpen(false)}
-                className="px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-80 transition-opacity cursor-pointer"
+                disabled={isCreatingProject}
+                onClick={handleCloseModal}
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-80 transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{
                   background: "white",
                   border: "1px solid var(--color-mm-border)",
@@ -2448,11 +2479,13 @@ function ProjectsPage() {
                 Cancel
               </button>
               <button
+                disabled={isCreatingProject}
                 onClick={handleCreateSubmit}
-                className="px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity cursor-pointer"
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 style={{ background: "var(--color-mm-orange)", color: "white" }}
               >
-                Create Project
+                {isCreatingProject && <Loader2 size={16} className="animate-spin text-white" />}
+                {isCreatingProject ? "Creating..." : "Create Project"}
               </button>
             </div>
           </div>

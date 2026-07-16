@@ -122,7 +122,38 @@ function RouteComponent() {
           "profileImg",
           formData.avatar || undefined
         );
-        setFormData((prev) => ({ ...prev, avatar: url }));
+        
+        await updateProfile(currentUser, {
+          displayName: formData.name.trim(),
+          photoURL: url,
+        });
+
+        const updatedUser = {
+          ...dbUserDoc,
+          id: currentUser.uid,
+          email: currentUser.email || dbUserDoc?.email || "",
+          fullName: formData.name.trim(),
+          phone: formData.phone.trim(),
+          image: url,
+          role: dbUserDoc?.role || "client",
+          status: dbUserDoc?.status || "Active",
+          businessCount: dbUserDoc?.businessCount ?? 0,
+          createdAt: dbUserDoc?.createdAt ? new Date(dbUserDoc.createdAt) : new Date(),
+          updatedAt: new Date(),
+        };
+
+        await saveUserFn({ data: updatedUser });
+        
+        const nextProfile = {
+          ...formData,
+          avatar: url,
+        };
+        setDbUserDoc(updatedUser);
+        setFormData(nextProfile);
+        setProfile(nextProfile);
+        if (typeof window !== "undefined") {
+          localStorage.setItem("user_profile", JSON.stringify(nextProfile));
+        }
       } catch (err: any) {
         console.error("Failed to upload avatar:", err);
         alert(err.message || "Failed to upload avatar");

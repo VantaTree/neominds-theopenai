@@ -101,9 +101,25 @@ function RouteComponent() {
           "businesses",
           activeBusiness.id,
           "businessImg",
-          formData.image || undefined
+          activeBusiness.image || undefined
         );
+        
+        const updatedBusiness: Business = {
+          ...activeBusiness,
+          businessName: formData.businessName.trim(),
+          businessType: formData.businessType.trim(),
+          contactEmail: formData.contactEmail.trim() ? formData.contactEmail.trim() : null,
+          contactPhone: formData.contactPhone.trim(),
+          image: url,
+          websiteUrl: formData.websiteUrl.trim(),
+          updatedAt: new Date(),
+        };
+
+        await saveBusinessFn({ data: updatedBusiness });
+        
         setFormData((prev) => ({ ...prev, image: url }));
+        setActiveBusiness(updatedBusiness);
+        await refetch();
       } catch (err: any) {
         console.error("Failed to upload logo:", err);
         alert(err.message || "Failed to upload logo");

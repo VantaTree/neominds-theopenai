@@ -98,6 +98,8 @@ function UsersPage() {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && editingUser) {
+      const originalUser = users.find((u) => u.id === editingUser.id);
+      if (!originalUser) return;
       setIsUploadingUserAvatar(true);
       try {
         const url = await uploadFileToStorage(
@@ -105,9 +107,23 @@ function UsersPage() {
           "users",
           editingUser.id,
           "profileImg",
-          editingUser.image || undefined
+          originalUser.image || undefined
         );
+        const userSchemaData: DBUser = {
+          ...originalUser,
+          image: url,
+          updatedAt: new Date(),
+        };
+        await saveUserFn({ data: userSchemaData });
+
+        setUsers((prev) =>
+          prev.map((u) => (u.id === editingUser.id ? userSchemaData : u)),
+        );
+        if (selectedUser?.id === editingUser.id) {
+          setSelectedUser((prev) => prev ? { ...prev, image: url } : null);
+        }
         setEditForm((prev: any) => ({ ...prev, image: url }));
+        setEditingUser((prev) => prev ? { ...prev, image: url } : null);
       } catch (err: any) {
         console.error("Failed to upload avatar:", err);
         alert(err.message || "Failed to upload avatar");
@@ -148,6 +164,8 @@ function UsersPage() {
   ) => {
     const file = e.target.files?.[0];
     if (file && editingBusiness) {
+      const originalBusiness = businesses.find((b) => b.id === editingBusiness.id);
+      if (!originalBusiness) return;
       setIsUploadingBusinessLogo(true);
       try {
         const url = await uploadFileToStorage(
@@ -155,9 +173,29 @@ function UsersPage() {
           "businesses",
           editingBusiness.id,
           "businessImg",
-          editingBusiness.image || undefined
+          originalBusiness.image || undefined
         );
+        const businessSchemaData: DBBusiness = {
+          ...originalBusiness,
+          image: url,
+          updatedAt: new Date(),
+        };
+        await saveBusinessFn({ data: businessSchemaData });
+
+        setBusinesses((prev) =>
+          prev.map((b) => (b.id === editingBusiness.id ? businessSchemaData : b)),
+        );
+        if (selectedUser) {
+          const updatedAssoc = selectedUser.associatedBusinesses.map((b) =>
+            b.id === editingBusiness.id ? businessSchemaData : b
+          );
+          setSelectedUser({
+            ...selectedUser,
+            associatedBusinesses: updatedAssoc,
+          });
+        }
         setEditBusinessForm((prev: any) => ({ ...prev, image: url }));
+        setEditingBusiness((prev) => prev ? { ...prev, image: url } : null);
       } catch (err: any) {
         console.error("Failed to upload logo:", err);
         alert(err.message || "Failed to upload logo");

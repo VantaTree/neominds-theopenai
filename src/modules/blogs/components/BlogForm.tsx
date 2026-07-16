@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { type Blog, type BlogStatus } from "@/lib/schemas";
 import { uploadFileToStorage, deleteFileFromStorage } from "@/lib/firebase";
+import { updateBlogFn } from "@/lib/server-functions";
 
 export type CreateBlogInput = Omit<Blog, "id" | "createdAt" | "updatedAt">;
 
@@ -39,7 +40,18 @@ export default function BlogForm({
   const [uploadError, setUploadError] = useState("");
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   
+  const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
+  
   const editorRef = useRef<HTMLDivElement>(null);
+
+  // Revoke object URL on unmount to avoid leaks
+  useEffect(() => {
+    return () => {
+      if (coverImageUrl && coverImageUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(coverImageUrl);
+      }
+    };
+  }, [coverImageUrl]);
 
   // Generate slug dynamically from title
   useEffect(() => {
@@ -199,23 +211,117 @@ export default function BlogForm({
       return;
     }
 
-    setIsUploading(true);
-    setUploadError("");
-    try {
-      const blogId = initialBlog?.id || slug || "new";
-      const url = await uploadFileToStorage(file, "blogs", blogId, "blogImg", coverImageUrl || undefined);
-      setCoverImageUrl(url);
-    } catch (err: any) {
-      setUploadError(err.message || "Failed to upload image");
-    } finally {
-      setIsUploading(false);
+    if (!initialBlog) {
+      // Create mode: Defer upload
+      setCoverImageFile(file);
+      const previewUrl = URL.createObjectURL(file);
+      if (coverImageUrl && coverImageUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(coverImageUrl);
+      }
+      setCoverImageUrl(previewUrl);
+      if (onChange) {
+        onChange({
+          title,
+          slug,
+          summary,
+          content,
+          coverImageUrl: previewUrl,
+          author,
+          status,
+          featured,
+        });
+      }
+    } else {
+      // Edit mode: Upload and save instantly
+      setIsUploading(true);
+      setUploadError("");
+      try {
+        const blogId = initialBlog.id;
+        const url = await uploadFileToStorage(file, "blogs", blogId, "blogImg", coverImageUrl || undefined);
+        
+        await updateBlogFn({
+          data: {
+            id: blogId,
+            data: {
+              coverImageUrl: url,
+            },
+          },
+        });
+
+        setCoverImageUrl(url);
+        if (onChange) {
+          onChange({
+            title,
+            slug,
+            summary,
+            content,
+            coverImageUrl: url,
+            author,
+            status,
+            featured,
+          });
+        }
+      } catch (err: any) {
+        setUploadError(err.message || "Failed to upload image");
+      } finally {
+        setIsUploading(false);
+      }
     }
   };
 
   const handleRemoveCoverImage = async () => {
     if (coverImageUrl) {
-      await deleteFileFromStorage(coverImageUrl);
-      setCoverImageUrl("");
+      if (!initialBlog) {
+        // Create mode: local cleanup
+        if (coverImageUrl.startsWith("blob:")) {
+          URL.revokeObjectURL(coverImageUrl);
+        }
+        setCoverImageFile(null);
+        setCoverImageUrl("");
+        if (onChange) {
+          onChange({
+            title,
+            slug,
+            summary,
+            content,
+            coverImageUrl: "",
+            author,
+            status,
+            featured,
+          });
+        }
+      } else {
+        // Edit mode: Delete from storage and update DB
+        setIsUploading(true);
+        try {
+          await deleteFileFromStorage(coverImageUrl);
+          await updateBlogFn({
+            data: {
+              id: initialBlog.id,
+              data: {
+                coverImageUrl: "",
+              },
+            },
+          });
+          setCoverImageUrl("");
+          if (onChange) {
+            onChange({
+              title,
+              slug,
+              summary,
+              content,
+              coverImageUrl: "",
+              author,
+              status,
+              featured,
+            });
+          }
+        } catch (err: any) {
+          setUploadError(err.message || "Failed to remove image");
+        } finally {
+          setIsUploading(false);
+        }
+      }
     }
   };
 
@@ -235,7 +341,7 @@ export default function BlogForm({
     }
   }, [title, slug, summary, content, coverImageUrl, author, status, featured, onChange]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!onSave) return;
     const errors: Record<string, string> = {};
@@ -251,16 +357,36 @@ export default function BlogForm({
       return;
     }
 
-    onSave({
-      title,
-      slug,
-      summary,
-      content,
-      coverImageUrl: coverImageUrl || "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=800&q=80",
-      author,
-      status,
-      featured,
-    });
+    setIsUploading(true);
+    try {
+      let finalUrl = coverImageUrl;
+      if (coverImageFile) {
+        finalUrl = await uploadFileToStorage(
+          coverImageFile,
+          "blogs",
+          slug || "new",
+          "blogImg"
+        );
+        if (coverImageUrl && coverImageUrl.startsWith("blob:")) {
+          URL.revokeObjectURL(coverImageUrl);
+        }
+      }
+
+      await onSave({
+        title,
+        slug,
+        summary,
+        content,
+        coverImageUrl: finalUrl || "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=800&q=80",
+        author,
+        status,
+        featured,
+      });
+    } catch (err: any) {
+      setUploadError(err.message || "Failed to save blog");
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (
