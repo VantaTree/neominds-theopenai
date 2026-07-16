@@ -72,7 +72,7 @@ interface MappedUser {
   associatedBusinesses: DBBusiness[];
   industry?: string;
   website?: string;
-  image?: string;
+  image?: string | null;
 }
 
 function UsersPage() {
@@ -128,6 +128,7 @@ function UsersPage() {
   const [editingBusiness, setEditingBusiness] = useState<DBBusiness | null>(
     null,
   );
+  const [isSavingUser, setIsSavingUser] = useState(false);
   const [editBusinessForm, setEditBusinessForm] = useState<any>({});
   const [editBusinessErrors, setEditBusinessErrors] = useState<
     Record<string, string>
@@ -377,37 +378,38 @@ function UsersPage() {
       updatedAt: new Date(),
     };
 
-    const matchedBiz = businesses.find(
-      (b) =>
-        (typeof b.userId === "string" ? b.userId : b.userId?.id) === userId,
-    );
-    const bizId = matchedBiz ? matchedBiz.id : `biz_${userId}`;
-    const parsedPlan = editForm.plan.replace(" Plan", "") as any;
-    const businessSchemaData: DBBusiness = {
-      id: bizId,
-      userId: userId,
-      plan: parsedPlan,
-      addons: matchedBiz ? matchedBiz.addons : [],
-      businessName: editForm.business,
-      businessType: editForm.industry || "Consulting",
-      contactEmail: editForm.email,
-      contactPhone: editForm.phone,
-      websiteUrl: editForm.website || null,
-      paymentStatus: matchedBiz ? matchedBiz.paymentStatus : "Paid",
-      createdAt: matchedBiz ? matchedBiz.createdAt : new Date(),
-      updatedAt: new Date(),
-    };
+    // const matchedBiz = businesses.find(
+    //   (b) =>
+    //     (typeof b.userId === "string" ? b.userId : b.userId?.id) === userId,
+    // );
+    // const bizId = matchedBiz ? matchedBiz.id : `biz_${userId}`;
+    // const parsedPlan = editForm.plan.replace(" Plan", "") as any;
+    // const businessSchemaData: DBBusiness = {
+    //   id: bizId,
+    //   userId: userId,
+    //   plan: parsedPlan,
+    //   addons: matchedBiz ? matchedBiz.addons : [],
+    //   businessName: editForm.business,
+    //   businessType: editForm.industry || "Consulting",
+    //   contactEmail: editForm.email,
+    //   contactPhone: editForm.phone,
+    //   websiteUrl: editForm.website || null,
+    //   paymentStatus: matchedBiz ? matchedBiz.paymentStatus : "Paid",
+    //   createdAt: matchedBiz ? matchedBiz.createdAt : new Date(),
+    //   updatedAt: new Date(),
+    // };
 
+    setIsSavingUser(true);
     Promise.all([
       saveUserFn({ data: userSchemaData }),
-      saveBusinessFn({ data: businessSchemaData }),
+      // saveBusinessFn({ data: businessSchemaData }),
     ]).then(() => {
       setUsers((prev) =>
         prev.map((u) => (u.id === userId ? userSchemaData : u)),
       );
-      setBusinesses((prev) =>
-        prev.map((b) => (b.id === bizId ? businessSchemaData : b)),
-      );
+      // setBusinesses((prev) =>
+      //   prev.map((b) => (b.id === bizId ? businessSchemaData : b)),
+      // );
       if (selectedUser?.id === userId) {
         setSelectedUser({
           ...selectedUser,
@@ -423,6 +425,7 @@ function UsersPage() {
           image: editForm.image,
         });
       }
+      setIsSavingUser(false);
       setEditingUser(null);
       setToast({ title: "✓ User updated successfully!" });
     });
@@ -455,7 +458,7 @@ function UsersPage() {
       contactEmail: editBusinessForm.contactEmail || null,
       plan: editBusinessForm.plan || "None",
       paymentStatus: editBusinessForm.paymentStatus || "Pending",
-      image: editBusinessForm.image || "",
+      image: editBusinessForm.image || null,
       updatedAt: new Date(),
     };
 
@@ -2280,12 +2283,12 @@ function UsersPage() {
                 Cancel
               </button>
               <button
-                disabled={isUploadingUserAvatar}
+                disabled={isSavingUser || isUploadingUserAvatar}
                 onClick={handleEditSubmit}
                 className="px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ background: "var(--color-mm-orange)", color: "white" }}
               >
-                Save Changes
+                {isSavingUser ? "Saving..." : "Save Changes"}
               </button>
             </div>
           </div>

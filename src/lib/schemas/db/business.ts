@@ -48,7 +48,8 @@ export const BusinessSchema = z.object({
   businessType: z.string().default(""),
   contactEmail: z.string().email("Invalid contact email").optional().nullable(),
   contactPhone: z.string().default(""),
-  image: z.string().url().optional(),
+  image: z.string().url().nullish() 
+    .transform(val => val === undefined ? null : val) ,
   websiteUrl: z.string().default(""),
   paymentStatus: PaymentStatusEnum.default("Pending"),
   integrations: IntegrationsSchema.optional().nullable(),
