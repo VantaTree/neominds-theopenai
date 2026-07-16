@@ -214,6 +214,7 @@ function AssessmentPage() {
       websiteUrl: formData.websiteUrl || null,
       primaryGoal: formData.primaryGoal || "",
       targetAudience: formData.targetAudience || "",
+      location: formData.location || "",
       submittedAt: new Date().toISOString(),
     };
 
@@ -244,6 +245,7 @@ function AssessmentPage() {
       websiteUrl: formData.websiteUrl || null,
       primaryGoal: formData.primaryGoal || "",
       targetAudience: formData.targetAudience || "",
+      location: formData.location || "",
       submittedAt: new Date().toISOString(),
     };
 

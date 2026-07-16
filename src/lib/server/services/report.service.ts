@@ -44,6 +44,7 @@ export class ReportService {
       websiteUrl?: string | null;
       primaryGoal: string;
       targetAudience: string;
+      location: string;
     }
   ): Promise<{ result: any; businessId: string; reportId: string }> {
     if (!adminDb) {
@@ -74,6 +75,7 @@ export class ReportService {
         websiteUrl: data.websiteUrl || "",
         primaryGoal: data.primaryGoal,
         targetAudience: data.targetAudience,
+        location: data.location,
       }),
     });
 

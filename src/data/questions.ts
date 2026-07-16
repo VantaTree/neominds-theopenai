@@ -49,4 +49,11 @@ export const questions: Question[] = [
     placeholder: "e.g. Young professionals aged 25-34",
     required: true,
   },
+  {
+    id: "location",
+    label: "Enter the Location",
+    type: "text",
+    placeholder: "e.g. Basheerbhag, Hyderabad Telangana",
+    required: true,
+  },
 ];
