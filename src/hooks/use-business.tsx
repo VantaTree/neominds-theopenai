@@ -1,13 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { type Business } from "@/lib/schemas";
-import { getMyBusinessesFn } from "@/lib/server-functions";
+import { useMyBusinesses } from "./useDbQueries";
 
 interface BusinessContextType {
   businesses: Business[];
   activeBusiness: Business | null;
   setActiveBusiness: (biz: Business) => void;
   loading: boolean;
-  refetch: () => Promise<void>;
+  refetch: () => Promise<any>;
 }
 
 export const BusinessContext = createContext<BusinessContextType | undefined>(undefined);
@@ -19,48 +19,35 @@ export function BusinessProvider({
   children: React.ReactNode;
   initialBusinesses?: Business[];
 }) {
-  const [businesses, setBusinesses] = useState<Business[]>(initialBusinesses);
-  const [activeBusiness, setActiveBusiness] = useState<Business | null>(
-    initialBusinesses.length > 0 ? initialBusinesses[0] : null
-  );
-  const [loading, setLoading] = useState(initialBusinesses.length === 0);
+  const { data: businesses = initialBusinesses, isLoading: loading, refetch } = useMyBusinesses();
 
-  useEffect(() => {
-    if (typeof window !== "undefined" && initialBusinesses.length > 0) {
-      const savedId = localStorage.getItem("active_business_id");
-      if (savedId) {
-        const found = initialBusinesses.find((b) => b.id === savedId);
-        if (found) {
-          setActiveBusiness(found);
+  const [activeBusiness, setActiveBusiness] = useState<Business | null>(() => {
+    if (initialBusinesses.length > 0) {
+      if (typeof window !== "undefined") {
+        const savedId = localStorage.getItem("active_business_id");
+        if (savedId) {
+          const found = initialBusinesses.find((b) => b.id === savedId);
+          if (found) return found;
         }
       }
+      return initialBusinesses[0];
     }
-  }, [initialBusinesses]);
-
-  const fetchBusinesses = async () => {
-    try {
-      if (businesses.length === 0) {
-        setLoading(true);
-      }
-      const data = await getMyBusinessesFn();
-      setBusinesses(data);
-      if (data && data.length > 0) {
-        const savedId = typeof window !== "undefined" ? localStorage.getItem("active_business_id") : null;
-        const found = data.find((b) => b.id === savedId) || data[0];
-        setActiveBusiness(found);
-      } else {
-        setActiveBusiness(null);
-      }
-    } catch (error) {
-      console.error("Error loading businesses:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    return null;
+  });
 
   useEffect(() => {
-    fetchBusinesses();
-  }, []);
+    if (businesses && businesses.length > 0) {
+      const savedId = typeof window !== "undefined" ? localStorage.getItem("active_business_id") : null;
+      const found = businesses.find((b) => b.id === savedId) || businesses[0];
+      setActiveBusiness((prev) => {
+        // Only update if it actually changed to prevent render loops
+        if (prev?.id === found.id) return prev;
+        return found;
+      });
+    } else {
+      setActiveBusiness(null);
+    }
+  }, [businesses]);
 
   const handleSetActiveBusiness = (biz: Business) => {
     setActiveBusiness(biz);
@@ -76,7 +63,7 @@ export function BusinessProvider({
         activeBusiness,
         setActiveBusiness: handleSetActiveBusiness,
         loading,
-        refetch: fetchBusinesses,
+        refetch,
       }}
     >
       {children}

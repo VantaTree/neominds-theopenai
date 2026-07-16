@@ -18,8 +18,14 @@ export default function ClientBottomLinks() {
     let client: any = null;
 
     async function checkUnread() {
+      const businessId = activeBusiness?.id;
+      if (!businessId) {
+        setUnreadChatCount(0);
+        return;
+      }
+
       try {
-        const creds = await getClientStreamCredentialsFn();
+        const creds = await getClientStreamCredentialsFn({ data: businessId });
         if (!active) return;
         const { StreamChat } = await import("stream-chat");
         client = StreamChat.getInstance(creds.apiKey);
@@ -44,6 +50,9 @@ export default function ClientBottomLinks() {
         });
       } catch (err) {
         // Silent error
+        if (active) {
+          setUnreadChatCount(0);
+        }
       }
     }
 
@@ -55,7 +64,7 @@ export default function ClientBottomLinks() {
         client.disconnectUser();
       }
     };
-  }, []);
+  }, [activeBusiness?.id]);
 
   // Close dropdown on click outside
   useEffect(() => {

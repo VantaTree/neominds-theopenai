@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
-import { adminMiddleware, authenticatedMiddleware } from "./middleware";
+import { adminMiddleware, authenticatedMiddleware, businessOwnerMiddleware, requirePlanMiddleware } from "./middleware";
+import { z } from "zod";
 
 export const testFirestoreConnectionFn = createServerFn({ method: "POST" })
   .middleware([adminMiddleware])
@@ -48,8 +49,9 @@ export const getStreamCredentialsFn = createServerFn({ method: "GET" })
   });
 
 export const getClientStreamCredentialsFn = createServerFn({ method: "GET" })
-  .middleware([authenticatedMiddleware])
-  .handler(async ({ context }) => {
+  .validator((d: any) => z.object({ data: z.string() }).parse(d))
+  .middleware([authenticatedMiddleware, businessOwnerMiddleware, requirePlanMiddleware("Basic")])
+  .handler(async ({ data: businessId, context }) => {
     const decoded = context.user;
 
     const apiKey = process.env.VITE_STREAM_API_KEY || import.meta.env.VITE_STREAM_API_KEY;

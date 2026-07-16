@@ -24,8 +24,14 @@ export default function ClientNav() {
     let client: any = null;
 
     async function checkUnread() {
+      const businessId = activeBusiness?.id;
+      if (!businessId) {
+        setUnreadChatCount(0);
+        return;
+      }
+
       try {
-        const creds = await getClientStreamCredentialsFn();
+        const creds = await getClientStreamCredentialsFn({ data: businessId });
         if (!active) return;
         const { StreamChat } = await import("stream-chat");
         client = StreamChat.getInstance(creds.apiKey);
@@ -50,6 +56,9 @@ export default function ClientNav() {
         });
       } catch (err) {
         // Silent error
+        if (active) {
+          setUnreadChatCount(0);
+        }
       }
     }
 
@@ -61,7 +70,7 @@ export default function ClientNav() {
         client.disconnectUser();
       }
     };
-  }, []);
+  }, [activeBusiness?.id]);
 
   const [userProfile, setUserProfile] = useState({
     name: "John Doe",

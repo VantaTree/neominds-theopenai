@@ -15,6 +15,7 @@ export const dbKeys = {
   businessesByUser: (userId: string) => [...dbKeys.businesses(), "byUser", userId] as const,
 
   projects: () => [...dbKeys.all, "projects"] as const,
+  projectsByBusiness: (businessId: string) => [...dbKeys.projects(), "byBusiness", businessId] as const,
 
   payments: () => [...dbKeys.all, "payments"] as const,
 
@@ -30,6 +31,7 @@ export const dbKeys = {
 
   reports: () => [...dbKeys.all, "reports"] as const,
   reportsByUser: (uid: string) => [...dbKeys.reports(), "byUser", uid] as const,
+  reportsByBusiness: (businessId: string) => [...dbKeys.reports(), "byBusiness", businessId] as const,
 
   auditLogs: (limit?: number) => [...dbKeys.all, "auditLogs", { limit }] as const,
 

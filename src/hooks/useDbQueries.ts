@@ -8,10 +8,12 @@ import {
   ensureUserDocumentFn,
   getBusinessesFn,
   getBusinessFn,
+  getMyBusinessesFn,
   getBusinessesByUserFn,
   saveBusinessFn,
   deleteBusinessFn,
   getProjectsFn,
+  getProjectsByBusinessFn,
   saveProjectFn,
   deleteProjectFn,
   getPaymentsFn,
@@ -28,6 +30,7 @@ import {
   saveSubscriptionFn,
   getReportsFn,
   getReportsByUserFn,
+  getReportsByBusinessFn,
   saveReportFn,
   deleteReportFn,
   getAuditLogFn,
@@ -126,6 +129,17 @@ export const useBusinessesList = () => {
   });
 };
 
+export const useMyBusinesses = (options?: { enabled?: boolean }) => {
+  return useQuery<Business[]>({
+    queryKey: ["myBusinesses"],
+    queryFn: async () => {
+      const res = await getMyBusinessesFn();
+      return res as Business[];
+    },
+    enabled: options?.enabled,
+  });
+};
+
 export const useBusiness = (id: string, options?: { enabled?: boolean }) => {
   return useQuery<Business | null>({
     queryKey: dbKeys.business(id),
@@ -194,6 +208,17 @@ export const useProjectsList = () => {
       const res = await getProjectsFn();
       return res as Project[];
     },
+  });
+};
+
+export const useProjectsByBusiness = (businessId: string, options?: { enabled?: boolean }) => {
+  return useQuery<Project[]>({
+    queryKey: dbKeys.projectsByBusiness(businessId),
+    queryFn: async () => {
+      const res = await getProjectsByBusinessFn({ data: businessId });
+      return res as Project[];
+    },
+    enabled: options?.enabled ?? !!businessId,
   });
 };
 
@@ -415,6 +440,17 @@ export const useReportsByUser = (uid: string, options?: { enabled?: boolean }) =
       return res as Report[];
     },
     enabled: options?.enabled ?? !!uid,
+  });
+};
+
+export const useReportsByBusiness = (businessId: string, options?: { enabled?: boolean }) => {
+  return useQuery<Report[]>({
+    queryKey: dbKeys.reportsByBusiness(businessId),
+    queryFn: async () => {
+      const res = await getReportsByBusinessFn({ data: businessId });
+      return res as Report[];
+    },
+    enabled: options?.enabled ?? !!businessId,
   });
 };
 

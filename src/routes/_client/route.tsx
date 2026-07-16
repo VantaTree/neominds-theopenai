@@ -4,6 +4,8 @@ import {
   Outlet,
   useLocation,
   redirect,
+  useMatches,
+  useRouterState,
 } from "@tanstack/react-router";
 import ClientNav from "../../components/client/ClientNav";
 import ClientBottomLinks from "../../components/client/ClientBottomLinks";
@@ -11,12 +13,19 @@ import { checkUserRoleFn, getMyBusinessesFn } from "@/lib/server-functions";
 import { BusinessProvider } from "@/hooks/use-business";
 
 export const Route = createFileRoute("/_client")({
-  beforeLoad: async ({ context, location }) => {
+  beforeLoad: async ({ context, location }: { context: any; location: any }) => {
     let userRole: string | null = null;
     let isAuthenticated = false;
 
     try {
-      const res = await checkUserRoleFn();
+      const res = await context.queryClient.ensureQueryData({
+        queryKey: ["userRole"],
+        queryFn: async () => {
+          const r = await checkUserRoleFn();
+          return r;
+        },
+        staleTime: 1000 * 60 * 5, // 5 minutes
+      });
       if (res && res.role) {
         userRole = res.role;
         isAuthenticated = true;
@@ -32,27 +41,33 @@ export const Route = createFileRoute("/_client")({
           throw redirect({
             to: "/login",
             search: { redirect: location.pathname },
-          });
+          } as any);
         }
       } else {
         throw redirect({
           to: "/login",
           search: { redirect: location.pathname },
-        });
+        } as any);
       }
     }
 
     if (userRole === "admin") {
       throw redirect({
         to: "/admin",
-      });
+      } as any);
     }
     try {
-      const businesses = await getMyBusinessesFn();
+      const businesses = await context.queryClient.ensureQueryData({
+        queryKey: ["myBusinesses"],
+        queryFn: async () => {
+          return await getMyBusinessesFn();
+        },
+        staleTime: 1000 * 60 * 5, // 5 minutes
+      });
       if (!businesses || businesses.length === 0) {
         throw redirect({
           to: "/assessment",
-        });
+        } as any);
       }
     } catch (e: any) {
       if (e && (e.to || e.isRedirect || typeof e.then === "function")) {
@@ -61,9 +76,15 @@ export const Route = createFileRoute("/_client")({
       console.error("Error fetching user businesses in beforeLoad:", e);
     }
   },
-  loader: async () => {
+  loader: async ({ context }: { context: any }) => {
     try {
-      const data = await getMyBusinessesFn();
+      const data = await context.queryClient.ensureQueryData({
+        queryKey: ["myBusinesses"],
+        queryFn: async () => {
+          return await getMyBusinessesFn();
+        },
+        staleTime: 1000 * 60 * 5,
+      });
       return {
         initialBusinesses: data || [],
       };
@@ -77,38 +98,41 @@ export const Route = createFileRoute("/_client")({
 });
 
 function PageTransitionWrapper({ children }: { children: React.ReactNode }) {
-  const location = useLocation();
+  const matches = useMatches();
+  const leafMatch = matches[matches.length - 1];
+  const currentPath = leafMatch?.pathname || "/";
+  
   const [displayChildren, setDisplayChildren] = useState(children);
   const [prevChildren, setPrevChildren] = useState<React.ReactNode>(null);
   const [animating, setAnimating] = useState(false);
-  const prevPath = useRef(location.pathname);
+  const prevPath = useRef(currentPath);
 
   useEffect(() => {
-    if (location.pathname !== prevPath.current) {
+    if (currentPath !== prevPath.current) {
       const isChatTransition =
-        location.pathname.startsWith("/chat") &&
+        currentPath.startsWith("/chat") &&
         prevPath.current.startsWith("/chat");
 
       if (isChatTransition) {
         setDisplayChildren(children);
-        prevPath.current = location.pathname;
+        prevPath.current = currentPath;
       } else {
         setPrevChildren(displayChildren);
         setDisplayChildren(children);
         setAnimating(true);
-        prevPath.current = location.pathname;
+        prevPath.current = currentPath;
       }
     } else {
       setDisplayChildren(children);
     }
-  }, [location.pathname, children]);
+  }, [currentPath, children]);
 
   const handleAnimationEnd = () => {
     setAnimating(false);
     setPrevChildren(null);
   };
 
-  const isChatRoute = location.pathname.startsWith("/chat");
+  const isChatRoute = currentPath.startsWith("/chat");
 
   return (
     <div
@@ -174,6 +198,7 @@ function PageTransitionWrapper({ children }: { children: React.ReactNode }) {
 function RouteComponent() {
   const { initialBusinesses } = Route.useLoaderData();
   const location = useLocation();
+  const routerState = useRouterState();
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -189,6 +214,7 @@ function RouteComponent() {
     location.pathname.startsWith("/chat/") &&
     location.pathname !== "/chat";
   const isChatRoute = location.pathname.startsWith("/chat");
+  const isRouterLoading = routerState.status === "pending";
 
   const renderContent = () => {
     if (isChatDomainMobile) {
@@ -239,6 +265,24 @@ function RouteComponent() {
 
   return (
     <BusinessProvider initialBusinesses={initialBusinesses}>
+      <style>{`
+        @keyframes loadingBar {
+          0% { width: 0%; }
+          50% { width: 70%; }
+          90% { width: 90%; }
+          100% { width: 100%; }
+        }
+        .top-progress-bar {
+          position: fixed;
+          top: 0;
+          left: 0;
+          height: 3px;
+          background: linear-gradient(90deg, #F39C12, #F1C40F, #E67E22);
+          z-index: 9999;
+          animation: loadingBar 2s cubic-bezier(0.1, 0.8, 0.1, 1) forwards;
+        }
+      `}</style>
+      {isRouterLoading && <div className="top-progress-bar" />}
       {renderContent()}
     </BusinessProvider>
   );

@@ -3,6 +3,7 @@ import { createFileRoute, Outlet, useNavigate, useParams, useLocation } from "@t
 import ChatNav from "../../../components/client/ChatNav";
 import { StreamChat } from "stream-chat";
 import { getClientStreamCredentialsFn } from "@/lib/server-functions";
+import { useBusiness } from "@/hooks/use-business";
 
 export const Route = createFileRoute("/_client/chat")({
   component: RouteComponent,
@@ -25,16 +26,24 @@ function RouteComponent() {
   const pathParts = location.pathname.split("/");
   const domain = pathParts[2] || "";
   const navigate = useNavigate();
+  const { activeBusiness } = useBusiness();
   const [chatClient, setChatClient] = useState<StreamChat | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const businessId = activeBusiness?.id || "";
 
   useEffect(() => {
     let clientInstance: StreamChat | null = null;
     let isSubscribed = true;
 
     async function initStream() {
+      if (!businessId) {
+        setLoading(false);
+        return;
+      }
       try {
-        const creds = await getClientStreamCredentialsFn();
+        setLoading(true);
+        const creds = await getClientStreamCredentialsFn({ data: businessId });
         if (!isSubscribed) return;
 
         clientInstance = StreamChat.getInstance(creds.apiKey);
@@ -48,6 +57,9 @@ function RouteComponent() {
         }
       } catch (err) {
         console.error("Failed to initialize Stream client:", err);
+        if (isSubscribed) {
+          setChatClient(null);
+        }
       } finally {
         if (isSubscribed) {
           setLoading(false);
@@ -63,7 +75,7 @@ function RouteComponent() {
         clientInstance.disconnectUser();
       }
     };
-  }, []);
+  }, [businessId]);
 
   const handleSelectChat = (id: string) => {
     navigate({

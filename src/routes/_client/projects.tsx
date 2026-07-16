@@ -4,8 +4,7 @@ import { ProjectDashboard } from "@/components/client/ProjectDashboard";
 import UpgradeCard from "@/components/client/UpgradeCard";
 import { X, Loader2 } from "lucide-react";
 import { useBusiness } from "@/hooks/use-business";
-import { getProjectsByBusinessFn, getReportsByBusinessFn, getMyBusinessesFn } from "@/lib/server-functions";
-import { type Project } from "@/lib/schemas";
+import { useProjectsByBusiness, useReportsByBusiness } from "@/hooks/useDbQueries";
 
 export const Route = createFileRoute("/_client/projects")({
   validateSearch: (
@@ -16,103 +15,27 @@ export const Route = createFileRoute("/_client/projects")({
         typeof search.activeCard === "string" ? search.activeCard : undefined,
     };
   },
-  loader: async () => {
-    try {
-      // Fetch businesses and default active business data for SSR pre-rendering
-      const businesses = await getMyBusinessesFn();
-      const defaultActiveId = businesses.length > 0 ? businesses[0].id : null;
-      
-      let initialProjects: Project[] = [];
-      let initialReports: any[] = [];
-      
-      if (defaultActiveId) {
-        const [projects, reports] = await Promise.all([
-          getProjectsByBusinessFn({ data: defaultActiveId }),
-          getReportsByBusinessFn({ data: defaultActiveId }),
-        ]);
-        initialProjects = projects;
-        initialReports = reports;
-      }
-      
-      return {
-        defaultActiveId,
-        initialProjects,
-        initialReports,
-      };
-    } catch (err) {
-      console.error("Loader failed in /projects:", err);
-      return {
-        defaultActiveId: null,
-        initialProjects: [],
-        initialReports: [],
-      };
-    }
-  },
   component: RouteComponent,
 });
 
 function RouteComponent() {
   const { activeCard } = Route.useSearch();
-  const { defaultActiveId, initialProjects, initialReports } = Route.useLoaderData();
   const { activeBusiness } = useBusiness();
   const navigate = Route.useNavigate();
 
-  const [projects, setProjects] = useState<Project[]>(initialProjects);
-  const [reports, setReports] = useState<any[]>(initialReports);
-  const [loading, setLoading] = useState(false);
+  const businessId = activeBusiness?.id || "";
+
+  // Fetch projects and reports with TanStack Query hooks, using the active business ID
+  const { data: projects = [], isLoading: loadingProjects } = useProjectsByBusiness(businessId, {
+    enabled: !!businessId,
+  });
+
+  const { data: reports = [], isLoading: loadingReports } = useReportsByBusiness(businessId, {
+    enabled: !!businessId,
+  });
+
+  const loading = loadingProjects || loadingReports;
   const [showUpgrade, setShowUpgrade] = useState(false);
-  const [loadedBusinessId, setLoadedBusinessId] = useState<string | null>(defaultActiveId);
-
-  // Sync projects and reports whenever activeBusiness changes
-  useEffect(() => {
-    const businessId = activeBusiness && activeBusiness.id;
-    if (!businessId) {
-      setProjects([]);
-      setReports([]);
-      setLoadedBusinessId(null);
-      return;
-    }
-
-    // If activeBusiness matches the business we currently have in state, skip fetching
-    if (businessId === loadedBusinessId) {
-      return;
-    }
-
-    let active = true;
-    async function loadData() {
-      setLoading(true);
-      try {
-        const [fetchedProjects, fetchedReports] = await Promise.all([
-          getProjectsByBusinessFn({ data: businessId }).catch((err) => {
-            console.warn("Failed to load projects (upgrade required):", err);
-            return [];
-          }),
-          getReportsByBusinessFn({ data: businessId }),
-        ]);
-        if (active) {
-          setProjects(fetchedProjects);
-          setReports(fetchedReports);
-          setLoadedBusinessId(businessId);
-        }
-      } catch (err) {
-        console.error("Failed to load projects/reports:", err);
-        if (active) {
-          setProjects([]);
-          setReports([]);
-          setLoadedBusinessId(null);
-        }
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    }
-
-    loadData();
-    return () => {
-      active = false;
-    };
-  }, [activeBusiness?.id, loadedBusinessId]);
 
   // Retrieve initial tab from query parameter, fallback to localStorage, fallback to 'report'
   const getInitialTab = () => {
