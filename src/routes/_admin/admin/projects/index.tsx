@@ -34,6 +34,26 @@ import {
   getBusinessesFn,
 } from "@/lib/server-functions";
 import { AdminLoader } from "@/components/AdminLoader";
+import { db } from "@/lib/firebase";
+import { collection, doc } from "firebase/firestore";
+
+// Helper to generate a Firestore auto ID safely
+function generateFirestoreAutoId() {
+  try {
+    if (db) {
+      return doc(collection(db, "projects")).id;
+    }
+  } catch (e) {
+    console.warn("Could not generate Firestore ID using SDK, falling back to random ID", e);
+  }
+  // Fallback: 20-character random alphanumeric string
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let autoId = "";
+  for (let i = 0; i < 20; i++) {
+    autoId += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return autoId;
+}
 
 export const Route = createFileRoute("/_admin/admin/projects/")({
   head: () => ({ meta: [{ title: "Projects — GrowConsult AI" }] }),
@@ -389,7 +409,7 @@ function ProjectsPage() {
     }
 
     const newPrjSchema = {
-      id: `PRJ-${1000 + projectList.length + 1}`,
+      id: generateFirestoreAutoId(),
       businessId: newProjectForm.businessId,
       name: newProjectForm.name,
       description: newProjectForm.description,
@@ -401,7 +421,9 @@ function ProjectsPage() {
       priority: newProjectForm.priority,
       notes: newProjectForm.notes,
       updates: [],
-      startDate: new Date(newProjectForm.startDate),
+      startDate: newProjectForm.startDate
+        ? new Date(newProjectForm.startDate)
+        : null,
       deadline: newProjectForm.deadline
         ? new Date(newProjectForm.deadline)
         : null,

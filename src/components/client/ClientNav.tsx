@@ -260,13 +260,13 @@ export default function ClientNav() {
               )}
             </div>
           ) : (
-            <button
-              className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold text-mm-gray/40 cursor-not-allowed"
-              disabled
+            <Link
+              to="/assessment"
+              className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold text-mm-orange hover:bg-mm-orange/5 transition-colors cursor-pointer"
             >
-              <Building2 className="h-4 w-4" />
-              <span>No Businesses</span>
-            </button>
+              <Plus className="h-4 w-4" />
+              <span>Add Businesses</span>
+            </Link>
           )}
 
         </div>
