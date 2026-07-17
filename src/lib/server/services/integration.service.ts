@@ -31,7 +31,7 @@ export class IntegrationService {
   }
 
   async getAuthUrl(platform: "google" | "meta", businessId: string, origin?: string): Promise<{ url: string }> {
-    const redirectUri = `${origin || process.env.VITE_APP_URL || "http://localhost:3000"}/oauth/callback`;
+    const redirectUri = `${origin || process.env.VITE_APP_URL || "http://localhost:8080"}/oauth/callback`;
     const stateObj = { platform, businessId };
     const state = Buffer.from(JSON.stringify(stateObj)).toString("base64");
 
@@ -79,7 +79,7 @@ export class IntegrationService {
   }
 
   async exchangeAuthCode(code: string, platform: "google" | "meta", businessId: string, origin?: string): Promise<{ success: boolean }> {
-    const redirectUri = `${origin || process.env.VITE_APP_URL || "http://localhost:3000"}/oauth/callback`;
+    const redirectUri = `${origin || process.env.VITE_APP_URL || "http://localhost:8080"}/oauth/callback`;
 
     let accessToken = "MOCK_ACCESS_TOKEN";
     let refreshToken = "MOCK_REFRESH_TOKEN";
@@ -108,7 +108,7 @@ export class IntegrationService {
         refreshToken = tokens.refresh_token || refreshToken;
         expiresAt = new Date(Date.now() + (tokens.expires_in || 3600) * 1000).toISOString();
       } else if (platform === "meta" && process.env.META_CLIENT_ID && process.env.META_CLIENT_SECRET) {
-        const response = await fetch("https://graph.facebook.com/v18.0/oauth/access_token", {
+        const response = await fetch("https://graph.facebook.com/v25.0/oauth/access_token", {
           method: "GET",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
