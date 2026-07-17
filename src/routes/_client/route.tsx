@@ -200,8 +200,10 @@ function RouteComponent() {
   const location = useLocation();
   const routerState = useRouterState();
   const [isMobile, setIsMobile] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     const media = window.matchMedia("(max-width: 768px)");
     setIsMobile(media.matches);
     const listener = (e: MediaQueryListEvent) => setIsMobile(e.matches);
@@ -282,7 +284,7 @@ function RouteComponent() {
           animation: loadingBar 2s cubic-bezier(0.1, 0.8, 0.1, 1) forwards;
         }
       `}</style>
-      {isRouterLoading && <div className="top-progress-bar" />}
+      {mounted && isRouterLoading && <div className="top-progress-bar" />}
       {renderContent()}
     </BusinessProvider>
   );
