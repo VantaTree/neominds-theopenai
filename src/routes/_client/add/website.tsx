@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useBusiness } from "@/hooks/use-business";
+import { PLAN_LIMITS } from "@/data/plans";
 import {
   ArrowLeft,
   ArrowRight,
@@ -9,9 +10,9 @@ import {
   UploadCloud,
   ChevronUp,
   ChevronDown,
-  Layers,
   CheckCircle,
-  HelpCircle
+  HelpCircle,
+  GripVertical
 } from "lucide-react";
 
 export const Route = createFileRoute("/_client/add/website")({
@@ -46,6 +47,7 @@ interface BrandSettings {
 interface SavedBrief {
   brandSettings: BrandSettings;
   sections: WebsiteSection[];
+  isFinishedAdding?: boolean;
 }
 
 const SECTION_TEMPLATES = [
@@ -92,9 +94,9 @@ function RouteComponent() {
   
   const storageKey = activeBusiness ? `website_brief_${activeBusiness.id}` : "website_brief_default";
 
-  // Step state
-  const [currentStep, setCurrentStep] = useState<number>(1);
-  const [maxVisitedStep, setMaxVisitedStep] = useState<number>(1);
+  // Resolve business plan limits
+  const currentPlan = activeBusiness?.plan || "Basic";
+  const limits = PLAN_LIMITS[currentPlan] || PLAN_LIMITS["Basic"];
 
   // Brand & identity settings
   const [brandSettings, setBrandSettings] = useState<BrandSettings>({
@@ -110,12 +112,55 @@ function RouteComponent() {
   // Dynamic website sections list
   const [sections, setSections] = useState<WebsiteSection[]>([]);
   
-  // Section workspace views
-  const [sectionWorkspaceView, setSectionWorkspaceView] = useState<"list" | "select" | "edit">("list");
-  const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
-  
+  // Dynamic step management
+  const [currentStep, setCurrentStep] = useState<number>(1);
+  const [maxVisitedStep, setMaxVisitedStep] = useState<number>(1);
+  const [isFinishedAdding, setIsFinishedAdding] = useState<boolean>(false);
   const [draggedOverId, setDraggedOverId] = useState<string | null>(null);
   const [isSubmitSuccess, setIsSubmitSuccess] = useState(false);
+
+  // Compute dynamic steps list dynamically
+  const dynamicSteps = [
+    { id: 1, type: "colors", label: "Brand Colors" },
+    { id: 2, type: "logo", label: "Brand Logo" },
+  ];
+
+  // Add existing sections as steps
+  sections.forEach((sec, idx) => {
+    dynamicSteps.push({
+      id: 3 + idx,
+      type: "edit-section",
+      sectionId: sec.id,
+      label: sec.title
+    });
+  });
+
+  const canAddMore = sections.length < limits.maxWebsiteSections;
+  const showAddStep = canAddMore && !isFinishedAdding;
+
+  if (showAddStep) {
+    dynamicSteps.push({
+      id: 3 + sections.length,
+      type: "select-section",
+      label: "Add Section"
+    });
+  }
+
+  const offset = showAddStep ? 1 : 0;
+  dynamicSteps.push(
+    {
+      id: 3 + sections.length + offset,
+      type: "notes",
+      label: "Final Details"
+    },
+    {
+      id: 4 + sections.length + offset,
+      type: "review",
+      label: "Review & Order"
+    }
+  );
+
+  const activeStep = dynamicSteps.find(s => s.id === currentStep) || dynamicSteps[0];
 
   // Load from local storage
   useEffect(() => {
@@ -124,13 +169,13 @@ function RouteComponent() {
       try {
         const parsed: SavedBrief = JSON.parse(saved);
         if (parsed.brandSettings) {
-          setBrandSettings(prev => ({
-            ...prev,
-            ...parsed.brandSettings
-          }));
+          setBrandSettings(prev => ({ ...prev, ...parsed.brandSettings }));
         }
         if (parsed.sections) {
           setSections(parsed.sections);
+        }
+        if (typeof parsed.isFinishedAdding === "boolean") {
+          setIsFinishedAdding(parsed.isFinishedAdding);
         }
       } catch (e) {
         console.error("Failed to parse website brief settings", e);
@@ -139,21 +184,28 @@ function RouteComponent() {
   }, [storageKey]);
 
   // Save to local storage helper
-  const saveProgress = (updatedBrand: BrandSettings, updatedSections: WebsiteSection[]) => {
+  const saveProgress = (
+    updatedBrand: BrandSettings,
+    updatedSections: WebsiteSection[],
+    finishedState: boolean = isFinishedAdding
+  ) => {
     const dataToSave: SavedBrief = {
       brandSettings: updatedBrand,
-      sections: updatedSections
+      sections: updatedSections,
+      isFinishedAdding: finishedState
     };
     localStorage.setItem(storageKey, JSON.stringify(dataToSave));
   };
 
   const handleNextStep = () => {
     const next = currentStep + 1;
-    setCurrentStep(next);
-    if (next > maxVisitedStep) {
-      setMaxVisitedStep(next);
+    if (next <= dynamicSteps.length) {
+      setCurrentStep(next);
+      if (next > maxVisitedStep) {
+        setMaxVisitedStep(next);
+      }
     }
-    saveProgress(brandSettings, sections);
+    saveProgress(brandSettings, sections, isFinishedAdding);
   };
 
   const handlePrevStep = () => {
@@ -168,11 +220,10 @@ function RouteComponent() {
     }
   };
 
-  // Color selection helpers
   const handleColorChange = (key: "primaryColor" | "secondaryColor", value: string) => {
     const newSettings = { ...brandSettings, [key]: value };
     setBrandSettings(newSettings);
-    saveProgress(newSettings, sections);
+    saveProgress(newSettings, sections, isFinishedAdding);
   };
 
   // File Upload Handlers
@@ -218,8 +269,14 @@ function RouteComponent() {
         logos: [...brandSettings.logos, ...loadedImages]
       };
       setBrandSettings(newSettings);
-      saveProgress(newSettings, sections);
+      saveProgress(newSettings, sections, isFinishedAdding);
     } else {
+      const targetSec = sections.find(s => s.id === targetId);
+      if (targetSec && (targetSec.images.length + loadedImages.length) > limits.maxImagesPerSection) {
+        alert(`You can only upload up to ${limits.maxImagesPerSection} reference images per section on the ${currentPlan} plan.`);
+        return;
+      }
+
       const updatedSections = sections.map(s => {
         if (s.id === targetId) {
           return { ...s, images: [...s.images, ...loadedImages] };
@@ -227,7 +284,7 @@ function RouteComponent() {
         return s;
       });
       setSections(updatedSections);
-      saveProgress(brandSettings, updatedSections);
+      saveProgress(brandSettings, updatedSections, isFinishedAdding);
     }
   };
 
@@ -238,7 +295,7 @@ function RouteComponent() {
         logos: brandSettings.logos.filter(img => img.id !== imageId)
       };
       setBrandSettings(newSettings);
-      saveProgress(newSettings, sections);
+      saveProgress(newSettings, sections, isFinishedAdding);
     } else {
       const updatedSections = sections.map(s => {
         if (s.id === sectionId) {
@@ -246,12 +303,12 @@ function RouteComponent() {
         }
         return s;
       });
-      setSections(updatedSections);
-      saveProgress(brandSettings, updatedSections);
+      setSections(updatedSections, isFinishedAdding);
+      saveProgress(brandSettings, updatedSections, isFinishedAdding);
     }
   };
 
-  // Section blueprint add/edit helpers
+  // Section flow template selector and addition triggers
   const handleAddSectionTemplate = (template: typeof SECTION_TEMPLATES[number]) => {
     const newSection: WebsiteSection = {
       id: `${template.type}_${Date.now()}`,
@@ -263,12 +320,20 @@ function RouteComponent() {
     
     const updatedSections = [...sections, newSection];
     setSections(updatedSections);
-    setEditingSectionId(newSection.id);
-    setSectionWorkspaceView("edit");
-    saveProgress(brandSettings, updatedSections);
+    
+    // Replace the "select-section" step with the config editor for this section
+    const newSectionStepId = 3 + sections.length;
+    setCurrentStep(newSectionStepId);
+    if (newSectionStepId > maxVisitedStep) {
+      setMaxVisitedStep(newSectionStepId);
+    }
+    
+    saveProgress(brandSettings, updatedSections, isFinishedAdding);
   };
 
   const handleAddCustomSection = () => {
+    if (!limits.eligibilityForCustomSection) return;
+
     const newSection: WebsiteSection = {
       id: `custom_${Date.now()}`,
       type: "custom",
@@ -279,31 +344,58 @@ function RouteComponent() {
     
     const updatedSections = [...sections, newSection];
     setSections(updatedSections);
-    setEditingSectionId(newSection.id);
-    setSectionWorkspaceView("edit");
-    saveProgress(brandSettings, updatedSections);
+    
+    const newSectionStepId = 3 + sections.length;
+    setCurrentStep(newSectionStepId);
+    if (newSectionStepId > maxVisitedStep) {
+      setMaxVisitedStep(newSectionStepId);
+    }
+    
+    saveProgress(brandSettings, updatedSections, isFinishedAdding);
   };
 
   const handleRemoveSection = (id: string) => {
     const updatedSections = sections.filter(s => s.id !== id);
     setSections(updatedSections);
-    if (editingSectionId === id) {
-      setEditingSectionId(null);
-      setSectionWorkspaceView("list");
+
+    // Fall back to step 2 (Brand Logo) or remains
+    setCurrentStep(2);
+    setMaxVisitedStep(2);
+    setIsFinishedAdding(false);
+    saveProgress(brandSettings, updatedSections, false);
+  };
+
+  const handleFinishAddingSections = () => {
+    setIsFinishedAdding(true);
+    const notesStepId = 3 + sections.length;
+    setCurrentStep(notesStepId);
+    if (notesStepId > maxVisitedStep) {
+      setMaxVisitedStep(notesStepId);
     }
-    saveProgress(brandSettings, updatedSections);
+    saveProgress(brandSettings, sections, true);
+  };
+
+  const handleTriggerAddSectionFromReview = () => {
+    setIsFinishedAdding(false);
+    const addSectionStepId = 3 + sections.length;
+    setCurrentStep(addSectionStepId);
+    if (addSectionStepId > maxVisitedStep) {
+      setMaxVisitedStep(addSectionStepId);
+    }
+    saveProgress(brandSettings, sections, false);
   };
 
   const handleSectionTextChange = (id: string, text: string) => {
     const updatedSections = sections.map(s => (s.id === id ? { ...s, description: text } : s));
     setSections(updatedSections);
-    saveProgress(brandSettings, updatedSections);
+    saveProgress(brandSettings, updatedSections, isFinishedAdding);
   };
 
   const handleSectionTitleChange = (id: string, title: string) => {
+    if (!limits.eligibilityForCustomSection) return;
     const updatedSections = sections.map(s => (s.id === id ? { ...s, title } : s));
     setSections(updatedSections);
-    saveProgress(brandSettings, updatedSections);
+    saveProgress(brandSettings, updatedSections, isFinishedAdding);
   };
 
   const moveSection = (index: number, direction: "up" | "down") => {
@@ -316,7 +408,7 @@ function RouteComponent() {
     updated[targetIndex] = temp;
     
     setSections(updated);
-    saveProgress(brandSettings, updated);
+    saveProgress(brandSettings, updated, isFinishedAdding);
   };
 
   const handleSubmitBrief = () => {
@@ -327,65 +419,54 @@ function RouteComponent() {
     }, 2500);
   };
 
-  const stepsList = [
-    { id: 1, label: "Brand Colors" },
-    { id: 2, label: "Brand Logo" },
-    { id: 3, label: "Page Sections" },
-    { id: 4, label: "Final Details" },
-    { id: 5, label: "Review & Order" }
-  ];
-
-  const editingSection = sections.find(s => s.id === editingSectionId);
+  const currentSection = activeStep.type === "edit-section" 
+    ? sections.find(s => s.id === (activeStep as any).sectionId) 
+    : null;
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-white text-[#0F172A] font-sans select-none flex flex-row">
       
-      {/* 1. Left Sidebar Navigation (Dots and Dashes only) */}
-      <aside className="w-16 md:w-20 shrink-0 border-r border-gray-100 flex flex-col justify-between items-center py-8 bg-white z-20 h-full">
+      {/* 1. Left Sidebar Navigation - Seamless and thin (Only show steps visited/reached) */}
+      <aside className="w-16 md:w-20 shrink-0 flex flex-col justify-between items-center py-10 z-20 h-full">
         {/* Back Button */}
         <Link
           to="/add"
-          className="p-2 hover:bg-blue-50 hover:text-blue-600 rounded-full transition-colors text-gray-400 cursor-pointer"
+          className="p-2 hover:bg-blue-50 hover:text-blue-600 rounded-full transition-colors text-gray-400 cursor-pointer shrink-0"
           title="Back to Services"
         >
           <ArrowLeft className="w-4 h-4" />
         </Link>
 
-        {/* Stepper container - dots & dashes only */}
-        <div className="flex flex-col items-center gap-4">
-          {stepsList.map((step, idx) => {
-            const isActive = currentStep === step.id;
-            const isVisited = step.id <= maxVisitedStep;
-            const isNextVisited = idx < stepsList.length - 1 && stepsList[idx + 1].id <= maxVisitedStep;
+        {/* Stepper container - vertical dashes with a fixed gap of 1 */}
+        <div className="flex-1 w-full flex flex-col justify-center items-center py-12 my-6">
+          <div className="flex flex-col items-center gap-1">
+            {dynamicSteps
+              .filter(step => step.id <= maxVisitedStep)
+              .map((step) => {
+                const isActive = currentStep === step.id;
+                const isVisited = step.id <= maxVisitedStep;
 
-            return (
-              <div key={step.id} className="flex flex-col items-center">
-                <button
-                  onClick={() => handleGoToStep(step.id)}
-                  disabled={!isVisited}
-                  className={`transition-all duration-350 cursor-pointer outline-none ${
-                    isActive
-                      ? "w-6 h-1 bg-blue-600 rounded-full my-1.5"
-                      : isVisited
-                        ? "w-1.5 h-1.5 rounded-full bg-blue-600 hover:scale-125 my-1.5"
-                        : "w-1.5 h-1.5 rounded-full bg-gray-200 my-1.5"
-                  }`}
-                  title={step.label}
-                />
-                {idx < stepsList.length - 1 && (
-                  <div
-                    className={`w-[1px] h-6 transition-colors duration-300 ${
-                      isNextVisited ? "bg-blue-600" : "bg-gray-100"
+                return (
+                  <button
+                    key={step.id}
+                    onClick={() => handleGoToStep(step.id)}
+                    disabled={!isVisited}
+                    className={`transition-all duration-350 cursor-pointer outline-none w-[2px] ${
+                      isActive
+                        ? "h-8 bg-blue-600 rounded-full"
+                        : isVisited
+                          ? "h-3 bg-blue-600/40 hover:bg-blue-600 rounded-full"
+                          : "h-3 bg-gray-150 rounded-full"
                     }`}
+                    title={step.label}
                   />
-                )}
-              </div>
-            );
-          })}
+                );
+              })}
+          </div>
         </div>
 
-        {/* Info Icon instead of block to maintain minimal look */}
-        <div className="text-gray-300 hover:text-blue-600 transition-colors cursor-pointer" title="Need help? Go back to chat.">
+        {/* Info Icon */}
+        <div className="text-gray-300 hover:text-blue-600 transition-colors cursor-pointer shrink-0" title="Need help? Go back to chat.">
           <HelpCircle className="w-4 h-4" />
         </div>
       </aside>
@@ -397,11 +478,11 @@ function RouteComponent() {
         <div className="flex-1 overflow-y-auto px-6 md:px-12 py-8 md:py-12 max-w-3xl w-full mx-auto flex flex-col justify-start">
           
           {/* STEP 1: Colors selection */}
-          {currentStep === 1 && (
+          {activeStep.type === "colors" && (
             <div className="space-y-8 animate-in fade-in duration-300 text-left">
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-blue-650 bg-blue-50 px-2.5 py-1 rounded border border-blue-100 inline-block mb-3">
-                  Step 1: Color Palette
+                  Step {activeStep.id}: Color Palette
                 </span>
                 <h2 className="text-2xl md:text-3xl font-extrabold text-[#0F172A] tracking-tight">
                   Pick your brand colors
@@ -412,7 +493,6 @@ function RouteComponent() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4">
-                {/* Primary color selection card */}
                 <div className="p-6 bg-white border border-gray-200 hover:border-blue-600 transition-colors rounded-[24px] shadow-xs flex flex-col items-center group">
                   <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Primary Color</span>
                   <div
@@ -437,15 +517,14 @@ function RouteComponent() {
                       className="text-xs font-black text-[#0F172A] uppercase bg-transparent text-right outline-none w-20"
                     />
                   </div>
-                  <button
+                  {/* <button
                     onClick={() => document.getElementById("primary_picker")?.click()}
                     className="mt-4 text-xs font-bold text-blue-600 hover:underline cursor-pointer"
                   >
                     Open Palette
-                  </button>
+                  </button> */}
                 </div>
 
-                {/* Secondary color selection card */}
                 <div className="p-6 bg-white border border-gray-200 hover:border-blue-600 transition-colors rounded-[24px] shadow-xs flex flex-col items-center group">
                   <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Secondary Color</span>
                   <div
@@ -470,23 +549,23 @@ function RouteComponent() {
                       className="text-xs font-black text-[#0F172A] uppercase bg-transparent text-right outline-none w-20"
                     />
                   </div>
-                  <button
+                  {/* <button
                     onClick={() => document.getElementById("secondary_picker")?.click()}
                     className="mt-4 text-xs font-bold text-blue-600 hover:underline cursor-pointer"
                   >
                     Open Palette
-                  </button>
+                  </button> */}
                 </div>
               </div>
             </div>
           )}
 
           {/* STEP 2: Logo upload or description */}
-          {currentStep === 2 && (
+          {activeStep.type === "logo" && (
             <div className="space-y-8 animate-in fade-in duration-300 text-left">
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-blue-650 bg-blue-50 px-2.5 py-1 rounded border border-blue-100 inline-block mb-3">
-                  Step 2: Brand Identity
+                  Step {activeStep.id}: Brand Identity
                 </span>
                 <h2 className="text-2xl md:text-3xl font-extrabold text-[#0F172A] tracking-tight">
                   Brand Logo
@@ -497,7 +576,6 @@ function RouteComponent() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
-                {/* Left Side: Upload Zone */}
                 <div className="space-y-4">
                   <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Option A: Upload Logo</span>
                   
@@ -509,7 +587,7 @@ function RouteComponent() {
                           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-2">
                             <button
                               onClick={() => removeImage("logo", logo.id, true)}
-                              className="p-1.5 rounded-lg bg-red-650 hover:bg-red-700 text-white cursor-pointer"
+                              className="p-1.5 rounded-lg bg-red-655 hover:bg-red-700 text-white cursor-pointer"
                               title="Delete Logo"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -545,7 +623,6 @@ function RouteComponent() {
                   </div>
                 </div>
 
-                {/* Right Side: Description Textarea */}
                 <div className="space-y-4 flex flex-col">
                   <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Option B: Describe Logo Concept</span>
                   <textarea
@@ -553,7 +630,7 @@ function RouteComponent() {
                     onChange={(e) => {
                       const newSettings = { ...brandSettings, logoDescription: e.target.value };
                       setBrandSettings(newSettings);
-                      saveProgress(newSettings, sections);
+                      saveProgress(newSettings, sections, isFinishedAdding);
                     }}
                     rows={7}
                     placeholder="Describe what you'd like your logo to look like (e.g. style, symbols, emblem, text, key ideas)..."
@@ -564,224 +641,163 @@ function RouteComponent() {
             </div>
           )}
 
-          {/* STEP 3: Website sections manager */}
-          {currentStep === 3 && (
+          {/* STEP 3 (Template selector step for adding sections) */}
+          {activeStep.type === "select-section" && (
             <div className="space-y-8 animate-in fade-in duration-300 text-left">
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-blue-650 bg-blue-50 px-2.5 py-1 rounded border border-blue-100 inline-block mb-3">
-                  Step 3: Site Blueprint
+                  Step {activeStep.id}: Blueprint Section Choice
                 </span>
                 <h2 className="text-2xl md:text-3xl font-extrabold text-[#0F172A] tracking-tight">
-                  Website Structure & Outline
+                  Add website section
                 </h2>
                 <p className="text-sm text-gray-500 mt-1">
-                  Choose the structural sections you want to include on your page.
+                  Choose a structural template block to add. You can add up to {limits.maxWebsiteSections} sections under your {currentPlan} plan (currently: {sections.length}).
                 </p>
               </div>
 
-              {/* View A: Section workspace list overview */}
-              {sectionWorkspaceView === "list" && (
-                <div className="space-y-6 pt-4">
-                  {sections.length === 0 ? (
-                    <div className="text-center py-12 border border-dashed border-gray-200 rounded-[24px] bg-gray-50/50 animate-in fade-in duration-200">
-                      <Layers className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-                      <h3 className="font-bold text-gray-700 text-sm">No sections added yet</h3>
-                      <p className="text-xs text-gray-400 mt-1 mb-4">Add sections to start outlining your page layout.</p>
-                      <button
-                        onClick={() => setSectionWorkspaceView("select")}
-                        className="bg-blue-600 text-white hover:bg-blue-700 font-extrabold text-xs px-5 py-2.5 rounded-full cursor-pointer transition-all active:scale-95 shadow-sm"
-                      >
-                        Add Your First Section
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between border-b border-gray-100 pb-2">
-                        <span className="text-xs font-bold text-gray-400">Added Sections ({sections.length})</span>
-                        <button
-                          onClick={() => setSectionWorkspaceView("select")}
-                          className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1 cursor-pointer"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                          Add Section
-                        </button>
-                      </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-4">
+                {SECTION_TEMPLATES.map((tmpl) => (
+                  <button
+                    key={tmpl.type}
+                    onClick={() => handleAddSectionTemplate(tmpl)}
+                    className="flex flex-col items-start p-5 bg-white border border-gray-200 rounded-[20px] text-left hover:border-blue-600 hover:shadow-xs transition-all cursor-pointer group"
+                  >
+                    <h4 className="font-bold text-sm text-[#0F172A] mb-1 group-hover:text-blue-600">{tmpl.title}</h4>
+                    <p className="text-[10px] text-gray-400 leading-relaxed line-clamp-3">{tmpl.defaultDescription}</p>
+                  </button>
+                ))}
+                
+                {limits.eligibilityForCustomSection && (
+                  <button
+                    onClick={handleAddCustomSection}
+                    className="flex flex-col items-start p-5 bg-white border border-dashed border-gray-300 rounded-[20px] text-left hover:border-blue-600 hover:shadow-xs transition-all cursor-pointer group"
+                  >
+                    <h4 className="font-bold text-sm text-blue-600 mb-1">Custom Section</h4>
+                    <p className="text-[10px] text-gray-400 leading-relaxed">Specify a completely custom structural section with unique goals.</p>
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
-                      <div className="grid grid-cols-1 gap-3">
-                        {sections.map((section, idx) => (
-                          <div
-                            key={section.id}
-                            className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-2xl shadow-xs transition-colors hover:border-gray-300"
-                          >
-                            <div className="flex items-center gap-3">
-                              <span className="text-xs font-extrabold text-gray-300">{(idx + 1).toString().padStart(2, "0")}</span>
-                              <div>
-                                <span className="font-bold text-sm text-[#0F172A]">{section.title}</span>
-                                <span className="text-[10px] text-gray-400 font-medium block capitalize">{section.type} outline</span>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => {
-                                  setEditingSectionId(section.id);
-                                  setSectionWorkspaceView("edit");
-                                }}
-                                className="text-xs font-bold text-blue-605 hover:text-blue-700 hover:underline px-3 py-1.5 hover:bg-blue-50/30 rounded-lg cursor-pointer"
-                              >
-                                Edit Details
-                              </button>
-                              <button
-                                onClick={() => handleRemoveSection(section.id)}
-                                className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 cursor-pointer"
-                                title="Remove section"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
+          {/* STEP 3+ (Dynamic sections editors) */}
+          {activeStep.type === "edit-section" && currentSection && (
+            <div className="space-y-8 animate-in fade-in duration-300 text-left">
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-blue-650 bg-blue-50 px-2.5 py-1 rounded border border-blue-100 inline-block">
+                    Step {activeStep.id}: Configure Section
+                  </span>
+                  <button
+                    onClick={() => handleRemoveSection(currentSection.id)}
+                    className="text-xs font-bold text-red-500 hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Delete Section</span>
+                  </button>
+                </div>
+                <h2 className="text-2xl md:text-3xl font-extrabold text-[#0F172A] tracking-tight mt-3">
+                  {currentSection.title}
+                </h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  Specify details, objectives, reference layout, or images for this block.
+                </p>
+              </div>
+
+              <div className="space-y-6 pt-2">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Section Name</label>
+                  <input
+                    type="text"
+                    value={currentSection.title}
+                    onChange={(e) => handleSectionTitleChange(currentSection.id, e.target.value)}
+                    disabled={!limits.eligibilityForCustomSection}
+                    className={`w-full text-sm font-bold text-[#0F172A] p-3 border border-gray-200 rounded-xl outline-none bg-white transition-all ${
+                      !limits.eligibilityForCustomSection 
+                        ? "bg-gray-50 text-gray-400 cursor-not-allowed border-gray-150" 
+                        : "focus:border-blue-600"
+                    }`}
+                    placeholder="Enter section name"
+                  />
+                  {!limits.eligibilityForCustomSection && (
+                    <p className="text-[10px] text-amber-600 font-medium">Upgrade to Pro plan to customize section names.</p>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block font-sans">
+                    What Copy / Layout goes here?
+                  </label>
+                  <textarea
+                    value={currentSection.description}
+                    onChange={(e) => handleSectionTextChange(currentSection.id, e.target.value)}
+                    rows={6}
+                    className="w-full text-sm text-[#0F172A] p-3.5 border border-gray-200 rounded-xl focus:border-blue-600 outline-none bg-white transition-all resize-y placeholder:text-gray-400"
+                    placeholder="Describe the content details, headings, action buttons, pricing info, or layout details for this section..."
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">
+                    Reference Images / Layouts (Max {limits.maxImagesPerSection} images under {currentPlan} plan)
+                  </label>
+                  
+                  {currentSection.images.length > 0 && (
+                    <div className="grid grid-cols-3 gap-3 mb-2">
+                      {currentSection.images.map(img => (
+                        <div key={img.id} className="relative rounded-xl border border-gray-200 overflow-hidden bg-gray-50 aspect-video shadow-xs group">
+                          <img src={img.url} alt={img.name} className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-2">
+                            <button
+                              onClick={() => removeImage(currentSection.id, img.id)}
+                              className="p-1 text-white bg-red-650 hover:bg-red-700 rounded cursor-pointer"
+                              title="Delete reference image"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
                           </div>
-                        ))}
-                      </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {currentSection.images.length < limits.maxImagesPerSection && (
+                    <div
+                      onDragOver={(e) => { e.preventDefault(); setDraggedOverId(currentSection.id); }}
+                      onDragLeave={() => setDraggedOverId(null)}
+                      onDrop={(e) => { e.preventDefault(); setDraggedOverId(null); processFiles(currentSection.id, e.dataTransfer.files); }}
+                      onClick={() => document.getElementById(`sect_file_${currentSection.id}`)?.click()}
+                      className={`border-2 border-dashed rounded-xl p-5 text-center flex flex-col items-center justify-center transition-all cursor-pointer bg-gray-50/20 ${
+                        draggedOverId === currentSection.id ? "border-blue-600 bg-blue-50/30" : "border-gray-200 hover:border-blue-600"
+                      }`}
+                    >
+                      <input
+                        id={`sect_file_${currentSection.id}`}
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        onChange={(e) => processFiles(currentSection.id, e.target.files)}
+                        className="hidden"
+                      />
+                      <UploadCloud className="w-7 h-7 text-gray-400 mb-1.5" />
+                      <p className="text-xs font-bold text-gray-700">
+                        Drag & drop layouts, or <span className="text-blue-600 hover:underline">browse</span>
+                      </p>
+                      <p className="text-[10px] text-gray-400 mt-0.5">PNG, JPG up to 1.5MB</p>
                     </div>
                   )}
                 </div>
-              )}
-
-              {/* View B: Selecting a section layout template to add */}
-              {sectionWorkspaceView === "select" && (
-                <div className="space-y-6 pt-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-extrabold uppercase text-gray-400 tracking-wider">Select a layout template</span>
-                    <button
-                      onClick={() => setSectionWorkspaceView("list")}
-                      className="text-xs font-bold text-gray-500 hover:text-[#0F172A] cursor-pointer"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {SECTION_TEMPLATES.map((tmpl) => (
-                      <button
-                        key={tmpl.type}
-                        onClick={() => handleAddSectionTemplate(tmpl)}
-                        className="flex flex-col items-start p-5 bg-white border border-gray-200 rounded-[20px] text-left hover:border-blue-600 hover:shadow-xs transition-all cursor-pointer group"
-                      >
-                        <h4 className="font-bold text-sm text-[#0F172A] mb-1 group-hover:text-blue-600">{tmpl.title}</h4>
-                        <p className="text-[10px] text-gray-400 leading-relaxed line-clamp-3">{tmpl.defaultDescription}</p>
-                      </button>
-                    ))}
-                    
-                    {/* Custom Outline Card */}
-                    <button
-                      onClick={handleAddCustomSection}
-                      className="flex flex-col items-start p-5 bg-white border border-dashed border-gray-300 rounded-[20px] text-left hover:border-blue-600 hover:shadow-xs transition-all cursor-pointer group"
-                    >
-                      <h4 className="font-bold text-sm text-blue-600 mb-1">Custom Section</h4>
-                      <p className="text-[10px] text-gray-400 leading-relaxed">Specify a completely custom structural section with unique goals or requirements.</p>
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* View C: Editing section details and uploading reference mockups */}
-              {sectionWorkspaceView === "edit" && editingSection && (
-                <div className="p-6 bg-gray-50/50 border border-gray-200 rounded-[24px] space-y-6 animate-in slide-in-from-bottom-3 duration-250 text-left">
-                  <div className="flex items-center justify-between border-b border-gray-200 pb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-extrabold uppercase text-gray-400 tracking-wider">Configure Section</span>
-                    </div>
-                    <button
-                      onClick={() => setSectionWorkspaceView("list")}
-                      className="text-xs font-bold text-gray-500 hover:text-[#0F172A] cursor-pointer"
-                    >
-                      Save & Back
-                    </button>
-                  </div>
-
-                  <div className="space-y-4">
-                    {/* Section Title Input */}
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Section Name</label>
-                      <input
-                        type="text"
-                        value={editingSection.title}
-                        onChange={(e) => handleSectionTitleChange(editingSection.id, e.target.value)}
-                        className="w-full text-sm font-bold text-[#0F172A] p-3 border border-gray-200 rounded-xl focus:border-blue-600 outline-none bg-white transition-all"
-                        placeholder="Enter section name"
-                      />
-                    </div>
-
-                    {/* Section Copy/Goal Details */}
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">What Copy / Layout goes here?</label>
-                      <textarea
-                        value={editingSection.description}
-                        onChange={(e) => handleSectionTextChange(editingSection.id, e.target.value)}
-                        rows={5}
-                        className="w-full text-sm text-[#0F172A] p-3.5 border border-gray-200 rounded-xl focus:border-blue-600 outline-none bg-white transition-all resize-y placeholder:text-gray-400"
-                        placeholder="Describe the content, copy points, buttons, images, or specific outline details for this section..."
-                      />
-                    </div>
-
-                    {/* Section Reference Images */}
-                    <div className="space-y-3">
-                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Reference Images / Mockups (Max 1.5MB)</label>
-                      
-                      {editingSection.images.length > 0 && (
-                        <div className="grid grid-cols-3 gap-3 mb-2">
-                          {editingSection.images.map(img => (
-                            <div key={img.id} className="relative rounded-xl border border-gray-200 overflow-hidden bg-gray-50 aspect-video shadow-xs animate-in zoom-in-95 duration-200 group">
-                              <img src={img.url} alt={img.name} className="w-full h-full object-cover" />
-                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-2">
-                                <button
-                                  onClick={() => removeImage(editingSection.id, img.id)}
-                                  className="p-1 text-white bg-red-600 hover:bg-red-700 rounded cursor-pointer"
-                                  title="Delete reference image"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      <div
-                        onDragOver={(e) => { e.preventDefault(); setDraggedOverId(editingSection.id); }}
-                        onDragLeave={() => setDraggedOverId(null)}
-                        onDrop={(e) => { e.preventDefault(); setDraggedOverId(null); processFiles(editingSection.id, e.dataTransfer.files); }}
-                        onClick={() => document.getElementById(`sect_file_${editingSection.id}`)?.click()}
-                        className={`border-2 border-dashed rounded-xl p-5 text-center flex flex-col items-center justify-center transition-all cursor-pointer bg-white ${
-                          draggedOverId === editingSection.id ? "border-blue-600 bg-blue-50/30" : "border-gray-200 hover:border-blue-600"
-                        }`}
-                      >
-                        <input
-                          id={`sect_file_${editingSection.id}`}
-                          type="file"
-                          multiple
-                          accept="image/*"
-                          onChange={(e) => processFiles(editingSection.id, e.target.files)}
-                          className="hidden"
-                        />
-                        <UploadCloud className="w-7 h-7 text-gray-400 mb-1.5" />
-                        <p className="text-xs font-bold text-gray-700">
-                          Drag & drop reference layouts, or <span className="text-blue-600 hover:underline">browse</span>
-                        </p>
-                        <p className="text-[10px] text-gray-400 mt-0.5">PNG, JPG up to 1.5MB</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
+              </div>
             </div>
           )}
 
           {/* STEP 4: General project details / instructions */}
-          {currentStep === 4 && (
+          {activeStep.type === "notes" && (
             <div className="space-y-8 animate-in fade-in duration-300 text-left">
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-blue-650 bg-blue-50 px-2.5 py-1 rounded border border-blue-100 inline-block mb-3">
-                  Step 4: Context & Details
+                  Step {activeStep.id}: Context & Details
                 </span>
                 <h2 className="text-2xl md:text-3xl font-extrabold text-[#0F172A] tracking-tight">
                   Final details & notes
@@ -792,7 +808,6 @@ function RouteComponent() {
               </div>
 
               <div className="space-y-5 pt-4">
-                {/* Target Audience */}
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">
                     Target Audience / Core Users
@@ -803,14 +818,13 @@ function RouteComponent() {
                     onChange={(e) => {
                       const newSettings = { ...brandSettings, targetAudience: e.target.value };
                       setBrandSettings(newSettings);
-                      saveProgress(newSettings, sections);
+                      saveProgress(newSettings, sections, isFinishedAdding);
                     }}
                     className="w-full text-sm text-[#0F172A] p-3 border border-gray-200 rounded-xl focus:border-blue-600 outline-none bg-gray-50/20 transition-all placeholder:text-gray-400"
                     placeholder="E.g., Young professionals, local foodies, corporate HR managers..."
                   />
                 </div>
 
-                {/* Reference Website links */}
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">
                     Reference / Competitor Website Links
@@ -821,14 +835,13 @@ function RouteComponent() {
                     onChange={(e) => {
                       const newSettings = { ...brandSettings, referenceLinks: e.target.value };
                       setBrandSettings(newSettings);
-                      saveProgress(newSettings, sections);
+                      saveProgress(newSettings, sections, isFinishedAdding);
                     }}
                     className="w-full text-sm text-[#0F172A] p-3 border border-gray-200 rounded-xl focus:border-blue-600 outline-none bg-gray-50/20 transition-all placeholder:text-gray-400"
                     placeholder="E.g., https://competitor.com, https://inspiration.design..."
                   />
                 </div>
 
-                {/* General Project Instructions */}
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">
                     General Project Instructions & Notes
@@ -838,9 +851,9 @@ function RouteComponent() {
                     onChange={(e) => {
                       const newSettings = { ...brandSettings, generalNotes: e.target.value };
                       setBrandSettings(newSettings);
-                      saveProgress(newSettings, sections);
+                      saveProgress(newSettings, sections, isFinishedAdding);
                     }}
-                    rows={4}
+                    rows={6}
                     placeholder="Add key objectives, font preferences, visual branding requirements, or any other final instruction details..."
                     className="w-full text-sm text-[#0F172A] p-3.5 border border-gray-200 rounded-xl focus:border-blue-600 bg-gray-50/20 outline-none transition-all resize-y placeholder:text-gray-400"
                   />
@@ -850,17 +863,17 @@ function RouteComponent() {
           )}
 
           {/* STEP 5: Outline Review and Rearrange */}
-          {currentStep === 5 && (
+          {activeStep.type === "review" && (
             <div className="space-y-8 animate-in fade-in duration-300 text-left">
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-blue-650 bg-blue-50 px-2.5 py-1 rounded border border-blue-100 inline-block mb-3">
-                  Step 5: Confirmation
+                  Step {activeStep.id}: Confirmation
                 </span>
                 <h2 className="text-2xl md:text-3xl font-extrabold text-[#0F172A] tracking-tight">
-                  Review & Reorder Sections
+                  Review & Rearrange Sections
                 </h2>
                 <p className="text-sm text-gray-500 mt-1">
-                  Verify your branding settings, rearrange section structure, and finalize your brief.
+                  Drag and drop your website sections to change the order they will appear to your users.
                 </p>
               </div>
 
@@ -874,15 +887,13 @@ function RouteComponent() {
                 </div>
               ) : (
                 <div className="space-y-6 pt-2">
-                  
-                  {/* Colors & Logo Metadata Summary box */}
                   <div className="p-5 border border-gray-150 rounded-[20px] bg-gray-50/30 grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Palette</span>
                       <div className="flex items-center gap-2">
                         <div className="w-6 h-6 rounded-full border border-gray-300" style={{ backgroundColor: brandSettings.primaryColor }} />
                         <div className="w-6 h-6 rounded-full border border-gray-300" style={{ backgroundColor: brandSettings.secondaryColor }} />
-                        <span className="text-xs font-bold text-gray-500 uppercase">{brandSettings.primaryColor} / {brandSettings.secondaryColor}</span>
+                        <span className="text-xs font-bold text-gray-550 uppercase">{brandSettings.primaryColor} / {brandSettings.secondaryColor}</span>
                       </div>
                     </div>
 
@@ -896,45 +907,75 @@ function RouteComponent() {
                     </div>
                   </div>
 
-                  {/* Dynamic sections rearrange container */}
                   <div className="space-y-4">
-                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block border-b border-gray-100 pb-1.5">
-                      Rearrange Section Order
-                    </span>
+                    <div className="flex items-center justify-between border-b border-gray-100 pb-2">
+                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">
+                        Website Sections ({sections.length} / {limits.maxWebsiteSections})
+                      </span>
+                      
+                      {sections.length < limits.maxWebsiteSections && (
+                        <button
+                          onClick={handleTriggerAddSectionFromReview}
+                          className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-lg border border-blue-100"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Add Section</span>
+                        </button>
+                      )}
+                    </div>
 
                     {sections.length === 0 ? (
                       <p className="text-xs text-gray-400 italic">No sections have been defined in this blueprint.</p>
                     ) : (
-                      <div className="space-y-2.5">
-                        {sections.map((section, idx) => (
-                          <div
-                            key={section.id}
-                            className="flex items-center justify-between p-3.5 bg-white border border-gray-200 rounded-xl shadow-xs"
-                          >
-                            <div className="flex items-center gap-3">
-                              <span className="text-xs font-extrabold text-gray-300">{(idx + 1).toString().padStart(2, "0")}</span>
-                              <span className="font-bold text-xs text-[#0F172A]">{section.title}</span>
+                      <div className="space-y-3">
+                        {sections.map((section, idx) => {
+                          // Find template description if applicable
+                          const templateInfo = SECTION_TEMPLATES.find(t => t.type === section.type);
+                          const subtitle = templateInfo ? templateInfo.defaultDescription : "Custom structural website section.";
+
+                          return (
+                            <div
+                              key={section.id}
+                              className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-2xl shadow-xs hover:shadow-sm transition-all"
+                            >
+                              <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                                <GripVertical className="text-gray-300 w-4 h-4 shrink-0 cursor-grab active:cursor-grabbing" />
+                                <div className="min-w-0 text-left">
+                                  <h4 className="font-bold text-sm text-[#0F172A] truncate">{section.title}</h4>
+                                  <p className="text-[11px] text-gray-400 truncate mt-0.5 max-w-md">{subtitle}</p>
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-center gap-4 shrink-0 pl-4">
+                                <button
+                                  onClick={() => handleGoToStep(3 + idx)}
+                                  className="text-xs font-bold text-blue-650 hover:underline cursor-pointer"
+                                >
+                                  Edit
+                                </button>
+
+                                <div className="flex items-center gap-0.5 border border-gray-150 rounded-lg p-0.5">
+                                  <button
+                                    onClick={() => moveSection(idx, "up")}
+                                    disabled={idx === 0}
+                                    className="p-1 hover:bg-gray-105 rounded disabled:opacity-20 text-gray-500 disabled:cursor-not-allowed cursor-pointer"
+                                    title="Move Up"
+                                  >
+                                    <ChevronUp className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => moveSection(idx, "down")}
+                                    disabled={idx === sections.length - 1}
+                                    className="p-1 hover:bg-gray-105 rounded disabled:opacity-20 text-gray-500 disabled:cursor-not-allowed cursor-pointer"
+                                    title="Move Down"
+                                  >
+                                    <ChevronDown className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-1">
-                              <button
-                                onClick={() => moveSection(idx, "up")}
-                                disabled={idx === 0}
-                                className="p-1 hover:bg-gray-150 rounded disabled:opacity-20 text-gray-500 disabled:cursor-not-allowed cursor-pointer"
-                                title="Move Up"
-                              >
-                                <ChevronUp className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => moveSection(idx, "down")}
-                                disabled={idx === sections.length - 1}
-                                className="p-1 hover:bg-gray-150 rounded disabled:opacity-20 text-gray-500 disabled:cursor-not-allowed cursor-pointer"
-                                title="Move Down"
-                              >
-                                <ChevronDown className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -948,15 +989,27 @@ function RouteComponent() {
         {/* Footer Navigation Buttons */}
         {!isSubmitSuccess && (
           <div className="border-t border-gray-100 bg-white px-6 md:px-12 py-5 max-w-3xl w-full mx-auto flex items-center justify-between shrink-0">
-            <button
-              onClick={handlePrevStep}
-              disabled={currentStep === 1}
-              className="px-5 py-2.5 text-xs font-bold text-gray-500 hover:text-[#0F172A] disabled:opacity-20 transition-all cursor-pointer disabled:cursor-not-allowed"
-            >
-              Previous Step
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handlePrevStep}
+                disabled={currentStep === 1}
+                className="px-4 py-2.5 text-xs font-bold text-gray-500 hover:text-[#0F172A] disabled:opacity-20 transition-all cursor-pointer disabled:cursor-not-allowed"
+              >
+                Previous Step
+              </button>
 
-            {currentStep === 5 ? (
+              {/* Finished Adding Sections button available during section building */}
+              {(activeStep.type === "edit-section" || activeStep.type === "select-section") && (
+                <button
+                  onClick={handleFinishAddingSections}
+                  className="px-4 py-2.5 text-xs font-bold text-amber-600 hover:text-amber-700 bg-amber-50 rounded-xl border border-amber-100 transition-all cursor-pointer"
+                >
+                  Finished Adding Sections
+                </button>
+              )}
+            </div>
+
+            {currentStep === dynamicSteps.length ? (
               <button
                 onClick={handleSubmitBrief}
                 className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded-xl shadow-xs cursor-pointer transition-all active:scale-95"
