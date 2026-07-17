@@ -42,6 +42,7 @@ export const ProjectSchema = z.object({
   assets: z.array(z.string()).default([]),
   completedAt: TimestampSchema.nullable().optional(),
   deadline: TimestampSchema.nullable().optional(),
+  data: z.record(z.any()).default({}),
   startDate: DateField,
   createdAt: DateField,
   updatedAt: DateField,

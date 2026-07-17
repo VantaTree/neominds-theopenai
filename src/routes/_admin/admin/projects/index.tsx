@@ -225,6 +225,8 @@ function ProjectsPage() {
   const [newProjectErrors, setNewProjectErrors] = useState<
     Record<string, boolean>
   >({});
+  const [serviceInput, setServiceInput] = useState("");
+  const [serviceSearchVal, setServiceSearchVal] = useState("");
 
   const handleOpenNewProject = () => {
     const selectedBiz = businesses.find((b) => b.id === selectedBusinessId);
@@ -249,6 +251,7 @@ function ProjectsPage() {
       notes: "",
       assets: [],
     });
+    setServiceInput("");
     setNewProjectErrors({});
     setIsNewProjectOpen(true);
   };
@@ -345,12 +348,24 @@ function ProjectsPage() {
   const [isDomainOpen, setIsDomainOpen] = useState(false);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isServiceSearchOpen, setIsServiceSearchOpen] = useState(false);
+  const [isMobileBizDropdownOpen, setIsMobileBizDropdownOpen] = useState(false);
 
   const domainRef = useRef<HTMLDivElement>(null);
   const statusRef = useRef<HTMLDivElement>(null);
   const serviceSearchRef = useRef<HTMLDivElement>(null);
+  const mobileBizDropdownRef = useRef<HTMLDivElement>(null);
 
-  const allAvailableServices = ["Website", "Marketing", "SEO", "Sales", "Automation"];
+  const allAvailableServices = useMemo(() => {
+    const servicesSet = new Set<string>(["Website", "Marketing", "SEO", "Sales", "Automation"]);
+    projectList.forEach((p) => {
+      if (Array.isArray(p.services)) {
+        p.services.forEach((s) => {
+          if (s) servicesSet.add(s);
+        });
+      }
+    });
+    return Array.from(servicesSet);
+  }, [projectList]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -363,6 +378,13 @@ function ProjectsPage() {
         !serviceSearchRef.current.contains(e.target as Node)
       ) {
         setIsServiceSearchOpen(false);
+        setServiceSearchVal("");
+      }
+      if (
+        mobileBizDropdownRef.current &&
+        !mobileBizDropdownRef.current.contains(e.target as Node)
+      ) {
+        setIsMobileBizDropdownOpen(false);
       }
       const target = e.target as HTMLElement;
       if (openDropdownId && !target.closest(".actions-dropdown-container")) {
@@ -399,6 +421,33 @@ function ProjectsPage() {
         ? prev.services.filter((x) => x !== s)
         : [...prev.services, s],
     }));
+  };
+
+  const addCustomService = (service: string) => {
+    const trimmed = service.trim();
+    if (!trimmed) return;
+    if (!newProjectForm.services.includes(trimmed)) {
+      setNewProjectForm((prev) => ({
+        ...prev,
+        services: [...prev.services, trimmed],
+      }));
+    }
+    setServiceInput("");
+  };
+
+  const handleServiceKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addCustomService(serviceInput);
+    } else if (e.key === "," || e.key === ";") {
+      e.preventDefault();
+      addCustomService(serviceInput);
+    } else if (e.key === "Backspace" && !serviceInput && newProjectForm.services.length > 0) {
+      setNewProjectForm((prev) => ({
+        ...prev,
+        services: prev.services.slice(0, -1),
+      }));
+    }
   };
 
   const filteredBusinessesForSelect = useMemo(() => {
@@ -850,69 +899,93 @@ function ProjectsPage() {
             </button>
           )}
         </div>
-        <div className="flex gap-2 overflow-x-auto pb-1.5 scrollbar-none">
-          {filteredBusinesses.map((biz) => {
-            const isSelected = selectedBusinessId === biz.id;
-            const projectCount = getFilteredProjectsForBusiness(biz.id).length;
+        <div className="relative" ref={mobileBizDropdownRef}>
+          <button
+            onClick={() => setIsMobileBizDropdownOpen(!isMobileBizDropdownOpen)}
+            className="flex items-center justify-between w-full px-3 py-2.5 border rounded-xl bg-white text-xs font-bold text-mm-dark cursor-pointer min-h-[42px] transition-all"
+            style={{ borderColor: "var(--color-mm-border)" }}
+          >
+            {selectedBiz ? (
+              <div className="flex items-center gap-2.5 min-w-0">
+                {selectedBiz.image ? (
+                  <img
+                    src={selectedBiz.image}
+                    alt={selectedBiz.businessName}
+                    className="w-5 h-5 rounded-md object-cover aspect-square shrink-0"
+                  />
+                ) : (
+                  <Avatar name={selectedBiz.businessName} size={20} />
+                )}
+                <span className="truncate">{selectedBiz.businessName}</span>
+              </div>
+            ) : (
+              <span className="text-mm-gray/60 font-medium">Select a business...</span>
+            )}
+            <ChevronDown size={14} className={`text-mm-gray transition-transform duration-200 shrink-0 ${isMobileBizDropdownOpen ? "rotate-180" : ""}`} />
+          </button>
 
-            const userIdStr = typeof biz.userId === "object" && biz.userId !== null ? biz.userId.id : biz.userId;
-            const clientUser = users.find((u) => u.id === userIdStr);
+          {isMobileBizDropdownOpen && (
+            <div
+              className="absolute left-0 mt-1 w-full bg-white border border-mm-border rounded-xl shadow-lg py-1.5 z-50 max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-150"
+              style={{ boxShadow: "0 8px 24px rgba(0,0,0,0.08)" }}
+            >
+              {filteredBusinesses.map((biz) => {
+                const isSelected = selectedBusinessId === biz.id;
+                const projectCount = getFilteredProjectsForBusiness(biz.id).length;
+                const userIdStr = typeof biz.userId === "object" && biz.userId !== null ? biz.userId.id : biz.userId;
+                const clientUser = users.find((u) => u.id === userIdStr);
 
-            return (
-              <button
-                key={biz.id}
-                onClick={() => setSelectedBusinessId(biz.id)}
-                className={`flex items-center gap-2.5 px-3 py-2 rounded-xl border shrink-0 transition-all text-xs font-bold cursor-pointer ${
-                  isSelected
-                    ? "bg-mm-orange/10 border-mm-orange text-mm-orange"
-                    : "bg-white border-mm-border/60 text-mm-gray hover:bg-mm-subtle/50"
-                }`}
-              >
-                {/* Overlapping Avatar Container */}
-                <div className="relative shrink-0 w-6 h-6 select-none mr-0.5">
-                  {biz.image ? (
-                    <img
-                      src={biz.image}
-                      alt={biz.businessName}
-                      className="w-5 h-5 rounded-md object-cover aspect-square"
-                    />
-                  ) : (
-                    <Avatar name={biz.businessName} size={20} />
-                  )}
-                  <div className="absolute bottom-0 right-0 translate-x-1 translate-y-1 border border-white rounded-full overflow-hidden shadow-xs bg-white">
-                    {clientUser?.image ? (
-                      <img
-                        src={clientUser.image}
-                        alt={clientUser.fullName}
-                        className="w-2.5 h-2.5 rounded-full object-cover aspect-square"
-                      />
-                    ) : (
-                      <div className="w-2.5 h-2.5 rounded-full bg-mm-orange text-white text-[4px] font-black flex items-center justify-center">
-                        {clientUser?.fullName ? clientUser.fullName.charAt(0) : "U"}
+                return (
+                  <button
+                    key={biz.id}
+                    onClick={() => {
+                      setSelectedBusinessId(biz.id);
+                      setIsMobileBizDropdownOpen(false);
+                    }}
+                    className={`flex items-center justify-between w-full px-3.5 py-2.5 text-left text-xs font-medium transition-colors ${
+                      isSelected
+                        ? "bg-mm-orange/5 text-mm-orange font-bold"
+                        : "text-mm-gray hover:bg-mm-subtle/50"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      {biz.image ? (
+                        <img
+                          src={biz.image}
+                          alt={biz.businessName}
+                          className="w-5 h-5 rounded-md object-cover aspect-square shrink-0"
+                        />
+                      ) : (
+                        <Avatar name={biz.businessName} size={20} />
+                      )}
+                      <div className="truncate min-w-0">
+                        <div className={isSelected ? "text-mm-orange font-bold" : "text-mm-dark"}>
+                          {biz.businessName}
+                        </div>
+                        <div className="text-[10px] text-mm-gray/70 font-normal">
+                          {clientUser?.fullName || "No Owner"}
+                        </div>
                       </div>
-                    )}
-                  </div>
+                    </div>
+                    <span className="text-[9px] font-black bg-mm-subtle text-mm-gray/70 px-1.5 py-0.5 rounded-full shrink-0 ml-2">
+                      {projectCount}
+                    </span>
+                  </button>
+                );
+              })}
+              {filteredBusinesses.length === 0 && (
+                <div className="px-3.5 py-2.5 text-xs text-mm-gray/40 text-center font-medium">
+                  No businesses found
                 </div>
-
-                <span>{biz.businessName} ({clientUser?.fullName || "No Owner"})</span>
-                <span
-                  className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${
-                    isSelected
-                      ? "bg-mm-orange/20 text-mm-orange"
-                      : "bg-mm-subtle text-mm-gray/70"
-                  }`}
-                >
-                  {projectCount}
-                </span>
-              </button>
-            );
-          })}
+              )}
+            </div>
+          )}
         </div>
       </div>
 
       {/* Right Side - Projects Content */}
       <div className="flex-1 p-6 md:p-8 lg:p-10 space-y-6 overflow-y-scroll min-w-0">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
           <div>
             <h1
               className="text-2xl font-bold"
@@ -1287,34 +1360,56 @@ function ProjectsPage() {
 
             <div className="relative w-full sm:w-[220px]" ref={serviceSearchRef}>
               <div
-                onClick={() => setIsServiceSearchOpen(!isServiceSearchOpen)}
-                className="flex flex-wrap items-center gap-1.5 px-3 py-2 border rounded-xl bg-white cursor-pointer min-h-[42px] transition-all w-full"
+                onClick={() => setIsServiceSearchOpen(true)}
+                className="flex flex-wrap items-center gap-1.5 px-3 py-1.5 border rounded-xl bg-white cursor-pointer min-h-[42px] transition-all w-full focus-within:border-mm-orange"
                 style={{
                   borderColor: selectedServices.length > 0 ? "var(--color-mm-orange)" : "var(--color-mm-border)",
                 }}
               >
-                {selectedServices.length === 0 ? (
-                  <span className="text-sm text-mm-gray/60 font-medium">Services Filters...</span>
-                ) : (
-                  selectedServices.map((tag) => (
-                    <span
-                      key={tag}
-                      className="inline-flex items-center gap-1 bg-mm-orange/10 text-mm-orange text-xs font-semibold px-2 py-0.5 rounded-full select-none"
+                {selectedServices.map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center gap-1 bg-mm-orange/10 text-mm-orange text-xs font-semibold px-2 py-0.5 rounded-full select-none"
+                  >
+                    {tag}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedServices((prev) => prev.filter((t) => t !== tag));
+                      }}
+                      className="hover:text-mm-red font-black cursor-pointer"
                     >
-                      {tag}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedServices((prev) => prev.filter((t) => t !== tag));
-                        }}
-                        className="hover:text-mm-red font-black"
-                      >
-                        <X size={10} />
-                      </button>
-                    </span>
-                  ))
-                )}
+                      <X size={10} />
+                    </button>
+                  </span>
+                ))}
+                <input
+                  type="text"
+                  value={serviceSearchVal}
+                  onChange={(e) => {
+                    setServiceSearchVal(e.target.value);
+                    if (!isServiceSearchOpen) setIsServiceSearchOpen(true);
+                  }}
+                  onFocus={() => setIsServiceSearchOpen(true)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === "," || e.key === ";") {
+                      e.preventDefault();
+                      const val = serviceSearchVal.trim();
+                      if (val) {
+                        if (!selectedServices.includes(val)) {
+                          setSelectedServices((prev) => [...prev, val]);
+                        }
+                        setServiceSearchVal("");
+                        setIsServiceSearchOpen(false);
+                      }
+                    } else if (e.key === "Backspace" && !serviceSearchVal && selectedServices.length > 0) {
+                      setSelectedServices((prev) => prev.slice(0, -1));
+                    }
+                  }}
+                  placeholder={selectedServices.length === 0 ? "Services Filters..." : ""}
+                  className="flex-1 min-w-[60px] bg-transparent border-0 outline-none text-sm text-mm-dark py-0.5 placeholder:text-mm-gray/60 font-medium"
+                />
               </div>
               {isServiceSearchOpen && (
                 <div
@@ -1325,6 +1420,7 @@ function ProjectsPage() {
                 >
                   {allAvailableServices
                     .filter((s) => !selectedServices.includes(s))
+                    .filter((s) => s.toLowerCase().includes(serviceSearchVal.toLowerCase()))
                     .map((s) => (
                       <button
                         key={s}
@@ -1332,15 +1428,18 @@ function ProjectsPage() {
                         onClick={() => {
                           setSelectedServices((prev) => [...prev, s]);
                           setIsServiceSearchOpen(false);
+                          setServiceSearchVal("");
                         }}
                         className="w-full text-left px-3.5 py-2 text-sm text-mm-gray hover:bg-mm-orange/5 hover:text-mm-orange font-medium transition-colors"
                       >
                         {s}
                       </button>
                     ))}
-                  {allAvailableServices.filter((s) => !selectedServices.includes(s)).length === 0 && (
-                    <div className="px-3.5 py-2 text-xs text-mm-gray/60 font-medium text-center">
-                      All services selected
+                  {allAvailableServices
+                    .filter((s) => !selectedServices.includes(s))
+                    .filter((s) => s.toLowerCase().includes(serviceSearchVal.toLowerCase())).length === 0 && (
+                    <div className="px-3.5 py-2 text-xs text-mm-gray/40 text-center font-medium">
+                      No matching services found
                     </div>
                   )}
                 </div>
@@ -1982,36 +2081,68 @@ function ProjectsPage() {
                 >
                   Services*
                 </label>
-                <div className="flex flex-wrap gap-2">
-                  {["Website", "Marketing", "SEO", "Sales", "Automation"].map(
-                    (s) => {
-                      const isSelected = newProjectForm.services.includes(s);
-                      return (
-                        <button
-                          key={s}
-                          onClick={() => toggleService(s)}
-                          style={{
-                            background: isSelected
-                              ? "var(--color-mm-orange)"
-                              : "var(--color-mm-subtle)",
-                            border: isSelected
-                              ? "1px solid var(--color-mm-orange)"
-                              : "1px solid var(--color-mm-border)",
-                            color: isSelected
-                              ? "white"
-                              : "var(--color-mm-gray)",
-                            borderRadius: "999px",
-                            padding: "6px 12px",
-                            fontSize: "13px",
-                          }}
-                          className="transition-colors hover:opacity-90 cursor-pointer"
-                        >
-                          {s}
-                        </button>
-                      );
-                    },
+                <div
+                  className="flex flex-wrap items-center gap-1.5 px-3 py-1.5 border rounded-xl bg-white focus-within:border-mm-orange transition-all"
+                  style={{
+                    borderColor: newProjectErrors.services ? "var(--color-mm-red)" : "var(--color-mm-border)",
+                  }}
+                >
+                  {newProjectForm.services.map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center gap-1 bg-mm-orange/10 text-mm-orange text-xs font-semibold px-2 py-0.5 rounded-full select-none"
+                    >
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={() => toggleService(tag)}
+                        className="hover:text-mm-red font-black cursor-pointer"
+                      >
+                        <X size={10} />
+                      </button>
+                    </span>
+                  ))}
+                  <input
+                    type="text"
+                    value={serviceInput}
+                    onChange={(e) => setServiceInput(e.target.value)}
+                    onKeyDown={handleServiceKeyDown}
+                    placeholder={newProjectForm.services.length === 0 ? "Add service (press Enter or comma)..." : ""}
+                    className="flex-1 min-w-[120px] bg-transparent border-0 outline-none text-sm text-mm-dark py-1 placeholder:text-mm-gray/40"
+                  />
+                  {serviceInput.trim() && (
+                    <button
+                      type="button"
+                      onClick={() => addCustomService(serviceInput)}
+                      className="text-xs text-mm-orange font-bold hover:underline cursor-pointer"
+                    >
+                      Add
+                    </button>
                   )}
                 </div>
+
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  <span className="text-[11px] text-mm-gray/50 mr-1">Suggestions:</span>
+                  {["Website", "Marketing", "SEO", "Sales", "Automation"].map((s) => {
+                    const isSelected = newProjectForm.services.includes(s);
+                    return (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => toggleService(s)}
+                        className="text-xs px-2.5 py-1 rounded-lg border transition-all cursor-pointer select-none"
+                        style={{
+                          background: isSelected ? "var(--color-mm-orange)" : "white",
+                          borderColor: isSelected ? "var(--color-mm-orange)" : "var(--color-mm-border)",
+                          color: isSelected ? "white" : "var(--color-mm-gray)",
+                        }}
+                      >
+                        {isSelected ? `✓ ${s}` : `+ ${s}`}
+                      </button>
+                    );
+                  })}
+                </div>
+
                 {newProjectErrors.services && (
                   <div
                     style={{
