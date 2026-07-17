@@ -528,6 +528,7 @@ marketing_agent = Agent(
     • Customer Acquisition
     • Competitor Position
     • Growth Readiness
+    • business model (product based, serviced based, online, hybrid, offline)
 
     Provide practical, evidence-based recommendations
     that help the business improve its online presence,
