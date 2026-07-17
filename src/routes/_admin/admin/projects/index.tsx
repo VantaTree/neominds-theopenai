@@ -9,7 +9,7 @@ import {
   MoreVertical,
 } from "lucide-react";
 import { statusColors } from "@/lib/mock-data";
-import type { Project } from "@/lib/schemas";
+import type { Project, ProjectDomain } from "@/lib/schemas";
 import {
   Avatar,
   ProgressBar,
@@ -225,6 +225,8 @@ function ProjectsPage() {
   const [newProjectErrors, setNewProjectErrors] = useState<
     Record<string, boolean>
   >({});
+  const [serviceInput, setServiceInput] = useState("");
+  const [serviceSearchVal, setServiceSearchVal] = useState("");
 
   const handleOpenNewProject = () => {
     const selectedBiz = businesses.find((b) => b.id === selectedBusinessId);
@@ -249,6 +251,7 @@ function ProjectsPage() {
       notes: "",
       assets: [],
     });
+    setServiceInput("");
     setNewProjectErrors({});
     setIsNewProjectOpen(true);
   };
@@ -342,20 +345,28 @@ function ProjectsPage() {
     setStatusFilter(newStatus);
   };
 
-  const [isDomainOpen, setIsDomainOpen] = useState(false);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isServiceSearchOpen, setIsServiceSearchOpen] = useState(false);
+  const [isMobileBizDropdownOpen, setIsMobileBizDropdownOpen] = useState(false);
 
-  const domainRef = useRef<HTMLDivElement>(null);
   const statusRef = useRef<HTMLDivElement>(null);
   const serviceSearchRef = useRef<HTMLDivElement>(null);
+  const mobileBizDropdownRef = useRef<HTMLDivElement>(null);
 
-  const allAvailableServices = ["Website", "Marketing", "SEO", "Sales", "Automation"];
+  const allAvailableServices = useMemo(() => {
+    const servicesSet = new Set<string>(["Website", "Marketing", "SEO", "Sales", "Automation"]);
+    projectList.forEach((p) => {
+      if (Array.isArray(p.services)) {
+        p.services.forEach((s) => {
+          if (s) servicesSet.add(s);
+        });
+      }
+    });
+    return Array.from(servicesSet);
+  }, [projectList]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (domainRef.current && !domainRef.current.contains(e.target as Node))
-        setIsDomainOpen(false);
       if (statusRef.current && !statusRef.current.contains(e.target as Node))
         setIsStatusOpen(false);
       if (
@@ -363,6 +374,13 @@ function ProjectsPage() {
         !serviceSearchRef.current.contains(e.target as Node)
       ) {
         setIsServiceSearchOpen(false);
+        setServiceSearchVal("");
+      }
+      if (
+        mobileBizDropdownRef.current &&
+        !mobileBizDropdownRef.current.contains(e.target as Node)
+      ) {
+        setIsMobileBizDropdownOpen(false);
       }
       const target = e.target as HTMLElement;
       if (openDropdownId && !target.closest(".actions-dropdown-container")) {
@@ -399,6 +417,33 @@ function ProjectsPage() {
         ? prev.services.filter((x) => x !== s)
         : [...prev.services, s],
     }));
+  };
+
+  const addCustomService = (service: string) => {
+    const trimmed = service.trim();
+    if (!trimmed) return;
+    if (!newProjectForm.services.includes(trimmed)) {
+      setNewProjectForm((prev) => ({
+        ...prev,
+        services: [...prev.services, trimmed],
+      }));
+    }
+    setServiceInput("");
+  };
+
+  const handleServiceKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addCustomService(serviceInput);
+    } else if (e.key === "," || e.key === ";") {
+      e.preventDefault();
+      addCustomService(serviceInput);
+    } else if (e.key === "Backspace" && !serviceInput && newProjectForm.services.length > 0) {
+      setNewProjectForm((prev) => ({
+        ...prev,
+        services: prev.services.slice(0, -1),
+      }));
+    }
   };
 
   const filteredBusinessesForSelect = useMemo(() => {
@@ -462,10 +507,10 @@ function ProjectsPage() {
     if (!newProjectForm.domain) errs.domain = true;
     if (newProjectForm.services.length === 0) errs.services = true;
     if (!newProjectForm.manager.trim()) errs.manager = true;
-    if (!newProjectForm.startDate) errs.startDate = true;
-    if (!newProjectForm.deadline) errs.deadline = true;
-    if (!newProjectForm.status) errs.status = true;
-    if (!newProjectForm.priority) errs.priority = true;
+    // if (!newProjectForm.startDate) errs.startDate = true;
+    // if (!newProjectForm.deadline) errs.deadline = true;
+    // if (!newProjectForm.status) errs.status = true;
+    // if (!newProjectForm.priority) errs.priority = true;
 
     if (Object.keys(errs).length > 0) {
       setNewProjectErrors(errs);
@@ -490,8 +535,8 @@ function ProjectsPage() {
         services: newProjectForm.services,
         progress: 0,
         assignee: newProjectForm.manager,
-        status: newProjectForm.status,
-        priority: newProjectForm.priority,
+        status: newProjectForm.status || "Pending",
+        priority: newProjectForm.priority || "Medium",
         notes: newProjectForm.notes,
         updates: [],
         assets: uploadedUrls,
@@ -542,7 +587,7 @@ function ProjectsPage() {
     }
   };
 
-  const getFilteredProjectsForBusiness = useCallback((bizId: string) => {
+  const getFilteredProjectsForBusiness = useCallback((bizId: string, ignoreDomainFilter = false) => {
     const bizProjects = projectList.filter((p) => {
       const pBizId = typeof p.businessId === "object" && p.businessId !== null ? p.businessId.id : p.businessId;
       return pBizId === bizId;
@@ -566,7 +611,7 @@ function ProjectsPage() {
       else if (p.progress === 100) status = "Completed";
 
       let matchType = true;
-      if (domainFilter !== "All Domains") {
+      if (!ignoreDomainFilter && domainFilter !== "All Domains") {
         matchType = p.domain === domainFilter;
       }
 
@@ -623,6 +668,37 @@ function ProjectsPage() {
   const filteredProjects = useMemo(() => {
     if (!selectedBusinessId) return [];
     return getFilteredProjectsForBusiness(selectedBusinessId);
+  }, [selectedBusinessId, getFilteredProjectsForBusiness]);
+
+  const projectsByDomain = useMemo(() => {
+    const map: Record<ProjectDomain, Project[]> = {
+      Website: [],
+      Marketing: [],
+      Automation: [],
+    };
+    filteredProjects.forEach((p) => {
+      if (p.status !== "Requested") {
+        if (map[p.domain]) {
+          map[p.domain].push(p);
+        }
+      }
+    });
+    return map;
+  }, [filteredProjects]);
+
+  const userDraftProjects = useMemo(() => {
+    return filteredProjects.filter((p) => p.status === "Requested");
+  }, [filteredProjects]);
+
+  const domainCounts = useMemo(() => {
+    if (!selectedBusinessId) return { all: 0, Website: 0, Marketing: 0, Automation: 0 };
+    const list = getFilteredProjectsForBusiness(selectedBusinessId, true);
+    return {
+      all: list.length,
+      Website: list.filter((p) => p.domain === "Website").length,
+      Marketing: list.filter((p) => p.domain === "Marketing").length,
+      Automation: list.filter((p) => p.domain === "Automation").length,
+    };
   }, [selectedBusinessId, getFilteredProjectsForBusiness]);
 
   const clearAllFilters = () => {
@@ -850,69 +926,93 @@ function ProjectsPage() {
             </button>
           )}
         </div>
-        <div className="flex gap-2 overflow-x-auto pb-1.5 scrollbar-none">
-          {filteredBusinesses.map((biz) => {
-            const isSelected = selectedBusinessId === biz.id;
-            const projectCount = getFilteredProjectsForBusiness(biz.id).length;
+        <div className="relative" ref={mobileBizDropdownRef}>
+          <button
+            onClick={() => setIsMobileBizDropdownOpen(!isMobileBizDropdownOpen)}
+            className="flex items-center justify-between w-full px-3 py-2.5 border rounded-xl bg-white text-xs font-bold text-mm-dark cursor-pointer min-h-[42px] transition-all"
+            style={{ borderColor: "var(--color-mm-border)" }}
+          >
+            {selectedBiz ? (
+              <div className="flex items-center gap-2.5 min-w-0">
+                {selectedBiz.image ? (
+                  <img
+                    src={selectedBiz.image}
+                    alt={selectedBiz.businessName}
+                    className="w-5 h-5 rounded-md object-cover aspect-square shrink-0"
+                  />
+                ) : (
+                  <Avatar name={selectedBiz.businessName} size={20} />
+                )}
+                <span className="truncate">{selectedBiz.businessName}</span>
+              </div>
+            ) : (
+              <span className="text-mm-gray/60 font-medium">Select a business...</span>
+            )}
+            <ChevronDown size={14} className={`text-mm-gray transition-transform duration-200 shrink-0 ${isMobileBizDropdownOpen ? "rotate-180" : ""}`} />
+          </button>
 
-            const userIdStr = typeof biz.userId === "object" && biz.userId !== null ? biz.userId.id : biz.userId;
-            const clientUser = users.find((u) => u.id === userIdStr);
+          {isMobileBizDropdownOpen && (
+            <div
+              className="absolute left-0 mt-1 w-full bg-white border border-mm-border rounded-xl shadow-lg py-1.5 z-50 max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-150"
+              style={{ boxShadow: "0 8px 24px rgba(0,0,0,0.08)" }}
+            >
+              {filteredBusinesses.map((biz) => {
+                const isSelected = selectedBusinessId === biz.id;
+                const projectCount = getFilteredProjectsForBusiness(biz.id).length;
+                const userIdStr = typeof biz.userId === "object" && biz.userId !== null ? biz.userId.id : biz.userId;
+                const clientUser = users.find((u) => u.id === userIdStr);
 
-            return (
-              <button
-                key={biz.id}
-                onClick={() => setSelectedBusinessId(biz.id)}
-                className={`flex items-center gap-2.5 px-3 py-2 rounded-xl border shrink-0 transition-all text-xs font-bold cursor-pointer ${
-                  isSelected
-                    ? "bg-mm-orange/10 border-mm-orange text-mm-orange"
-                    : "bg-white border-mm-border/60 text-mm-gray hover:bg-mm-subtle/50"
-                }`}
-              >
-                {/* Overlapping Avatar Container */}
-                <div className="relative shrink-0 w-6 h-6 select-none mr-0.5">
-                  {biz.image ? (
-                    <img
-                      src={biz.image}
-                      alt={biz.businessName}
-                      className="w-5 h-5 rounded-md object-cover aspect-square"
-                    />
-                  ) : (
-                    <Avatar name={biz.businessName} size={20} />
-                  )}
-                  <div className="absolute bottom-0 right-0 translate-x-1 translate-y-1 border border-white rounded-full overflow-hidden shadow-xs bg-white">
-                    {clientUser?.image ? (
-                      <img
-                        src={clientUser.image}
-                        alt={clientUser.fullName}
-                        className="w-2.5 h-2.5 rounded-full object-cover aspect-square"
-                      />
-                    ) : (
-                      <div className="w-2.5 h-2.5 rounded-full bg-mm-orange text-white text-[4px] font-black flex items-center justify-center">
-                        {clientUser?.fullName ? clientUser.fullName.charAt(0) : "U"}
+                return (
+                  <button
+                    key={biz.id}
+                    onClick={() => {
+                      setSelectedBusinessId(biz.id);
+                      setIsMobileBizDropdownOpen(false);
+                    }}
+                    className={`flex items-center justify-between w-full px-3.5 py-2.5 text-left text-xs font-medium transition-colors ${
+                      isSelected
+                        ? "bg-mm-orange/5 text-mm-orange font-bold"
+                        : "text-mm-gray hover:bg-mm-subtle/50"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      {biz.image ? (
+                        <img
+                          src={biz.image}
+                          alt={biz.businessName}
+                          className="w-5 h-5 rounded-md object-cover aspect-square shrink-0"
+                        />
+                      ) : (
+                        <Avatar name={biz.businessName} size={20} />
+                      )}
+                      <div className="truncate min-w-0">
+                        <div className={isSelected ? "text-mm-orange font-bold" : "text-mm-dark"}>
+                          {biz.businessName}
+                        </div>
+                        <div className="text-[10px] text-mm-gray/70 font-normal">
+                          {clientUser?.fullName || "No Owner"}
+                        </div>
                       </div>
-                    )}
-                  </div>
+                    </div>
+                    <span className="text-[9px] font-black bg-mm-subtle text-mm-gray/70 px-1.5 py-0.5 rounded-full shrink-0 ml-2">
+                      {projectCount}
+                    </span>
+                  </button>
+                );
+              })}
+              {filteredBusinesses.length === 0 && (
+                <div className="px-3.5 py-2.5 text-xs text-mm-gray/40 text-center font-medium">
+                  No businesses found
                 </div>
-
-                <span>{biz.businessName} ({clientUser?.fullName || "No Owner"})</span>
-                <span
-                  className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${
-                    isSelected
-                      ? "bg-mm-orange/20 text-mm-orange"
-                      : "bg-mm-subtle text-mm-gray/70"
-                  }`}
-                >
-                  {projectCount}
-                </span>
-              </button>
-            );
-          })}
+              )}
+            </div>
+          )}
         </div>
       </div>
 
       {/* Right Side - Projects Content */}
       <div className="flex-1 p-6 md:p-8 lg:p-10 space-y-6 overflow-y-scroll min-w-0">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
           <div>
             <h1
               className="text-2xl font-bold"
@@ -1013,114 +1113,7 @@ function ProjectsPage() {
               )}
             </div>
 
-            <div className="relative w-full sm:w-auto" ref={domainRef}>
-              <button
-                onClick={() => setIsDomainOpen(!isDomainOpen)}
-                className="inline-flex items-center justify-between sm:justify-start gap-2 px-4 py-2.5 rounded-xl text-sm transition-colors w-full sm:w-auto"
-                style={{
-                  background: "white",
-                  border:
-                    domainFilter === "All Domains"
-                      ? "1px solid var(--color-mm-border)"
-                      : "1px solid var(--color-mm-orange)",
-                  color:
-                    domainFilter === "All Domains"
-                      ? "var(--color-mm-gray)"
-                      : "var(--color-mm-orange)",
-                }}
-              >
-                <span className="truncate">{domainFilter}</span>
-                <ChevronDown
-                  size={14}
-                  className="shrink-0"
-                  style={{
-                    transform: isDomainOpen ? "rotate(180deg)" : "rotate(0deg)",
-                    transition: "transform 150ms ease",
-                  }}
-                />
-              </button>
-              {isDomainOpen && (
-                <div
-                  style={{
-                    background: "white",
-                    border: "1px solid var(--color-mm-border)",
-                    borderRadius: "16px",
-                    padding: "8px",
-                    boxShadow: "0 8px 24px rgba(0,0,0,0.10)",
-                    minWidth: "200px",
-                    position: "absolute",
-                    zIndex: 100,
-                    marginTop: "4px",
-                  }}
-                  className="w-full sm:w-auto left-0"
-                >
-                  {[
-                    { label: "All Domains", count: projectList.length },
-                    {
-                      label: "Website",
-                      count: projectList.filter((p) => p.domain === "Website").length,
-                    },
-                    {
-                      label: "Marketing",
-                      count: projectList.filter((p) => p.domain === "Marketing").length,
-                    },
-                    {
-                      label: "Automation",
-                      count: projectList.filter((p) => p.domain === "Automation").length,
-                    },
-                  ].map((opt) => (
-                    <div
-                      key={opt.label}
-                      onClick={() => {
-                        setDomainFilter(opt.label);
-                        setIsDomainOpen(false);
-                      }}
-                      style={{
-                        padding: "10px 14px",
-                        borderRadius: "10px",
-                        color:
-                          domainFilter === opt.label
-                            ? "var(--color-mm-orange)"
-                            : "var(--color-mm-gray)",
-                        fontSize: "14px",
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        background:
-                          domainFilter === opt.label
-                            ? "rgba(224, 86, 36, 0.1)"
-                            : "transparent",
-                        fontWeight: domainFilter === opt.label ? 600 : 400,
-                      }}
-                      onMouseEnter={(e) => {
-                        if (domainFilter !== opt.label) {
-                          e.currentTarget.style.background =
-                            "rgba(224, 86, 36, 0.1)";
-                          e.currentTarget.style.color = "var(--color-mm-dark)";
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (domainFilter !== opt.label) {
-                          e.currentTarget.style.background = "transparent";
-                          e.currentTarget.style.color = "var(--color-mm-gray)";
-                        }
-                      }}
-                    >
-                      <div className="flex items-center gap-2">{opt.label}</div>
-                      <span
-                        style={{
-                          color: "var(--color-mm-gray)",
-                          fontSize: "12px",
-                        }}
-                      >
-                        {opt.count}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+
 
             <div className="relative w-full sm:w-auto" ref={statusRef}>
               <button
@@ -1195,7 +1188,7 @@ function ProjectsPage() {
                       color: "var(--color-mm-gray)",
                     },
                     {
-                      label: "User Draft",
+                      label: "Requested",
                       bg: "var(--color-mm-subtle)",
                       color: "var(--color-mm-gray)",
                     },
@@ -1287,34 +1280,56 @@ function ProjectsPage() {
 
             <div className="relative w-full sm:w-[220px]" ref={serviceSearchRef}>
               <div
-                onClick={() => setIsServiceSearchOpen(!isServiceSearchOpen)}
-                className="flex flex-wrap items-center gap-1.5 px-3 py-2 border rounded-xl bg-white cursor-pointer min-h-[42px] transition-all w-full"
+                onClick={() => setIsServiceSearchOpen(true)}
+                className="flex flex-wrap items-center gap-1.5 px-3 py-1.5 border rounded-xl bg-white cursor-pointer min-h-[42px] transition-all w-full focus-within:border-mm-orange"
                 style={{
                   borderColor: selectedServices.length > 0 ? "var(--color-mm-orange)" : "var(--color-mm-border)",
                 }}
               >
-                {selectedServices.length === 0 ? (
-                  <span className="text-sm text-mm-gray/60 font-medium">Services Filters...</span>
-                ) : (
-                  selectedServices.map((tag) => (
-                    <span
-                      key={tag}
-                      className="inline-flex items-center gap-1 bg-mm-orange/10 text-mm-orange text-xs font-semibold px-2 py-0.5 rounded-full select-none"
+                {selectedServices.map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center gap-1 bg-mm-orange/10 text-mm-orange text-xs font-semibold px-2 py-0.5 rounded-full select-none"
+                  >
+                    {tag}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedServices((prev) => prev.filter((t) => t !== tag));
+                      }}
+                      className="hover:text-mm-red font-black cursor-pointer"
                     >
-                      {tag}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedServices((prev) => prev.filter((t) => t !== tag));
-                        }}
-                        className="hover:text-mm-red font-black"
-                      >
-                        <X size={10} />
-                      </button>
-                    </span>
-                  ))
-                )}
+                      <X size={10} />
+                    </button>
+                  </span>
+                ))}
+                <input
+                  type="text"
+                  value={serviceSearchVal}
+                  onChange={(e) => {
+                    setServiceSearchVal(e.target.value);
+                    if (!isServiceSearchOpen) setIsServiceSearchOpen(true);
+                  }}
+                  onFocus={() => setIsServiceSearchOpen(true)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === "," || e.key === ";") {
+                      e.preventDefault();
+                      const val = serviceSearchVal.trim();
+                      if (val) {
+                        if (!selectedServices.includes(val)) {
+                          setSelectedServices((prev) => [...prev, val]);
+                        }
+                        setServiceSearchVal("");
+                        setIsServiceSearchOpen(false);
+                      }
+                    } else if (e.key === "Backspace" && !serviceSearchVal && selectedServices.length > 0) {
+                      setSelectedServices((prev) => prev.slice(0, -1));
+                    }
+                  }}
+                  placeholder={selectedServices.length === 0 ? "Services Filters..." : ""}
+                  className="flex-1 min-w-[60px] bg-transparent border-0 outline-none text-sm text-mm-dark py-0.5 placeholder:text-mm-gray/60 font-medium"
+                />
               </div>
               {isServiceSearchOpen && (
                 <div
@@ -1325,6 +1340,7 @@ function ProjectsPage() {
                 >
                   {allAvailableServices
                     .filter((s) => !selectedServices.includes(s))
+                    .filter((s) => s.toLowerCase().includes(serviceSearchVal.toLowerCase()))
                     .map((s) => (
                       <button
                         key={s}
@@ -1332,15 +1348,18 @@ function ProjectsPage() {
                         onClick={() => {
                           setSelectedServices((prev) => [...prev, s]);
                           setIsServiceSearchOpen(false);
+                          setServiceSearchVal("");
                         }}
                         className="w-full text-left px-3.5 py-2 text-sm text-mm-gray hover:bg-mm-orange/5 hover:text-mm-orange font-medium transition-colors"
                       >
                         {s}
                       </button>
                     ))}
-                  {allAvailableServices.filter((s) => !selectedServices.includes(s)).length === 0 && (
-                    <div className="px-3.5 py-2 text-xs text-mm-gray/60 font-medium text-center">
-                      All services selected
+                  {allAvailableServices
+                    .filter((s) => !selectedServices.includes(s))
+                    .filter((s) => s.toLowerCase().includes(serviceSearchVal.toLowerCase())).length === 0 && (
+                    <div className="px-3.5 py-2 text-xs text-mm-gray/40 text-center font-medium">
+                      No matching services found
                     </div>
                   )}
                 </div>
@@ -1427,32 +1446,68 @@ function ProjectsPage() {
             </button>
           </div>
         )}
+        {/* Domain Tabs Selector */}
+        <div className="flex border-b border-mm-border gap-6 mb-6">
+          {[
+            { label: "All Domains", value: "All Domains", count: domainCounts.all },
+            { label: "Website", value: "Website", count: domainCounts.Website },
+            { label: "Marketing", value: "Marketing", count: domainCounts.Marketing },
+            { label: "Automation", value: "Automation", count: domainCounts.Automation },
+          ].map((tab) => {
+            const isActive = domainFilter === tab.value;
+            return (
+              <button
+                key={tab.value}
+                onClick={() => setDomainFilter(tab.value)}
+                className={`pb-3 text-sm font-bold relative transition-all cursor-pointer flex items-center gap-1.5 ${
+                  isActive
+                    ? "text-mm-orange font-extrabold"
+                    : "text-mm-gray hover:text-mm-dark"
+                }`}
+              >
+                <span>{tab.label}</span>
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
+                  isActive
+                    ? "bg-mm-orange/15 text-mm-orange"
+                    : "bg-mm-subtle text-mm-gray/70"
+                }`}>
+                  {tab.count}
+                </span>
+                {isActive && (
+                  <div
+                    className="absolute bottom-0 left-0 right-0 h-[2px] bg-mm-orange rounded-full"
+                  />
+                )}
+              </button>
+            );
+          })}
+        </div>
 
-        <div className="bg-white border border-mm-border rounded-[24px] shadow-[0_2px_12px_rgba(0,0,0,0.02)] overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-mm-subtle border-b border-mm-border text-mm-gray font-semibold">
-                  {[
-                    "Project Name",
-                    "Services",
-                    "Assignee",
-                    "Status",
-                    "Progress",
-                    "Timeline",
-                    "Actions",
-                  ].map((h) => (
-                    <th
-                      key={h}
-                      className="text-left font-semibold px-4 py-3 whitespace-nowrap"
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {isLoading ? (
+        {isLoading ? (
+          <div className="bg-white border border-mm-border rounded-[24px] shadow-[0_2px_12px_rgba(0,0,0,0.02)] overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-mm-subtle border-b border-mm-border text-mm-gray font-semibold">
+                    {[
+                      "Project Name",
+                      "Services",
+                      "Assignee",
+                      "Status",
+                      "Progress",
+                      "Timeline",
+                      "Actions",
+                    ].map((h) => (
+                      <th
+                        key={h}
+                        className="text-left font-semibold px-4 py-3 whitespace-nowrap"
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
                   <tr>
                     <td colSpan={7} className="px-4 py-12 text-center">
                       <div className="flex flex-col items-center justify-center gap-2">
@@ -1466,174 +1521,447 @@ function ProjectsPage() {
                       </div>
                     </td>
                   </tr>
-                ) : filteredProjects.length > 0 ? (
-                  filteredProjects.map((p) => {
-                    const biz =
-                      typeof p.businessId === "object" && p.businessId !== null
-                        ? p.businessId
-                        : businesses.find((b) => b.id === p.businessId);
-                    const manager = p.assignee;
-
-                    const userIdStr = biz
-                      ? typeof biz.userId === "object" && biz.userId !== null
-                        ? biz.userId.id
-                        : biz.userId
-                      : null;
-                    const matchedUser = users.find((u) => u.id === userIdStr);
-
-                    let status: "Pending" | "In Progress" | "Completed" =
-                      "In Progress";
-                    if (p.progress === 0) status = "Pending";
-                    else if (p.progress === 100) status = "Completed";
-
-                    const startDateStr = p.startDate
-                      ? new Date(p.startDate).toLocaleDateString()
-                      : "";
-                    const deadlineStr = p.deadline
-                      ? new Date(p.deadline).toLocaleDateString()
-                      : "";
-
-                    return (
-                      <tr
-                        key={p.id}
-                        style={{
-                          borderTop: "1px solid var(--color-mm-border)",
-                        }}
-                        className="hover:bg-mm-subtle transition-colors"
-                      >
-                        <td className="px-4 py-3 font-semibold text-mm-dark whitespace-nowrap">
-                          {p.name || p.id}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex flex-wrap gap-1">
-                            {p.services.map((s) => (
-                              <span
-                                key={s}
-                                className="px-2.5 py-0.5 rounded-full text-xs border border-mm-border bg-mm-subtle text-mm-gray"
-                              >
-                                {s}
-                              </span>
-                            ))}
-                          </div>
-                        </td>
-                        <td
-                          className="px-4 py-3"
-                          style={{ color: "var(--color-mm-gray)" }}
-                        >
-                          {manager}
-                        </td>
-                        <td className="px-4 py-3">
-                          <StatusBadge status={status} />
-                        </td>
-                        <td className="px-4 py-3">
-                          <ProgressRing
-                            value={p.progress}
-                            color={
-                              statusColors[status as keyof typeof statusColors]
-                            }
-                          />
-                        </td>
-                        <td
-                          className="px-4 py-3 text-xs whitespace-nowrap"
-                          style={{ color: "var(--color-mm-gray)" }}
-                        >
-                          <div className="text-[10px] text-mm-gray mt-0.5">
-                            {startDateStr || "N/A"} to
-                          </div>
-                          <div className="font-semibold text-mm-dark">
-                            {deadlineStr || "N/A"}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="relative inline-block actions-dropdown-container">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const rect = e.currentTarget.getBoundingClientRect();
-                                const dropdownHeight = 180;
-                                const dropdownWidth = 160;
-                                let top = rect.bottom;
-                                if (top + dropdownHeight > window.innerHeight) {
-                                  top = rect.top - dropdownHeight - 8;
-                                }
-                                let left = rect.right - dropdownWidth;
-                                if (left < 8) {
-                                  left = 8;
-                                }
-                                setDropdownCoords({ top, left });
-                                setOpenDropdownId(
-                                  openDropdownId === p.id ? null : p.id,
-                                );
-                              }}
-                              className="p-1.5 rounded-lg hover:bg-mm-subtle transition-colors cursor-pointer text-mm-gray hover:text-mm-dark flex items-center justify-center"
-                              title="Actions"
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : filteredProjects.length > 0 ? (
+          <div className="space-y-8">
+            {userDraftProjects.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-base font-bold text-mm-dark flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-amber-500" />
+                  Requested
+                  <span className="text-xs font-medium text-mm-gray">({userDraftProjects.length})</span>
+                </h3>
+                <div className="bg-white border border-mm-border rounded-[24px] shadow-[0_2px_12px_rgba(0,0,0,0.02)] overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-mm-subtle border-b border-mm-border text-mm-gray font-semibold">
+                          {[
+                            "Project Name",
+                            "Services",
+                            "Assignee",
+                            "Status",
+                            "Progress",
+                            "Timeline",
+                            "Actions",
+                          ].map((h) => (
+                            <th
+                              key={h}
+                              className="text-left font-semibold px-4 py-3 whitespace-nowrap"
                             >
-                              <MoreVertical size={16} />
-                            </button>
-                            {openDropdownId === p.id && dropdownCoords && (
-                              <div
-                                className="fixed mt-1 w-40 bg-white border border-mm-border rounded-xl shadow-lg py-1.5 z-50 animate-in fade-in slide-in-from-top-1 duration-150"
-                                style={{
-                                  boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
-                                  top: `${dropdownCoords.top}px`,
-                                  left: `${dropdownCoords.left}px`,
-                                }}
+                              {h}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {userDraftProjects.map((p) => {
+                          const biz =
+                            typeof p.businessId === "object" && p.businessId !== null
+                              ? p.businessId
+                              : businesses.find((b) => b.id === p.businessId);
+                          const manager = p.assignee;
+
+                          const userIdStr = biz
+                            ? typeof biz.userId === "object" && biz.userId !== null
+                              ? biz.userId.id
+                              : biz.userId
+                            : null;
+                          const matchedUser = users.find((u) => u.id === userIdStr);
+
+                          let status = p.status;
+
+                          const startDateStr = p.startDate
+                            ? new Date(p.startDate).toLocaleDateString()
+                            : "";
+                          const deadlineStr = p.deadline
+                            ? new Date(p.deadline).toLocaleDateString()
+                            : "";
+
+                          return (
+                            <tr
+                              key={p.id}
+                              style={{
+                                borderTop: "1px solid var(--color-mm-border)",
+                              }}
+                              className="hover:bg-mm-subtle transition-colors"
+                            >
+                              <td className="px-4 py-3 font-semibold text-mm-dark whitespace-nowrap">
+                                {p.name || p.id}
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex flex-wrap gap-1">
+                                  {p.services.map((s) => (
+                                    <span
+                                      key={s}
+                                      className="px-2.5 py-0.5 rounded-full text-xs border border-mm-border bg-mm-subtle text-mm-gray"
+                                    >
+                                      {s}
+                                    </span>
+                                  ))}
+                                </div>
+                              </td>
+                              <td
+                                className="px-4 py-3"
+                                style={{ color: "var(--color-mm-gray)" }}
                               >
-                                <Link
-                                  to="/admin/projects/$id"
-                                  params={{ id: p.id }}
-                                  search={{ edit: false }}
-                                  onClick={() => setOpenDropdownId(null)}
-                                  className="flex items-center gap-2 px-3 py-2 text-xs text-mm-gray hover:text-mm-dark hover:bg-mm-subtle transition-colors"
+                                {manager}
+                              </td>
+                              <td className="px-4 py-3">
+                                <StatusBadge status={status} />
+                              </td>
+                              <td className="px-4 py-3">
+                                <ProgressRing
+                                  value={p.progress}
+                                  color="#f59e0b"
+                                />
+                              </td>
+                              <td
+                                className="px-4 py-3 text-xs whitespace-nowrap"
+                                style={{ color: "var(--color-mm-gray)" }}
+                              >
+                                <div className="text-[10px] text-mm-gray mt-0.5">
+                                  {startDateStr || "N/A"} to
+                                </div>
+                                <div className="font-semibold text-mm-dark">
+                                  {deadlineStr || "N/A"}
+                                </div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="relative inline-block actions-dropdown-container">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const rect = e.currentTarget.getBoundingClientRect();
+                                      const dropdownHeight = 180;
+                                      const dropdownWidth = 160;
+                                      let top = rect.bottom;
+                                      if (top + dropdownHeight > window.innerHeight) {
+                                        top = rect.top - dropdownHeight - 8;
+                                      }
+                                      let left = rect.right - dropdownWidth;
+                                      if (left < 8) {
+                                        left = 8;
+                                      }
+                                      setDropdownCoords({ top, left });
+                                      setOpenDropdownId(
+                                        openDropdownId === p.id ? null : p.id,
+                                      );
+                                    }}
+                                    className="p-1.5 rounded-lg hover:bg-mm-subtle transition-colors cursor-pointer text-mm-gray hover:text-mm-dark flex items-center justify-center"
+                                    title="Actions"
+                                  >
+                                    <MoreVertical size={16} />
+                                  </button>
+                                  {openDropdownId === p.id && dropdownCoords && (
+                                    <div
+                                      className="fixed mt-1 w-40 bg-white border border-mm-border rounded-xl shadow-lg py-1.5 z-50 animate-in fade-in slide-in-from-top-1 duration-150"
+                                      style={{
+                                        boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+                                        top: `${dropdownCoords.top}px`,
+                                        left: `${dropdownCoords.left}px`,
+                                      }}
+                                    >
+                                      <Link
+                                        to="/admin/projects/$id"
+                                        params={{ id: p.id }}
+                                        search={{ edit: false }}
+                                        onClick={() => setOpenDropdownId(null)}
+                                        className="flex items-center gap-2 px-3 py-2 text-xs text-mm-gray hover:text-mm-dark hover:bg-mm-subtle transition-colors"
+                                      >
+                                        <Eye size={14} />
+                                        <span>View Project</span>
+                                      </Link>
+                                      <Link
+                                        to="/admin/projects/$id"
+                                        params={{ id: p.id }}
+                                        search={{ edit: true }}
+                                        onClick={() => setOpenDropdownId(null)}
+                                        className="flex items-center gap-2 px-3 py-2 text-xs text-mm-gray hover:text-mm-dark hover:bg-mm-subtle transition-colors"
+                                      >
+                                        <Edit2 size={14} />
+                                        <span>Edit Project</span>
+                                      </Link>
+                                      <Link
+                                        to="/admin/chat"
+                                        search={{
+                                          user: userIdStr || "",
+                                          business:
+                                            (typeof p.businessId === "string"
+                                              ? p.businessId
+                                              : biz?.id) || "",
+                                          domain: p.domain,
+                                        }}
+                                        onClick={() => setOpenDropdownId(null)}
+                                        className="flex items-center gap-2 px-3 py-2 text-xs text-mm-orange hover:bg-mm-orange/5 transition-colors"
+                                      >
+                                        <MessageSquare size={14} />
+                                        <span>Open Chat</span>
+                                      </Link>
+                                      <hr className="border-t border-mm-border my-1" />
+                                      <button
+                                        onClick={() => {
+                                          setConfirmDelete(p);
+                                          setOpenDropdownId(null);
+                                        }}
+                                        className="flex items-center gap-2 w-full text-left px-3 py-2 text-xs text-mm-red hover:bg-mm-red/5 transition-colors cursor-pointer"
+                                      >
+                                        <Trash2 size={14} />
+                                        <span>Delete Project</span>
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+            {(["Website", "Marketing", "Automation"] as ProjectDomain[]).map((domain) => {
+              const domainProjects = projectsByDomain[domain];
+              if (domainProjects.length === 0) return null;
+
+              return (
+                <div key={domain} className="space-y-3">
+                  <h3 className="text-base font-bold text-mm-dark flex items-center gap-2">
+                    <span className={`w-2 h-2 rounded-full ${
+                      domain === "Website" ? "bg-[#3B82F6]" :
+                      domain === "Marketing" ? "bg-[#EC4899]" : "bg-[#10B981]"
+                    }`} />
+                    {domain} Projects
+                    <span className="text-xs font-medium text-mm-gray">({domainProjects.length})</span>
+                  </h3>
+                  <div className="bg-white border border-mm-border rounded-[24px] shadow-[0_2px_12px_rgba(0,0,0,0.02)] overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="bg-mm-subtle border-b border-mm-border text-mm-gray font-semibold">
+                            {[
+                              "Project Name",
+                              "Services",
+                              "Assignee",
+                              "Status",
+                              "Progress",
+                              "Timeline",
+                              "Actions",
+                            ].map((h) => (
+                              <th
+                                key={h}
+                                className="text-left font-semibold px-4 py-3 whitespace-nowrap"
+                              >
+                                {h}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {domainProjects.map((p) => {
+                            const biz =
+                              typeof p.businessId === "object" && p.businessId !== null
+                                ? p.businessId
+                                : businesses.find((b) => b.id === p.businessId);
+                            const manager = p.assignee;
+
+                            const userIdStr = biz
+                              ? typeof biz.userId === "object" && biz.userId !== null
+                                ? biz.userId.id
+                                : biz.userId
+                              : null;
+                            const matchedUser = users.find((u) => u.id === userIdStr);
+
+                            let status: "Pending" | "In Progress" | "Completed" =
+                              "In Progress";
+                            if (p.progress === 0) status = "Pending";
+                            else if (p.progress === 100) status = "Completed";
+
+                            const startDateStr = p.startDate
+                              ? new Date(p.startDate).toLocaleDateString()
+                              : "";
+                            const deadlineStr = p.deadline
+                              ? new Date(p.deadline).toLocaleDateString()
+                              : "";
+
+                            return (
+                              <tr
+                                key={p.id}
+                                style={{
+                                  borderTop: "1px solid var(--color-mm-border)",
+                                }}
+                                className="hover:bg-mm-subtle transition-colors"
+                              >
+                                <td className="px-4 py-3 font-semibold text-mm-dark whitespace-nowrap">
+                                  {p.name || p.id}
+                                </td>
+                                <td className="px-4 py-3">
+                                  <div className="flex flex-wrap gap-1">
+                                    {p.services.map((s) => (
+                                      <span
+                                        key={s}
+                                        className="px-2.5 py-0.5 rounded-full text-xs border border-mm-border bg-mm-subtle text-mm-gray"
+                                      >
+                                        {s}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </td>
+                                <td
+                                  className="px-4 py-3"
+                                  style={{ color: "var(--color-mm-gray)" }}
                                 >
-                                  <Eye size={14} />
-                                  <span>View Project</span>
-                                </Link>
-                                <Link
-                                  to="/admin/projects/$id"
-                                  params={{ id: p.id }}
-                                  search={{ edit: true }}
-                                  onClick={() => setOpenDropdownId(null)}
-                                  className="flex items-center gap-2 px-3 py-2 text-xs text-mm-gray hover:text-mm-dark hover:bg-mm-subtle transition-colors"
+                                  {manager}
+                                </td>
+                                <td className="px-4 py-3">
+                                  <StatusBadge status={status} />
+                                </td>
+                                <td className="px-4 py-3">
+                                  <ProgressRing
+                                    value={p.progress}
+                                    color={
+                                      statusColors[status as keyof typeof statusColors]
+                                    }
+                                  />
+                                </td>
+                                <td
+                                  className="px-4 py-3 text-xs whitespace-nowrap"
+                                  style={{ color: "var(--color-mm-gray)" }}
                                 >
-                                  <Edit2 size={14} />
-                                  <span>Edit Project</span>
-                                </Link>
-                                <Link
-                                  to="/admin/chat"
-                                  search={{
-                                    user: userIdStr || "",
-                                    business:
-                                      (typeof p.businessId === "string"
-                                        ? p.businessId
-                                        : biz?.id) || "",
-                                    domain: p.domain,
-                                  }}
-                                  onClick={() => setOpenDropdownId(null)}
-                                  className="flex items-center gap-2 px-3 py-2 text-xs text-mm-orange hover:bg-mm-orange/5 transition-colors"
-                                >
-                                  <MessageSquare size={14} />
-                                  <span>Open Chat</span>
-                                </Link>
-                                <hr className="border-t border-mm-border my-1" />
-                                <button
-                                  onClick={() => {
-                                    setConfirmDelete(p);
-                                    setOpenDropdownId(null);
-                                  }}
-                                  className="flex items-center gap-2 w-full text-left px-3 py-2 text-xs text-mm-red hover:bg-mm-red/5 transition-colors cursor-pointer"
-                                >
-                                  <Trash2 size={14} />
-                                  <span>Delete Project</span>
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                ) : (
+                                  <div className="text-[10px] text-mm-gray mt-0.5">
+                                    {startDateStr || "N/A"} to
+                                  </div>
+                                  <div className="font-semibold text-mm-dark">
+                                    {deadlineStr || "N/A"}
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <div className="relative inline-block actions-dropdown-container">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const rect = e.currentTarget.getBoundingClientRect();
+                                        const dropdownHeight = 180;
+                                        const dropdownWidth = 160;
+                                        let top = rect.bottom;
+                                        if (top + dropdownHeight > window.innerHeight) {
+                                          top = rect.top - dropdownHeight - 8;
+                                        }
+                                        let left = rect.right - dropdownWidth;
+                                        if (left < 8) {
+                                          left = 8;
+                                        }
+                                        setDropdownCoords({ top, left });
+                                        setOpenDropdownId(
+                                          openDropdownId === p.id ? null : p.id,
+                                        );
+                                      }}
+                                      className="p-1.5 rounded-lg hover:bg-mm-subtle transition-colors cursor-pointer text-mm-gray hover:text-mm-dark flex items-center justify-center"
+                                      title="Actions"
+                                    >
+                                      <MoreVertical size={16} />
+                                    </button>
+                                    {openDropdownId === p.id && dropdownCoords && (
+                                      <div
+                                        className="fixed mt-1 w-40 bg-white border border-mm-border rounded-xl shadow-lg py-1.5 z-50 animate-in fade-in slide-in-from-top-1 duration-150"
+                                        style={{
+                                          boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+                                          top: `${dropdownCoords.top}px`,
+                                          left: `${dropdownCoords.left}px`,
+                                        }}
+                                      >
+                                        <Link
+                                          to="/admin/projects/$id"
+                                          params={{ id: p.id }}
+                                          search={{ edit: false }}
+                                          onClick={() => setOpenDropdownId(null)}
+                                          className="flex items-center gap-2 px-3 py-2 text-xs text-mm-gray hover:text-mm-dark hover:bg-mm-subtle transition-colors"
+                                        >
+                                          <Eye size={14} />
+                                          <span>View Project</span>
+                                        </Link>
+                                        <Link
+                                          to="/admin/projects/$id"
+                                          params={{ id: p.id }}
+                                          search={{ edit: true }}
+                                          onClick={() => setOpenDropdownId(null)}
+                                          className="flex items-center gap-2 px-3 py-2 text-xs text-mm-gray hover:text-mm-dark hover:bg-mm-subtle transition-colors"
+                                        >
+                                          <Edit2 size={14} />
+                                          <span>Edit Project</span>
+                                        </Link>
+                                        <Link
+                                          to="/admin/chat"
+                                          search={{
+                                            user: userIdStr || "",
+                                            business:
+                                              (typeof p.businessId === "string"
+                                                ? p.businessId
+                                                : biz?.id) || "",
+                                            domain: p.domain,
+                                          }}
+                                          onClick={() => setOpenDropdownId(null)}
+                                          className="flex items-center gap-2 px-3 py-2 text-xs text-mm-orange hover:bg-mm-orange/5 transition-colors"
+                                        >
+                                          <MessageSquare size={14} />
+                                          <span>Open Chat</span>
+                                        </Link>
+                                        <hr className="border-t border-mm-border my-1" />
+                                        <button
+                                          onClick={() => {
+                                            setConfirmDelete(p);
+                                            setOpenDropdownId(null);
+                                          }}
+                                          className="flex items-center gap-2 w-full text-left px-3 py-2 text-xs text-mm-red hover:bg-mm-red/5 transition-colors cursor-pointer"
+                                        >
+                                          <Trash2 size={14} />
+                                          <span>Delete Project</span>
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="bg-white border border-mm-border rounded-[24px] shadow-[0_2px_12px_rgba(0,0,0,0.02)] overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-mm-subtle border-b border-mm-border text-mm-gray font-semibold">
+                    {[
+                      "Project Name",
+                      "Services",
+                      "Assignee",
+                      "Status",
+                      "Progress",
+                      "Timeline",
+                      "Actions",
+                    ].map((h) => (
+                      <th
+                        key={h}
+                        className="text-left font-semibold px-4 py-3 whitespace-nowrap"
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
                   <tr>
                     <td colSpan={7} className="px-4 py-12">
                       <div className="flex flex-col items-center justify-center">
@@ -1665,11 +1993,11 @@ function ProjectsPage() {
                       </div>
                     </td>
                   </tr>
-                )}
-              </tbody>
-            </table>
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {isNewProjectOpen && (
@@ -1982,36 +2310,68 @@ function ProjectsPage() {
                 >
                   Services*
                 </label>
-                <div className="flex flex-wrap gap-2">
-                  {["Website", "Marketing", "SEO", "Sales", "Automation"].map(
-                    (s) => {
-                      const isSelected = newProjectForm.services.includes(s);
-                      return (
-                        <button
-                          key={s}
-                          onClick={() => toggleService(s)}
-                          style={{
-                            background: isSelected
-                              ? "var(--color-mm-orange)"
-                              : "var(--color-mm-subtle)",
-                            border: isSelected
-                              ? "1px solid var(--color-mm-orange)"
-                              : "1px solid var(--color-mm-border)",
-                            color: isSelected
-                              ? "white"
-                              : "var(--color-mm-gray)",
-                            borderRadius: "999px",
-                            padding: "6px 12px",
-                            fontSize: "13px",
-                          }}
-                          className="transition-colors hover:opacity-90 cursor-pointer"
-                        >
-                          {s}
-                        </button>
-                      );
-                    },
+                <div
+                  className="flex flex-wrap items-center gap-1.5 px-3 py-1.5 border rounded-xl bg-white focus-within:border-mm-orange transition-all"
+                  style={{
+                    borderColor: newProjectErrors.services ? "var(--color-mm-red)" : "var(--color-mm-border)",
+                  }}
+                >
+                  {newProjectForm.services.map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center gap-1 bg-mm-orange/10 text-mm-orange text-xs font-semibold px-2 py-0.5 rounded-full select-none"
+                    >
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={() => toggleService(tag)}
+                        className="hover:text-mm-red font-black cursor-pointer"
+                      >
+                        <X size={10} />
+                      </button>
+                    </span>
+                  ))}
+                  <input
+                    type="text"
+                    value={serviceInput}
+                    onChange={(e) => setServiceInput(e.target.value)}
+                    onKeyDown={handleServiceKeyDown}
+                    placeholder={newProjectForm.services.length === 0 ? "Add service (press Enter or comma)..." : ""}
+                    className="flex-1 min-w-[120px] bg-transparent border-0 outline-none text-sm text-mm-dark py-1 placeholder:text-mm-gray/40"
+                  />
+                  {serviceInput.trim() && (
+                    <button
+                      type="button"
+                      onClick={() => addCustomService(serviceInput)}
+                      className="text-xs text-mm-orange font-bold hover:underline cursor-pointer"
+                    >
+                      Add
+                    </button>
                   )}
                 </div>
+
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  <span className="text-[11px] text-mm-gray/50 mr-1">Suggestions:</span>
+                  {["Website", "Marketing", "SEO", "Sales", "Automation"].map((s) => {
+                    const isSelected = newProjectForm.services.includes(s);
+                    return (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => toggleService(s)}
+                        className="text-xs px-2.5 py-1 rounded-lg border transition-all cursor-pointer select-none"
+                        style={{
+                          background: isSelected ? "var(--color-mm-orange)" : "white",
+                          borderColor: isSelected ? "var(--color-mm-orange)" : "var(--color-mm-border)",
+                          color: isSelected ? "white" : "var(--color-mm-gray)",
+                        }}
+                      >
+                        {isSelected ? `✓ ${s}` : `+ ${s}`}
+                      </button>
+                    );
+                  })}
+                </div>
+
                 {newProjectErrors.services && (
                   <div
                     style={{
@@ -2090,7 +2450,7 @@ function ProjectsPage() {
                       marginBottom: "4px",
                     }}
                   >
-                    Start Date*
+                    Start Date
                   </label>
                   <input
                     type="date"
@@ -2135,7 +2495,7 @@ function ProjectsPage() {
                       marginBottom: "4px",
                     }}
                   >
-                    Deadline*
+                    Deadline
                   </label>
                   <input
                     type="date"
@@ -2183,7 +2543,7 @@ function ProjectsPage() {
                       marginBottom: "4px",
                     }}
                   >
-                    Status*
+                    Status
                   </label>
                   <select
                     value={newProjectForm.status}
@@ -2250,7 +2610,7 @@ function ProjectsPage() {
                       marginBottom: "4px",
                     }}
                   >
-                    Priority*
+                    Priority
                   </label>
                   <select
                     value={newProjectForm.priority}

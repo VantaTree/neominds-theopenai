@@ -39,6 +39,28 @@ export const IntegrationsSchema = z.object({
 });
 export type Integrations = z.infer<typeof IntegrationsSchema>;
 
+export const InsightMetricSchema = z.object({
+  label: z.string(),
+  value: z.string(),
+  trend: z.string(),
+  isPositive: z.boolean(),
+});
+
+export const InsightsCacheSchema = z.object({
+  lastFetchedAt: z.string(),
+  website: z.object({
+    isConnected: z.boolean(),
+    needsSetup: z.boolean(),
+    metrics: z.array(InsightMetricSchema),
+  }).optional().nullable(),
+  google: z.object({
+    isConnected: z.boolean(),
+    needsSetup: z.boolean(),
+    metrics: z.array(InsightMetricSchema),
+  }).optional().nullable(),
+});
+export type InsightsCache = z.infer<typeof InsightsCacheSchema>;
+
 export const BusinessSchema = z.object({
   id: z.string().min(1, "Business ID is required"),
   userId: Reference(UserSchema, "User ID reference is required"),
@@ -53,6 +75,7 @@ export const BusinessSchema = z.object({
   websiteUrl: z.string().default(""),
   paymentStatus: PaymentStatusEnum.default("Pending"),
   integrations: IntegrationsSchema.optional().nullable(),
+  insightsCache: InsightsCacheSchema.optional().nullable(),
   createdAt: DateField,
   updatedAt: DateField,
 });

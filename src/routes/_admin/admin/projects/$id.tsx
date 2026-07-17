@@ -810,6 +810,7 @@ function ProgressTab({
 
   const [imageUploading, setImageUploading] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [serviceInput, setServiceInput] = useState("");
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -857,6 +858,33 @@ function ProgressTab({
       ? project.services.filter((x) => x !== s)
       : [...project.services, s];
     onDetailsChange({ ...project, services: nextServices });
+  };
+
+  const addCustomService = (service: string) => {
+    const trimmed = service.trim();
+    if (!trimmed) return;
+    if (!project.services.includes(trimmed)) {
+      onDetailsChange({
+        ...project,
+        services: [...project.services, trimmed],
+      });
+    }
+    setServiceInput("");
+  };
+
+  const handleServiceKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addCustomService(serviceInput);
+    } else if (e.key === "," || e.key === ";") {
+      e.preventDefault();
+      addCustomService(serviceInput);
+    } else if (e.key === "Backspace" && !serviceInput && project.services.length > 0) {
+      onDetailsChange({
+        ...project,
+        services: project.services.slice(0, -1),
+      });
+    }
   };
 
   const handleAddUpdate = (e: React.FormEvent) => {
@@ -951,36 +979,66 @@ function ProgressTab({
               </select>
             </Field>
             <Field label="Services">
-              <div className="flex flex-wrap gap-2">
-                {["Website", "Marketing", "SEO", "Sales", "Automation"].map(
-                  (s) => {
-                    const on = project.services.includes(s);
-                    return (
-                      <button
-                        key={s}
-                        type="button"
-                        onClick={() => toggleService(s)}
-                        className="px-3 py-1.5 rounded-full text-xs font-semibold transition-colors cursor-pointer"
-                        style={
-                          on
-                            ? {
-                                background:
-                                  "color-mix(in oklch, var(--color-mm-orange) 8%, white)",
-                                border: "1px solid var(--color-mm-orange)",
-                                color: "var(--color-mm-orange)",
-                              }
-                            : {
-                                background: "var(--color-mm-subtle)",
-                                border: "1px solid var(--color-mm-border)",
-                                color: "var(--color-mm-gray)",
-                              }
-                        }
-                      >
-                        {s}
-                      </button>
-                    );
-                  },
+              <div
+                className="flex flex-wrap items-center gap-1.5 px-3 py-1.5 border rounded-xl bg-white focus-within:border-mm-orange transition-all"
+                style={{
+                  borderColor: "var(--color-mm-border)",
+                }}
+              >
+                {project.services.map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center gap-1 bg-mm-orange/10 text-mm-orange text-xs font-semibold px-2 py-0.5 rounded-full select-none"
+                  >
+                    {tag}
+                    <button
+                      type="button"
+                      onClick={() => toggleService(tag)}
+                      className="hover:text-mm-red font-black cursor-pointer"
+                    >
+                      <X size={10} />
+                    </button>
+                  </span>
+                ))}
+                <input
+                  type="text"
+                  value={serviceInput}
+                  onChange={(e) => setServiceInput(e.target.value)}
+                  onKeyDown={handleServiceKeyDown}
+                  placeholder={project.services.length === 0 ? "Add service (press Enter or comma)..." : ""}
+                  className="flex-1 min-w-[120px] bg-transparent border-0 outline-none text-sm text-mm-dark py-1 placeholder:text-mm-gray/40"
+                />
+                {serviceInput.trim() && (
+                  <button
+                    type="button"
+                    onClick={() => addCustomService(serviceInput)}
+                    className="text-xs text-mm-orange font-bold hover:underline cursor-pointer"
+                  >
+                    Add
+                  </button>
                 )}
+              </div>
+
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                <span className="text-[11px] text-mm-gray/50 mr-1">Suggestions:</span>
+                {["Website", "Marketing", "SEO", "Sales", "Automation"].map((s) => {
+                  const isSelected = project.services.includes(s);
+                  return (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => toggleService(s)}
+                      className="text-xs px-2.5 py-1 rounded-lg border transition-all cursor-pointer select-none"
+                      style={{
+                        background: isSelected ? "var(--color-mm-orange)" : "white",
+                        borderColor: isSelected ? "var(--color-mm-orange)" : "var(--color-mm-border)",
+                        color: isSelected ? "white" : "var(--color-mm-gray)",
+                      }}
+                    >
+                      {isSelected ? `✓ ${s}` : `+ ${s}`}
+                    </button>
+                  );
+                })}
               </div>
             </Field>
             <Field label="Project Manager / Assignee" error={assigneeError}>

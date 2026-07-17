@@ -8,7 +8,11 @@ import {
 } from "@tanstack/react-router";
 import { type ReactNode, useEffect } from "react";
 import { LightboxProvider } from "@/components/mymind/LightboxContext";
-import { auth as firebaseAuth, isAuthInitialized, waitUntilAuthInitialized } from "@/lib/firebase";
+import {
+  auth as firebaseAuth,
+  isAuthInitialized,
+  waitUntilAuthInitialized,
+} from "@/lib/firebase";
 import { type User, onAuthStateChanged } from "firebase/auth";
 
 import appCss from "../styles.css?url";
@@ -30,8 +34,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       { title: "theOpenAI" },
       {
         name: "description",
-        content:
-          "theOpenAI",
+        content: "theOpenAI",
       },
       { name: "theme-color", content: "#ffffff" },
     ],
@@ -46,11 +49,11 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
       </head>
-      <body>
+      <body suppressHydrationWarning>
         {children}
         <Scripts />
       </body>
