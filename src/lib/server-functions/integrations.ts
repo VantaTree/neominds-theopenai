@@ -57,5 +57,5 @@ export const getDashboardInsightsFn = createServerFn({ method: "GET" })
     }
     const { IntegrationService } = await import("../server/services/integration.service");
     const integrationService = new IntegrationService();
-    return integrationService.getDashboardInsights(business);
+    return integrationService.getDashboardInsights(business, data.range);
   });
