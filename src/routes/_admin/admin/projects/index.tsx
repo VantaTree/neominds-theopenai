@@ -345,12 +345,10 @@ function ProjectsPage() {
     setStatusFilter(newStatus);
   };
 
-  const [isDomainOpen, setIsDomainOpen] = useState(false);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isServiceSearchOpen, setIsServiceSearchOpen] = useState(false);
   const [isMobileBizDropdownOpen, setIsMobileBizDropdownOpen] = useState(false);
 
-  const domainRef = useRef<HTMLDivElement>(null);
   const statusRef = useRef<HTMLDivElement>(null);
   const serviceSearchRef = useRef<HTMLDivElement>(null);
   const mobileBizDropdownRef = useRef<HTMLDivElement>(null);
@@ -369,8 +367,6 @@ function ProjectsPage() {
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (domainRef.current && !domainRef.current.contains(e.target as Node))
-        setIsDomainOpen(false);
       if (statusRef.current && !statusRef.current.contains(e.target as Node))
         setIsStatusOpen(false);
       if (
@@ -591,7 +587,7 @@ function ProjectsPage() {
     }
   };
 
-  const getFilteredProjectsForBusiness = useCallback((bizId: string) => {
+  const getFilteredProjectsForBusiness = useCallback((bizId: string, ignoreDomainFilter = false) => {
     const bizProjects = projectList.filter((p) => {
       const pBizId = typeof p.businessId === "object" && p.businessId !== null ? p.businessId.id : p.businessId;
       return pBizId === bizId;
@@ -615,7 +611,7 @@ function ProjectsPage() {
       else if (p.progress === 100) status = "Completed";
 
       let matchType = true;
-      if (domainFilter !== "All Domains") {
+      if (!ignoreDomainFilter && domainFilter !== "All Domains") {
         matchType = p.domain === domainFilter;
       }
 
@@ -681,7 +677,7 @@ function ProjectsPage() {
       Automation: [],
     };
     filteredProjects.forEach((p) => {
-      if (p.status !== "User Draft") {
+      if (p.status !== "Requested") {
         if (map[p.domain]) {
           map[p.domain].push(p);
         }
@@ -691,8 +687,19 @@ function ProjectsPage() {
   }, [filteredProjects]);
 
   const userDraftProjects = useMemo(() => {
-    return filteredProjects.filter((p) => p.status === "User Draft");
+    return filteredProjects.filter((p) => p.status === "Requested");
   }, [filteredProjects]);
+
+  const domainCounts = useMemo(() => {
+    if (!selectedBusinessId) return { all: 0, Website: 0, Marketing: 0, Automation: 0 };
+    const list = getFilteredProjectsForBusiness(selectedBusinessId, true);
+    return {
+      all: list.length,
+      Website: list.filter((p) => p.domain === "Website").length,
+      Marketing: list.filter((p) => p.domain === "Marketing").length,
+      Automation: list.filter((p) => p.domain === "Automation").length,
+    };
+  }, [selectedBusinessId, getFilteredProjectsForBusiness]);
 
   const clearAllFilters = () => {
     setSearchQuery("");
@@ -1106,114 +1113,7 @@ function ProjectsPage() {
               )}
             </div>
 
-            <div className="relative w-full sm:w-auto" ref={domainRef}>
-              <button
-                onClick={() => setIsDomainOpen(!isDomainOpen)}
-                className="inline-flex items-center justify-between sm:justify-start gap-2 px-4 py-2.5 rounded-xl text-sm transition-colors w-full sm:w-auto"
-                style={{
-                  background: "white",
-                  border:
-                    domainFilter === "All Domains"
-                      ? "1px solid var(--color-mm-border)"
-                      : "1px solid var(--color-mm-orange)",
-                  color:
-                    domainFilter === "All Domains"
-                      ? "var(--color-mm-gray)"
-                      : "var(--color-mm-orange)",
-                }}
-              >
-                <span className="truncate">{domainFilter}</span>
-                <ChevronDown
-                  size={14}
-                  className="shrink-0"
-                  style={{
-                    transform: isDomainOpen ? "rotate(180deg)" : "rotate(0deg)",
-                    transition: "transform 150ms ease",
-                  }}
-                />
-              </button>
-              {isDomainOpen && (
-                <div
-                  style={{
-                    background: "white",
-                    border: "1px solid var(--color-mm-border)",
-                    borderRadius: "16px",
-                    padding: "8px",
-                    boxShadow: "0 8px 24px rgba(0,0,0,0.10)",
-                    minWidth: "200px",
-                    position: "absolute",
-                    zIndex: 100,
-                    marginTop: "4px",
-                  }}
-                  className="w-full sm:w-auto left-0"
-                >
-                  {[
-                    { label: "All Domains", count: projectList.length },
-                    {
-                      label: "Website",
-                      count: projectList.filter((p) => p.domain === "Website").length,
-                    },
-                    {
-                      label: "Marketing",
-                      count: projectList.filter((p) => p.domain === "Marketing").length,
-                    },
-                    {
-                      label: "Automation",
-                      count: projectList.filter((p) => p.domain === "Automation").length,
-                    },
-                  ].map((opt) => (
-                    <div
-                      key={opt.label}
-                      onClick={() => {
-                        setDomainFilter(opt.label);
-                        setIsDomainOpen(false);
-                      }}
-                      style={{
-                        padding: "10px 14px",
-                        borderRadius: "10px",
-                        color:
-                          domainFilter === opt.label
-                            ? "var(--color-mm-orange)"
-                            : "var(--color-mm-gray)",
-                        fontSize: "14px",
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        background:
-                          domainFilter === opt.label
-                            ? "rgba(224, 86, 36, 0.1)"
-                            : "transparent",
-                        fontWeight: domainFilter === opt.label ? 600 : 400,
-                      }}
-                      onMouseEnter={(e) => {
-                        if (domainFilter !== opt.label) {
-                          e.currentTarget.style.background =
-                            "rgba(224, 86, 36, 0.1)";
-                          e.currentTarget.style.color = "var(--color-mm-dark)";
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (domainFilter !== opt.label) {
-                          e.currentTarget.style.background = "transparent";
-                          e.currentTarget.style.color = "var(--color-mm-gray)";
-                        }
-                      }}
-                    >
-                      <div className="flex items-center gap-2">{opt.label}</div>
-                      <span
-                        style={{
-                          color: "var(--color-mm-gray)",
-                          fontSize: "12px",
-                        }}
-                      >
-                        {opt.count}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+
 
             <div className="relative w-full sm:w-auto" ref={statusRef}>
               <button
@@ -1288,7 +1188,7 @@ function ProjectsPage() {
                       color: "var(--color-mm-gray)",
                     },
                     {
-                      label: "User Draft",
+                      label: "Requested",
                       bg: "var(--color-mm-subtle)",
                       color: "var(--color-mm-gray)",
                     },
@@ -1546,6 +1446,42 @@ function ProjectsPage() {
             </button>
           </div>
         )}
+        {/* Domain Tabs Selector */}
+        <div className="flex border-b border-mm-border gap-6 mb-6">
+          {[
+            { label: "All Domains", value: "All Domains", count: domainCounts.all },
+            { label: "Website", value: "Website", count: domainCounts.Website },
+            { label: "Marketing", value: "Marketing", count: domainCounts.Marketing },
+            { label: "Automation", value: "Automation", count: domainCounts.Automation },
+          ].map((tab) => {
+            const isActive = domainFilter === tab.value;
+            return (
+              <button
+                key={tab.value}
+                onClick={() => setDomainFilter(tab.value)}
+                className={`pb-3 text-sm font-bold relative transition-all cursor-pointer flex items-center gap-1.5 ${
+                  isActive
+                    ? "text-mm-orange font-extrabold"
+                    : "text-mm-gray hover:text-mm-dark"
+                }`}
+              >
+                <span>{tab.label}</span>
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
+                  isActive
+                    ? "bg-mm-orange/15 text-mm-orange"
+                    : "bg-mm-subtle text-mm-gray/70"
+                }`}>
+                  {tab.count}
+                </span>
+                {isActive && (
+                  <div
+                    className="absolute bottom-0 left-0 right-0 h-[2px] bg-mm-orange rounded-full"
+                  />
+                )}
+              </button>
+            );
+          })}
+        </div>
 
         {isLoading ? (
           <div className="bg-white border border-mm-border rounded-[24px] shadow-[0_2px_12px_rgba(0,0,0,0.02)] overflow-hidden">
@@ -1595,7 +1531,7 @@ function ProjectsPage() {
               <div className="space-y-3">
                 <h3 className="text-base font-bold text-mm-dark flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-amber-500" />
-                  User Drafts
+                  Requested
                   <span className="text-xs font-medium text-mm-gray">({userDraftProjects.length})</span>
                 </h3>
                 <div className="bg-white border border-mm-border rounded-[24px] shadow-[0_2px_12px_rgba(0,0,0,0.02)] overflow-hidden">
