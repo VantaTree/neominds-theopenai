@@ -9,7 +9,7 @@ import {
   MoreVertical,
 } from "lucide-react";
 import { statusColors } from "@/lib/mock-data";
-import type { Project } from "@/lib/schemas";
+import type { Project, ProjectDomain } from "@/lib/schemas";
 import {
   Avatar,
   ProgressBar,
@@ -673,6 +673,26 @@ function ProjectsPage() {
     if (!selectedBusinessId) return [];
     return getFilteredProjectsForBusiness(selectedBusinessId);
   }, [selectedBusinessId, getFilteredProjectsForBusiness]);
+
+  const projectsByDomain = useMemo(() => {
+    const map: Record<ProjectDomain, Project[]> = {
+      Website: [],
+      Marketing: [],
+      Automation: [],
+    };
+    filteredProjects.forEach((p) => {
+      if (p.status !== "User Draft") {
+        if (map[p.domain]) {
+          map[p.domain].push(p);
+        }
+      }
+    });
+    return map;
+  }, [filteredProjects]);
+
+  const userDraftProjects = useMemo(() => {
+    return filteredProjects.filter((p) => p.status === "User Draft");
+  }, [filteredProjects]);
 
   const clearAllFilters = () => {
     setSearchQuery("");
@@ -1527,31 +1547,31 @@ function ProjectsPage() {
           </div>
         )}
 
-        <div className="bg-white border border-mm-border rounded-[24px] shadow-[0_2px_12px_rgba(0,0,0,0.02)] overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-mm-subtle border-b border-mm-border text-mm-gray font-semibold">
-                  {[
-                    "Project Name",
-                    "Services",
-                    "Assignee",
-                    "Status",
-                    "Progress",
-                    "Timeline",
-                    "Actions",
-                  ].map((h) => (
-                    <th
-                      key={h}
-                      className="text-left font-semibold px-4 py-3 whitespace-nowrap"
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {isLoading ? (
+        {isLoading ? (
+          <div className="bg-white border border-mm-border rounded-[24px] shadow-[0_2px_12px_rgba(0,0,0,0.02)] overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-mm-subtle border-b border-mm-border text-mm-gray font-semibold">
+                    {[
+                      "Project Name",
+                      "Services",
+                      "Assignee",
+                      "Status",
+                      "Progress",
+                      "Timeline",
+                      "Actions",
+                    ].map((h) => (
+                      <th
+                        key={h}
+                        className="text-left font-semibold px-4 py-3 whitespace-nowrap"
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
                   <tr>
                     <td colSpan={7} className="px-4 py-12 text-center">
                       <div className="flex flex-col items-center justify-center gap-2">
@@ -1565,174 +1585,447 @@ function ProjectsPage() {
                       </div>
                     </td>
                   </tr>
-                ) : filteredProjects.length > 0 ? (
-                  filteredProjects.map((p) => {
-                    const biz =
-                      typeof p.businessId === "object" && p.businessId !== null
-                        ? p.businessId
-                        : businesses.find((b) => b.id === p.businessId);
-                    const manager = p.assignee;
-
-                    const userIdStr = biz
-                      ? typeof biz.userId === "object" && biz.userId !== null
-                        ? biz.userId.id
-                        : biz.userId
-                      : null;
-                    const matchedUser = users.find((u) => u.id === userIdStr);
-
-                    let status: "Pending" | "In Progress" | "Completed" =
-                      "In Progress";
-                    if (p.progress === 0) status = "Pending";
-                    else if (p.progress === 100) status = "Completed";
-
-                    const startDateStr = p.startDate
-                      ? new Date(p.startDate).toLocaleDateString()
-                      : "";
-                    const deadlineStr = p.deadline
-                      ? new Date(p.deadline).toLocaleDateString()
-                      : "";
-
-                    return (
-                      <tr
-                        key={p.id}
-                        style={{
-                          borderTop: "1px solid var(--color-mm-border)",
-                        }}
-                        className="hover:bg-mm-subtle transition-colors"
-                      >
-                        <td className="px-4 py-3 font-semibold text-mm-dark whitespace-nowrap">
-                          {p.name || p.id}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex flex-wrap gap-1">
-                            {p.services.map((s) => (
-                              <span
-                                key={s}
-                                className="px-2.5 py-0.5 rounded-full text-xs border border-mm-border bg-mm-subtle text-mm-gray"
-                              >
-                                {s}
-                              </span>
-                            ))}
-                          </div>
-                        </td>
-                        <td
-                          className="px-4 py-3"
-                          style={{ color: "var(--color-mm-gray)" }}
-                        >
-                          {manager}
-                        </td>
-                        <td className="px-4 py-3">
-                          <StatusBadge status={status} />
-                        </td>
-                        <td className="px-4 py-3">
-                          <ProgressRing
-                            value={p.progress}
-                            color={
-                              statusColors[status as keyof typeof statusColors]
-                            }
-                          />
-                        </td>
-                        <td
-                          className="px-4 py-3 text-xs whitespace-nowrap"
-                          style={{ color: "var(--color-mm-gray)" }}
-                        >
-                          <div className="text-[10px] text-mm-gray mt-0.5">
-                            {startDateStr || "N/A"} to
-                          </div>
-                          <div className="font-semibold text-mm-dark">
-                            {deadlineStr || "N/A"}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="relative inline-block actions-dropdown-container">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const rect = e.currentTarget.getBoundingClientRect();
-                                const dropdownHeight = 180;
-                                const dropdownWidth = 160;
-                                let top = rect.bottom;
-                                if (top + dropdownHeight > window.innerHeight) {
-                                  top = rect.top - dropdownHeight - 8;
-                                }
-                                let left = rect.right - dropdownWidth;
-                                if (left < 8) {
-                                  left = 8;
-                                }
-                                setDropdownCoords({ top, left });
-                                setOpenDropdownId(
-                                  openDropdownId === p.id ? null : p.id,
-                                );
-                              }}
-                              className="p-1.5 rounded-lg hover:bg-mm-subtle transition-colors cursor-pointer text-mm-gray hover:text-mm-dark flex items-center justify-center"
-                              title="Actions"
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : filteredProjects.length > 0 ? (
+          <div className="space-y-8">
+            {userDraftProjects.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-base font-bold text-mm-dark flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-amber-500" />
+                  User Drafts
+                  <span className="text-xs font-medium text-mm-gray">({userDraftProjects.length})</span>
+                </h3>
+                <div className="bg-white border border-mm-border rounded-[24px] shadow-[0_2px_12px_rgba(0,0,0,0.02)] overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-mm-subtle border-b border-mm-border text-mm-gray font-semibold">
+                          {[
+                            "Project Name",
+                            "Services",
+                            "Assignee",
+                            "Status",
+                            "Progress",
+                            "Timeline",
+                            "Actions",
+                          ].map((h) => (
+                            <th
+                              key={h}
+                              className="text-left font-semibold px-4 py-3 whitespace-nowrap"
                             >
-                              <MoreVertical size={16} />
-                            </button>
-                            {openDropdownId === p.id && dropdownCoords && (
-                              <div
-                                className="fixed mt-1 w-40 bg-white border border-mm-border rounded-xl shadow-lg py-1.5 z-50 animate-in fade-in slide-in-from-top-1 duration-150"
-                                style={{
-                                  boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
-                                  top: `${dropdownCoords.top}px`,
-                                  left: `${dropdownCoords.left}px`,
-                                }}
+                              {h}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {userDraftProjects.map((p) => {
+                          const biz =
+                            typeof p.businessId === "object" && p.businessId !== null
+                              ? p.businessId
+                              : businesses.find((b) => b.id === p.businessId);
+                          const manager = p.assignee;
+
+                          const userIdStr = biz
+                            ? typeof biz.userId === "object" && biz.userId !== null
+                              ? biz.userId.id
+                              : biz.userId
+                            : null;
+                          const matchedUser = users.find((u) => u.id === userIdStr);
+
+                          let status = p.status;
+
+                          const startDateStr = p.startDate
+                            ? new Date(p.startDate).toLocaleDateString()
+                            : "";
+                          const deadlineStr = p.deadline
+                            ? new Date(p.deadline).toLocaleDateString()
+                            : "";
+
+                          return (
+                            <tr
+                              key={p.id}
+                              style={{
+                                borderTop: "1px solid var(--color-mm-border)",
+                              }}
+                              className="hover:bg-mm-subtle transition-colors"
+                            >
+                              <td className="px-4 py-3 font-semibold text-mm-dark whitespace-nowrap">
+                                {p.name || p.id}
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex flex-wrap gap-1">
+                                  {p.services.map((s) => (
+                                    <span
+                                      key={s}
+                                      className="px-2.5 py-0.5 rounded-full text-xs border border-mm-border bg-mm-subtle text-mm-gray"
+                                    >
+                                      {s}
+                                    </span>
+                                  ))}
+                                </div>
+                              </td>
+                              <td
+                                className="px-4 py-3"
+                                style={{ color: "var(--color-mm-gray)" }}
                               >
-                                <Link
-                                  to="/admin/projects/$id"
-                                  params={{ id: p.id }}
-                                  search={{ edit: false }}
-                                  onClick={() => setOpenDropdownId(null)}
-                                  className="flex items-center gap-2 px-3 py-2 text-xs text-mm-gray hover:text-mm-dark hover:bg-mm-subtle transition-colors"
+                                {manager}
+                              </td>
+                              <td className="px-4 py-3">
+                                <StatusBadge status={status} />
+                              </td>
+                              <td className="px-4 py-3">
+                                <ProgressRing
+                                  value={p.progress}
+                                  color="#f59e0b"
+                                />
+                              </td>
+                              <td
+                                className="px-4 py-3 text-xs whitespace-nowrap"
+                                style={{ color: "var(--color-mm-gray)" }}
+                              >
+                                <div className="text-[10px] text-mm-gray mt-0.5">
+                                  {startDateStr || "N/A"} to
+                                </div>
+                                <div className="font-semibold text-mm-dark">
+                                  {deadlineStr || "N/A"}
+                                </div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="relative inline-block actions-dropdown-container">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const rect = e.currentTarget.getBoundingClientRect();
+                                      const dropdownHeight = 180;
+                                      const dropdownWidth = 160;
+                                      let top = rect.bottom;
+                                      if (top + dropdownHeight > window.innerHeight) {
+                                        top = rect.top - dropdownHeight - 8;
+                                      }
+                                      let left = rect.right - dropdownWidth;
+                                      if (left < 8) {
+                                        left = 8;
+                                      }
+                                      setDropdownCoords({ top, left });
+                                      setOpenDropdownId(
+                                        openDropdownId === p.id ? null : p.id,
+                                      );
+                                    }}
+                                    className="p-1.5 rounded-lg hover:bg-mm-subtle transition-colors cursor-pointer text-mm-gray hover:text-mm-dark flex items-center justify-center"
+                                    title="Actions"
+                                  >
+                                    <MoreVertical size={16} />
+                                  </button>
+                                  {openDropdownId === p.id && dropdownCoords && (
+                                    <div
+                                      className="fixed mt-1 w-40 bg-white border border-mm-border rounded-xl shadow-lg py-1.5 z-50 animate-in fade-in slide-in-from-top-1 duration-150"
+                                      style={{
+                                        boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+                                        top: `${dropdownCoords.top}px`,
+                                        left: `${dropdownCoords.left}px`,
+                                      }}
+                                    >
+                                      <Link
+                                        to="/admin/projects/$id"
+                                        params={{ id: p.id }}
+                                        search={{ edit: false }}
+                                        onClick={() => setOpenDropdownId(null)}
+                                        className="flex items-center gap-2 px-3 py-2 text-xs text-mm-gray hover:text-mm-dark hover:bg-mm-subtle transition-colors"
+                                      >
+                                        <Eye size={14} />
+                                        <span>View Project</span>
+                                      </Link>
+                                      <Link
+                                        to="/admin/projects/$id"
+                                        params={{ id: p.id }}
+                                        search={{ edit: true }}
+                                        onClick={() => setOpenDropdownId(null)}
+                                        className="flex items-center gap-2 px-3 py-2 text-xs text-mm-gray hover:text-mm-dark hover:bg-mm-subtle transition-colors"
+                                      >
+                                        <Edit2 size={14} />
+                                        <span>Edit Project</span>
+                                      </Link>
+                                      <Link
+                                        to="/admin/chat"
+                                        search={{
+                                          user: userIdStr || "",
+                                          business:
+                                            (typeof p.businessId === "string"
+                                              ? p.businessId
+                                              : biz?.id) || "",
+                                          domain: p.domain,
+                                        }}
+                                        onClick={() => setOpenDropdownId(null)}
+                                        className="flex items-center gap-2 px-3 py-2 text-xs text-mm-orange hover:bg-mm-orange/5 transition-colors"
+                                      >
+                                        <MessageSquare size={14} />
+                                        <span>Open Chat</span>
+                                      </Link>
+                                      <hr className="border-t border-mm-border my-1" />
+                                      <button
+                                        onClick={() => {
+                                          setConfirmDelete(p);
+                                          setOpenDropdownId(null);
+                                        }}
+                                        className="flex items-center gap-2 w-full text-left px-3 py-2 text-xs text-mm-red hover:bg-mm-red/5 transition-colors cursor-pointer"
+                                      >
+                                        <Trash2 size={14} />
+                                        <span>Delete Project</span>
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+            {(["Website", "Marketing", "Automation"] as ProjectDomain[]).map((domain) => {
+              const domainProjects = projectsByDomain[domain];
+              if (domainProjects.length === 0) return null;
+
+              return (
+                <div key={domain} className="space-y-3">
+                  <h3 className="text-base font-bold text-mm-dark flex items-center gap-2">
+                    <span className={`w-2 h-2 rounded-full ${
+                      domain === "Website" ? "bg-[#3B82F6]" :
+                      domain === "Marketing" ? "bg-[#EC4899]" : "bg-[#10B981]"
+                    }`} />
+                    {domain} Projects
+                    <span className="text-xs font-medium text-mm-gray">({domainProjects.length})</span>
+                  </h3>
+                  <div className="bg-white border border-mm-border rounded-[24px] shadow-[0_2px_12px_rgba(0,0,0,0.02)] overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="bg-mm-subtle border-b border-mm-border text-mm-gray font-semibold">
+                            {[
+                              "Project Name",
+                              "Services",
+                              "Assignee",
+                              "Status",
+                              "Progress",
+                              "Timeline",
+                              "Actions",
+                            ].map((h) => (
+                              <th
+                                key={h}
+                                className="text-left font-semibold px-4 py-3 whitespace-nowrap"
+                              >
+                                {h}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {domainProjects.map((p) => {
+                            const biz =
+                              typeof p.businessId === "object" && p.businessId !== null
+                                ? p.businessId
+                                : businesses.find((b) => b.id === p.businessId);
+                            const manager = p.assignee;
+
+                            const userIdStr = biz
+                              ? typeof biz.userId === "object" && biz.userId !== null
+                                ? biz.userId.id
+                                : biz.userId
+                              : null;
+                            const matchedUser = users.find((u) => u.id === userIdStr);
+
+                            let status: "Pending" | "In Progress" | "Completed" =
+                              "In Progress";
+                            if (p.progress === 0) status = "Pending";
+                            else if (p.progress === 100) status = "Completed";
+
+                            const startDateStr = p.startDate
+                              ? new Date(p.startDate).toLocaleDateString()
+                              : "";
+                            const deadlineStr = p.deadline
+                              ? new Date(p.deadline).toLocaleDateString()
+                              : "";
+
+                            return (
+                              <tr
+                                key={p.id}
+                                style={{
+                                  borderTop: "1px solid var(--color-mm-border)",
+                                }}
+                                className="hover:bg-mm-subtle transition-colors"
+                              >
+                                <td className="px-4 py-3 font-semibold text-mm-dark whitespace-nowrap">
+                                  {p.name || p.id}
+                                </td>
+                                <td className="px-4 py-3">
+                                  <div className="flex flex-wrap gap-1">
+                                    {p.services.map((s) => (
+                                      <span
+                                        key={s}
+                                        className="px-2.5 py-0.5 rounded-full text-xs border border-mm-border bg-mm-subtle text-mm-gray"
+                                      >
+                                        {s}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </td>
+                                <td
+                                  className="px-4 py-3"
+                                  style={{ color: "var(--color-mm-gray)" }}
                                 >
-                                  <Eye size={14} />
-                                  <span>View Project</span>
-                                </Link>
-                                <Link
-                                  to="/admin/projects/$id"
-                                  params={{ id: p.id }}
-                                  search={{ edit: true }}
-                                  onClick={() => setOpenDropdownId(null)}
-                                  className="flex items-center gap-2 px-3 py-2 text-xs text-mm-gray hover:text-mm-dark hover:bg-mm-subtle transition-colors"
+                                  {manager}
+                                </td>
+                                <td className="px-4 py-3">
+                                  <StatusBadge status={status} />
+                                </td>
+                                <td className="px-4 py-3">
+                                  <ProgressRing
+                                    value={p.progress}
+                                    color={
+                                      statusColors[status as keyof typeof statusColors]
+                                    }
+                                  />
+                                </td>
+                                <td
+                                  className="px-4 py-3 text-xs whitespace-nowrap"
+                                  style={{ color: "var(--color-mm-gray)" }}
                                 >
-                                  <Edit2 size={14} />
-                                  <span>Edit Project</span>
-                                </Link>
-                                <Link
-                                  to="/admin/chat"
-                                  search={{
-                                    user: userIdStr || "",
-                                    business:
-                                      (typeof p.businessId === "string"
-                                        ? p.businessId
-                                        : biz?.id) || "",
-                                    domain: p.domain,
-                                  }}
-                                  onClick={() => setOpenDropdownId(null)}
-                                  className="flex items-center gap-2 px-3 py-2 text-xs text-mm-orange hover:bg-mm-orange/5 transition-colors"
-                                >
-                                  <MessageSquare size={14} />
-                                  <span>Open Chat</span>
-                                </Link>
-                                <hr className="border-t border-mm-border my-1" />
-                                <button
-                                  onClick={() => {
-                                    setConfirmDelete(p);
-                                    setOpenDropdownId(null);
-                                  }}
-                                  className="flex items-center gap-2 w-full text-left px-3 py-2 text-xs text-mm-red hover:bg-mm-red/5 transition-colors cursor-pointer"
-                                >
-                                  <Trash2 size={14} />
-                                  <span>Delete Project</span>
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                ) : (
+                                  <div className="text-[10px] text-mm-gray mt-0.5">
+                                    {startDateStr || "N/A"} to
+                                  </div>
+                                  <div className="font-semibold text-mm-dark">
+                                    {deadlineStr || "N/A"}
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <div className="relative inline-block actions-dropdown-container">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const rect = e.currentTarget.getBoundingClientRect();
+                                        const dropdownHeight = 180;
+                                        const dropdownWidth = 160;
+                                        let top = rect.bottom;
+                                        if (top + dropdownHeight > window.innerHeight) {
+                                          top = rect.top - dropdownHeight - 8;
+                                        }
+                                        let left = rect.right - dropdownWidth;
+                                        if (left < 8) {
+                                          left = 8;
+                                        }
+                                        setDropdownCoords({ top, left });
+                                        setOpenDropdownId(
+                                          openDropdownId === p.id ? null : p.id,
+                                        );
+                                      }}
+                                      className="p-1.5 rounded-lg hover:bg-mm-subtle transition-colors cursor-pointer text-mm-gray hover:text-mm-dark flex items-center justify-center"
+                                      title="Actions"
+                                    >
+                                      <MoreVertical size={16} />
+                                    </button>
+                                    {openDropdownId === p.id && dropdownCoords && (
+                                      <div
+                                        className="fixed mt-1 w-40 bg-white border border-mm-border rounded-xl shadow-lg py-1.5 z-50 animate-in fade-in slide-in-from-top-1 duration-150"
+                                        style={{
+                                          boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+                                          top: `${dropdownCoords.top}px`,
+                                          left: `${dropdownCoords.left}px`,
+                                        }}
+                                      >
+                                        <Link
+                                          to="/admin/projects/$id"
+                                          params={{ id: p.id }}
+                                          search={{ edit: false }}
+                                          onClick={() => setOpenDropdownId(null)}
+                                          className="flex items-center gap-2 px-3 py-2 text-xs text-mm-gray hover:text-mm-dark hover:bg-mm-subtle transition-colors"
+                                        >
+                                          <Eye size={14} />
+                                          <span>View Project</span>
+                                        </Link>
+                                        <Link
+                                          to="/admin/projects/$id"
+                                          params={{ id: p.id }}
+                                          search={{ edit: true }}
+                                          onClick={() => setOpenDropdownId(null)}
+                                          className="flex items-center gap-2 px-3 py-2 text-xs text-mm-gray hover:text-mm-dark hover:bg-mm-subtle transition-colors"
+                                        >
+                                          <Edit2 size={14} />
+                                          <span>Edit Project</span>
+                                        </Link>
+                                        <Link
+                                          to="/admin/chat"
+                                          search={{
+                                            user: userIdStr || "",
+                                            business:
+                                              (typeof p.businessId === "string"
+                                                ? p.businessId
+                                                : biz?.id) || "",
+                                            domain: p.domain,
+                                          }}
+                                          onClick={() => setOpenDropdownId(null)}
+                                          className="flex items-center gap-2 px-3 py-2 text-xs text-mm-orange hover:bg-mm-orange/5 transition-colors"
+                                        >
+                                          <MessageSquare size={14} />
+                                          <span>Open Chat</span>
+                                        </Link>
+                                        <hr className="border-t border-mm-border my-1" />
+                                        <button
+                                          onClick={() => {
+                                            setConfirmDelete(p);
+                                            setOpenDropdownId(null);
+                                          }}
+                                          className="flex items-center gap-2 w-full text-left px-3 py-2 text-xs text-mm-red hover:bg-mm-red/5 transition-colors cursor-pointer"
+                                        >
+                                          <Trash2 size={14} />
+                                          <span>Delete Project</span>
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="bg-white border border-mm-border rounded-[24px] shadow-[0_2px_12px_rgba(0,0,0,0.02)] overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-mm-subtle border-b border-mm-border text-mm-gray font-semibold">
+                    {[
+                      "Project Name",
+                      "Services",
+                      "Assignee",
+                      "Status",
+                      "Progress",
+                      "Timeline",
+                      "Actions",
+                    ].map((h) => (
+                      <th
+                        key={h}
+                        className="text-left font-semibold px-4 py-3 whitespace-nowrap"
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
                   <tr>
                     <td colSpan={7} className="px-4 py-12">
                       <div className="flex flex-col items-center justify-center">
@@ -1764,11 +2057,11 @@ function ProjectsPage() {
                       </div>
                     </td>
                   </tr>
-                )}
-              </tbody>
-            </table>
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {isNewProjectOpen && (
