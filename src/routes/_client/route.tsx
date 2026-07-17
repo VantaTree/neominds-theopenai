@@ -217,12 +217,25 @@ function RouteComponent() {
     location.pathname !== "/chat";
   const isChatRoute = location.pathname.startsWith("/chat");
   const isRouterLoading = routerState.status === "pending";
+  const isAddRoute = location.pathname.startsWith("/add");
 
   const renderContent = () => {
     if (isChatDomainMobile) {
       return (
         <div className="h-dvh w-screen bg-white flex flex-col font-sans relative overflow-hidden">
           <main className="flex-1 w-full flex flex-col overflow-hidden">
+            <PageTransitionWrapper>
+              <Outlet />
+            </PageTransitionWrapper>
+          </main>
+        </div>
+      );
+    }
+
+    if (isAddRoute) {
+      return (
+        <div className="min-h-screen bg-[#F9FAFC] flex flex-col font-sans">
+          <main className="flex-1 w-full flex flex-col">
             <PageTransitionWrapper>
               <Outlet />
             </PageTransitionWrapper>

@@ -30,9 +30,12 @@ import { Route as ClientPlanRouteImport } from './routes/_client/plan'
 import { Route as ClientDashboardRouteImport } from './routes/_client/dashboard'
 import { Route as ClientBusinessProfileRouteImport } from './routes/_client/businessProfile'
 import { Route as ClientChatRouteRouteImport } from './routes/_client/chat/route'
+import { Route as ClientAddRouteRouteImport } from './routes/_client/add/route'
 import { Route as ClientChatIndexRouteImport } from './routes/_client/chat/index'
+import { Route as ClientAddIndexRouteImport } from './routes/_client/add/index'
 import { Route as AdminAdminIndexRouteImport } from './routes/_admin/admin/index'
 import { Route as ClientChatDomainRouteImport } from './routes/_client/chat/$domain'
+import { Route as ClientAddWebsiteRouteImport } from './routes/_client/add/website'
 import { Route as AdminAdminUsersRouteImport } from './routes/_admin/admin/users'
 import { Route as AdminAdminTemplatesRouteImport } from './routes/_admin/admin/templates'
 import { Route as AdminAdminSupportRouteImport } from './routes/_admin/admin/support'
@@ -149,10 +152,20 @@ const ClientChatRouteRoute = ClientChatRouteRouteImport.update({
   path: '/chat',
   getParentRoute: () => ClientRouteRoute,
 } as any)
+const ClientAddRouteRoute = ClientAddRouteRouteImport.update({
+  id: '/add',
+  path: '/add',
+  getParentRoute: () => ClientRouteRoute,
+} as any)
 const ClientChatIndexRoute = ClientChatIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => ClientChatRouteRoute,
+} as any)
+const ClientAddIndexRoute = ClientAddIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ClientAddRouteRoute,
 } as any)
 const AdminAdminIndexRoute = AdminAdminIndexRouteImport.update({
   id: '/admin/',
@@ -163,6 +176,11 @@ const ClientChatDomainRoute = ClientChatDomainRouteImport.update({
   id: '/$domain',
   path: '/$domain',
   getParentRoute: () => ClientChatRouteRoute,
+} as any)
+const ClientAddWebsiteRoute = ClientAddWebsiteRouteImport.update({
+  id: '/website',
+  path: '/website',
+  getParentRoute: () => ClientAddRouteRoute,
 } as any)
 const AdminAdminUsersRoute = AdminAdminUsersRouteImport.update({
   id: '/admin/users',
@@ -234,6 +252,7 @@ export interface FileRoutesByFullPath {
   '/logout': typeof LogoutRoute
   '/signup': typeof SignupRoute
   '/why': typeof WhyRoute
+  '/add': typeof ClientAddRouteRouteWithChildren
   '/chat': typeof ClientChatRouteRouteWithChildren
   '/businessProfile': typeof ClientBusinessProfileRoute
   '/dashboard': typeof ClientDashboardRoute
@@ -251,8 +270,10 @@ export interface FileRoutesByFullPath {
   '/admin/support': typeof AdminAdminSupportRoute
   '/admin/templates': typeof AdminAdminTemplatesRoute
   '/admin/users': typeof AdminAdminUsersRoute
+  '/add/website': typeof ClientAddWebsiteRoute
   '/chat/$domain': typeof ClientChatDomainRoute
   '/admin/': typeof AdminAdminIndexRoute
+  '/add/': typeof ClientAddIndexRoute
   '/chat/': typeof ClientChatIndexRoute
   '/admin/blogs/$id': typeof AdminAdminBlogsIdRoute
   '/admin/projects/$id': typeof AdminAdminProjectsIdRoute
@@ -285,8 +306,10 @@ export interface FileRoutesByTo {
   '/admin/support': typeof AdminAdminSupportRoute
   '/admin/templates': typeof AdminAdminTemplatesRoute
   '/admin/users': typeof AdminAdminUsersRoute
+  '/add/website': typeof ClientAddWebsiteRoute
   '/chat/$domain': typeof ClientChatDomainRoute
   '/admin': typeof AdminAdminIndexRoute
+  '/add': typeof ClientAddIndexRoute
   '/chat': typeof ClientChatIndexRoute
   '/admin/blogs/$id': typeof AdminAdminBlogsIdRoute
   '/admin/projects/$id': typeof AdminAdminProjectsIdRoute
@@ -307,6 +330,7 @@ export interface FileRoutesById {
   '/logout': typeof LogoutRoute
   '/signup': typeof SignupRoute
   '/why': typeof WhyRoute
+  '/_client/add': typeof ClientAddRouteRouteWithChildren
   '/_client/chat': typeof ClientChatRouteRouteWithChildren
   '/_client/businessProfile': typeof ClientBusinessProfileRoute
   '/_client/dashboard': typeof ClientDashboardRoute
@@ -324,8 +348,10 @@ export interface FileRoutesById {
   '/_admin/admin/support': typeof AdminAdminSupportRoute
   '/_admin/admin/templates': typeof AdminAdminTemplatesRoute
   '/_admin/admin/users': typeof AdminAdminUsersRoute
+  '/_client/add/website': typeof ClientAddWebsiteRoute
   '/_client/chat/$domain': typeof ClientChatDomainRoute
   '/_admin/admin/': typeof AdminAdminIndexRoute
+  '/_client/add/': typeof ClientAddIndexRoute
   '/_client/chat/': typeof ClientChatIndexRoute
   '/_admin/admin/blogs/$id': typeof AdminAdminBlogsIdRoute
   '/_admin/admin/projects/$id': typeof AdminAdminProjectsIdRoute
@@ -345,6 +371,7 @@ export interface FileRouteTypes {
     | '/logout'
     | '/signup'
     | '/why'
+    | '/add'
     | '/chat'
     | '/businessProfile'
     | '/dashboard'
@@ -362,8 +389,10 @@ export interface FileRouteTypes {
     | '/admin/support'
     | '/admin/templates'
     | '/admin/users'
+    | '/add/website'
     | '/chat/$domain'
     | '/admin/'
+    | '/add/'
     | '/chat/'
     | '/admin/blogs/$id'
     | '/admin/projects/$id'
@@ -396,8 +425,10 @@ export interface FileRouteTypes {
     | '/admin/support'
     | '/admin/templates'
     | '/admin/users'
+    | '/add/website'
     | '/chat/$domain'
     | '/admin'
+    | '/add'
     | '/chat'
     | '/admin/blogs/$id'
     | '/admin/projects/$id'
@@ -417,6 +448,7 @@ export interface FileRouteTypes {
     | '/logout'
     | '/signup'
     | '/why'
+    | '/_client/add'
     | '/_client/chat'
     | '/_client/businessProfile'
     | '/_client/dashboard'
@@ -434,8 +466,10 @@ export interface FileRouteTypes {
     | '/_admin/admin/support'
     | '/_admin/admin/templates'
     | '/_admin/admin/users'
+    | '/_client/add/website'
     | '/_client/chat/$domain'
     | '/_admin/admin/'
+    | '/_client/add/'
     | '/_client/chat/'
     | '/_admin/admin/blogs/$id'
     | '/_admin/admin/projects/$id'
@@ -608,12 +642,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClientChatRouteRouteImport
       parentRoute: typeof ClientRouteRoute
     }
+    '/_client/add': {
+      id: '/_client/add'
+      path: '/add'
+      fullPath: '/add'
+      preLoaderRoute: typeof ClientAddRouteRouteImport
+      parentRoute: typeof ClientRouteRoute
+    }
     '/_client/chat/': {
       id: '/_client/chat/'
       path: '/'
       fullPath: '/chat/'
       preLoaderRoute: typeof ClientChatIndexRouteImport
       parentRoute: typeof ClientChatRouteRoute
+    }
+    '/_client/add/': {
+      id: '/_client/add/'
+      path: '/'
+      fullPath: '/add/'
+      preLoaderRoute: typeof ClientAddIndexRouteImport
+      parentRoute: typeof ClientAddRouteRoute
     }
     '/_admin/admin/': {
       id: '/_admin/admin/'
@@ -628,6 +676,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/chat/$domain'
       preLoaderRoute: typeof ClientChatDomainRouteImport
       parentRoute: typeof ClientChatRouteRoute
+    }
+    '/_client/add/website': {
+      id: '/_client/add/website'
+      path: '/website'
+      fullPath: '/add/website'
+      preLoaderRoute: typeof ClientAddWebsiteRouteImport
+      parentRoute: typeof ClientAddRouteRoute
     }
     '/_admin/admin/users': {
       id: '/_admin/admin/users'
@@ -752,6 +807,20 @@ const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(
   AdminRouteRouteChildren,
 )
 
+interface ClientAddRouteRouteChildren {
+  ClientAddWebsiteRoute: typeof ClientAddWebsiteRoute
+  ClientAddIndexRoute: typeof ClientAddIndexRoute
+}
+
+const ClientAddRouteRouteChildren: ClientAddRouteRouteChildren = {
+  ClientAddWebsiteRoute: ClientAddWebsiteRoute,
+  ClientAddIndexRoute: ClientAddIndexRoute,
+}
+
+const ClientAddRouteRouteWithChildren = ClientAddRouteRoute._addFileChildren(
+  ClientAddRouteRouteChildren,
+)
+
 interface ClientChatRouteRouteChildren {
   ClientChatDomainRoute: typeof ClientChatDomainRoute
   ClientChatIndexRoute: typeof ClientChatIndexRoute
@@ -767,6 +836,7 @@ const ClientChatRouteRouteWithChildren = ClientChatRouteRoute._addFileChildren(
 )
 
 interface ClientRouteRouteChildren {
+  ClientAddRouteRoute: typeof ClientAddRouteRouteWithChildren
   ClientChatRouteRoute: typeof ClientChatRouteRouteWithChildren
   ClientBusinessProfileRoute: typeof ClientBusinessProfileRoute
   ClientDashboardRoute: typeof ClientDashboardRoute
@@ -778,6 +848,7 @@ interface ClientRouteRouteChildren {
 }
 
 const ClientRouteRouteChildren: ClientRouteRouteChildren = {
+  ClientAddRouteRoute: ClientAddRouteRouteWithChildren,
   ClientChatRouteRoute: ClientChatRouteRouteWithChildren,
   ClientBusinessProfileRoute: ClientBusinessProfileRoute,
   ClientDashboardRoute: ClientDashboardRoute,
