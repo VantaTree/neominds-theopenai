@@ -511,10 +511,10 @@ function ProjectsPage() {
     if (!newProjectForm.domain) errs.domain = true;
     if (newProjectForm.services.length === 0) errs.services = true;
     if (!newProjectForm.manager.trim()) errs.manager = true;
-    if (!newProjectForm.startDate) errs.startDate = true;
-    if (!newProjectForm.deadline) errs.deadline = true;
-    if (!newProjectForm.status) errs.status = true;
-    if (!newProjectForm.priority) errs.priority = true;
+    // if (!newProjectForm.startDate) errs.startDate = true;
+    // if (!newProjectForm.deadline) errs.deadline = true;
+    // if (!newProjectForm.status) errs.status = true;
+    // if (!newProjectForm.priority) errs.priority = true;
 
     if (Object.keys(errs).length > 0) {
       setNewProjectErrors(errs);
@@ -539,8 +539,8 @@ function ProjectsPage() {
         services: newProjectForm.services,
         progress: 0,
         assignee: newProjectForm.manager,
-        status: newProjectForm.status,
-        priority: newProjectForm.priority,
+        status: newProjectForm.status || "Pending",
+        priority: newProjectForm.priority || "Medium",
         notes: newProjectForm.notes,
         updates: [],
         assets: uploadedUrls,
@@ -2514,7 +2514,7 @@ function ProjectsPage() {
                       marginBottom: "4px",
                     }}
                   >
-                    Start Date*
+                    Start Date
                   </label>
                   <input
                     type="date"
@@ -2559,7 +2559,7 @@ function ProjectsPage() {
                       marginBottom: "4px",
                     }}
                   >
-                    Deadline*
+                    Deadline
                   </label>
                   <input
                     type="date"
@@ -2607,7 +2607,7 @@ function ProjectsPage() {
                       marginBottom: "4px",
                     }}
                   >
-                    Status*
+                    Status
                   </label>
                   <select
                     value={newProjectForm.status}
@@ -2674,7 +2674,7 @@ function ProjectsPage() {
                       marginBottom: "4px",
                     }}
                   >
-                    Priority*
+                    Priority
                   </label>
                   <select
                     value={newProjectForm.priority}
