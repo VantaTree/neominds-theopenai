@@ -651,10 +651,12 @@ export class IntegrationService {
     try {
       const currentBusiness = await this.businessService.getBusiness(business.id);
       if (currentBusiness) {
-        if (!currentBusiness.insightsCache || typeof currentBusiness.insightsCache.lastFetchedAt === "string") {
-          currentBusiness.insightsCache = {};
+        let cache = currentBusiness.insightsCache;
+        if (!cache || (typeof cache === "object" && "lastFetchedAt" in cache)) {
+          cache = {};
         }
-        currentBusiness.insightsCache[range] = {
+        const recordCache = cache as Record<string, any>;
+        recordCache[range] = {
           lastFetchedAt: now.toISOString(),
           website: {
             isConnected: websiteIsConnected,
@@ -669,6 +671,7 @@ export class IntegrationService {
             metrics: googleMetrics,
           },
         };
+        currentBusiness.insightsCache = recordCache;
         await this.businessService.saveBusiness(currentBusiness);
       }
     } catch (dbErr) {
