@@ -357,7 +357,6 @@ export class IntegrationService {
                   { startDate: startDate, endDate: "today", name: "current" },
                   { startDate: prevStartDate, endDate: prevEndDate, name: "previous" }
                 ],
-                dimensions: [{ name: "dateRange" }],
                 metrics: [
                   { name: "activeUsers" },
                   { name: "sessions" },
