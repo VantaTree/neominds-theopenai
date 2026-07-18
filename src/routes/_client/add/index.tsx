@@ -71,8 +71,7 @@ function RouteComponent() {
 
           {/* Card 3: Instagram Reel */}
           <Link
-            to="/chat/$domain"
-            params={{ domain: "marketing" }}
+            to="/add/reel"
             className="flex flex-col items-start p-4 md:p-6 bg-white border border-gray-200 rounded-[16px] md:rounded-[20px] shadow-xs hover:border-mm-orange hover:ring-2 hover:ring-mm-orange/10 transition-all duration-200 text-left cursor-pointer group"
           >
             <div className="bg-gray-50 border border-gray-100 text-gray-500 rounded-xl p-2.5 md:p-3 mb-3 md:mb-4 shrink-0 transition-colors group-hover:bg-mm-orange/10 group-hover:text-mm-orange group-hover:border-mm-orange/20">

@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Heart,
   MessageCircle,
@@ -13,6 +13,7 @@ import {
   ChevronLeft,
   Save,
   FileText,
+  ArrowLeft,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -28,7 +29,7 @@ function RouteComponent() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
-  
+
   const [images, setImages] = useState<string[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [liked, setLiked] = useState(false);
@@ -218,6 +219,17 @@ function RouteComponent() {
 
   return (
     <div className="relative h-screen w-full bg-[#F9FAFC] text-[#0F172A] flex flex-col items-center justify-center p-4 font-sans select-none overflow-hidden">
+      {/* Back Button (Outside the Mobile Preview) */}
+      <div className="absolute top-6 left-6 z-50">
+        <Link
+          to="/add"
+          className="p-2 hover:bg-blue-50 hover:text-blue-600 rounded-full transition-colors text-gray-400 cursor-pointer flex items-center justify-center"
+          title="Back to Services"
+        >
+          <ArrowLeft className="w-4 h-4" />
+        </Link>
+      </div>
+
       {/* Hidden File Input */}
       <input
         type="file"
@@ -389,11 +401,10 @@ function RouteComponent() {
 
                     {/* Actions Overlay (Toggleable on click) */}
                     <div
-                      className={`absolute inset-0 bg-black/40 flex items-center justify-center gap-4 transition-opacity duration-200 z-20 ${
-                        showOverlay
-                          ? "opacity-100 pointer-events-auto"
-                          : "opacity-0 pointer-events-none"
-                      }`}
+                      className={`absolute inset-0 bg-black/40 flex items-center justify-center gap-4 transition-opacity duration-200 z-20 ${showOverlay
+                        ? "opacity-100 pointer-events-auto"
+                        : "opacity-0 pointer-events-none"
+                        }`}
                       onClick={handleCarouselClick}
                     >
                       {/* Add Image Button */}
@@ -489,9 +500,8 @@ function RouteComponent() {
                     {images.map((_, idx) => (
                       <div
                         key={idx}
-                        className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
-                          idx === currentIndex ? "bg-blue-500 scale-110" : "bg-gray-300"
-                        }`}
+                        className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${idx === currentIndex ? "bg-blue-500 scale-110" : "bg-gray-300"
+                          }`}
                       />
                     ))}
                   </div>
@@ -544,7 +554,7 @@ function RouteComponent() {
                 <div className="font-bold mb-1">1,234 likes</div>
                 <div className="flex flex-col gap-0.5">
                   <span className="font-bold">yourusername</span>
-                  
+
                   <div className="relative w-full">
                     {/* Hidden textarea as the relative flow base layout element */}
                     <textarea
@@ -586,9 +596,8 @@ function RouteComponent() {
                 <Search className="w-5.5 h-5.5" />
               </button>
               <button
-                className={`text-zinc-900 transition-all hover:scale-110 active:scale-95 flex items-center justify-center ${
-                  hasContent ? "animate-pulse-gentle text-mm-orange scale-110" : "hover:scale-105"
-                }`}
+                className={`text-zinc-900 transition-all hover:scale-110 active:scale-95 flex items-center justify-center ${hasContent ? "animate-pulse-gentle text-mm-orange scale-110" : "hover:scale-105"
+                  }`}
                 onClick={hasContent ? handleSaveClick : handleImageClick}
               >
                 {hasContent ? (

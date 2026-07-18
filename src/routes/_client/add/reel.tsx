@@ -19,6 +19,7 @@ import {
   Trash2,
   Volume2,
   VolumeX,
+  ArrowLeft,
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -138,6 +139,17 @@ function RouteComponent() {
 
   return (
     <div className="relative h-screen w-full bg-[#F9FAFC] text-[#0F172A] flex flex-col items-center justify-center p-4 font-sans select-none overflow-hidden">
+      {/* Back Button (Outside the Mobile Preview) */}
+      <div className="absolute top-6 left-6 z-50">
+        <Link
+          to="/add"
+          className="p-2 hover:bg-blue-50 hover:text-blue-600 rounded-full transition-colors text-gray-400 cursor-pointer flex items-center justify-center"
+          title="Back to Services"
+        >
+          <ArrowLeft className="w-4 h-4" />
+        </Link>
+      </div>
+
       {/* Hidden File Input for Video */}
       <input
         type="file"
@@ -156,7 +168,7 @@ function RouteComponent() {
         >
           {/* Inner Screen */}
           <div className="relative w-full h-full rounded-[36px] overflow-hidden flex flex-col justify-between pt-1 border border-zinc-950/5 bg-[#FAFAFA]">
-            
+
             {/* iOS Status Bar (Always light themed for mockup border integration) */}
             <div className="flex justify-between items-center px-6 py-1 text-[11px] font-semibold shrink-0 z-30 text-zinc-900 bg-transparent">
               <span>9:41</span>
@@ -178,7 +190,7 @@ function RouteComponent() {
 
             {/* Main Content Area */}
             <div className="flex-1 relative w-full overflow-hidden flex flex-col justify-center">
-              
+
               {/* DESCRIBE DESIGN MODE */}
               {mode === "describe" && (
                 <div className="w-full h-full p-4 flex flex-col justify-between bg-[#FCFCFC] z-30">
@@ -326,7 +338,7 @@ function RouteComponent() {
 
                   {/* Reels UI Overlay Layer */}
                   <div className="absolute inset-0 flex flex-col justify-between z-10 pointer-events-none p-3.5">
-                    
+
                     {/* Reels Header Top Bar */}
                     <div className="flex justify-between items-center w-full pointer-events-auto mt-0">
                       <button
@@ -334,9 +346,8 @@ function RouteComponent() {
                           e.stopPropagation();
                           setMode("select");
                         }}
-                        className={`hover:scale-105 active:scale-95 transition-transform flex items-center justify-center p-1 ${
-                          video ? "text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]" : "text-zinc-800"
-                        }`}
+                        className={`hover:scale-105 active:scale-95 transition-transform flex items-center justify-center p-1 ${video ? "text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]" : "text-zinc-800"
+                          }`}
                       >
                         <ChevronLeft className="w-6 h-6 stroke-[2.5]" />
                         <span className="text-sm font-bold ml-1">Reels</span>
@@ -346,9 +357,8 @@ function RouteComponent() {
                           e.stopPropagation();
                           toast.info("Camera option clicked");
                         }}
-                        className={`hover:scale-105 active:scale-95 transition-transform p-1 ${
-                          video ? "text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]" : "text-zinc-800"
-                        }`}
+                        className={`hover:scale-105 active:scale-95 transition-transform p-1 ${video ? "text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]" : "text-zinc-800"
+                          }`}
                       >
                         <Camera className="w-5.5 h-5.5 stroke-[2]" />
                       </button>
@@ -356,11 +366,10 @@ function RouteComponent() {
 
                     {/* Reels Controls & Description Bottom Section */}
                     <div className="w-full flex items-end justify-between gap-4 mt-auto">
-                      
+
                       {/* Left: User Info & Caption (Matching Screenshot) */}
-                      <div className={`flex-1 flex flex-col items-start gap-2 pointer-events-auto pr-4 ${
-                        video ? "text-white drop-shadow-[0_1.5px_4px_rgba(0,0,0,0.8)]" : "text-zinc-900"
-                      }`}>
+                      <div className={`flex-1 flex flex-col items-start gap-2 pointer-events-auto pr-4 ${video ? "text-white drop-shadow-[0_1.5px_4px_rgba(0,0,0,0.8)]" : "text-zinc-900"
+                        }`}>
                         {/* Profile Logo and Username Row */}
                         <div className="flex items-center gap-2">
                           {/* Colorful Instagram gradient border ring */}
@@ -383,20 +392,18 @@ function RouteComponent() {
                                   e.stopPropagation();
                                   toast.success("Followed apache_insaan");
                                 }}
-                                className={`px-2 py-0.5 border rounded-md text-[9px] font-bold transition-all cursor-pointer active:scale-95 ${
-                                  video
-                                    ? "border-white/40 hover:border-white hover:bg-white/10"
-                                    : "border-zinc-300 hover:border-zinc-400 hover:bg-zinc-100 text-zinc-800"
-                                }`}
+                                className={`px-2 py-0.5 border rounded-md text-[9px] font-bold transition-all cursor-pointer active:scale-95 ${video
+                                  ? "border-white/40 hover:border-white hover:bg-white/10"
+                                  : "border-zinc-300 hover:border-zinc-400 hover:bg-zinc-100 text-zinc-800"
+                                  }`}
                               >
                                 Follow
                               </button>
                             </div>
 
                             {/* Music Tag below username */}
-                            <div className={`flex items-center gap-1 text-[8.5px] font-semibold overflow-hidden max-w-[130px] mt-0.5 select-none ${
-                              video ? "text-zinc-300" : "text-zinc-500"
-                            }`}>
+                            <div className={`flex items-center gap-1 text-[8.5px] font-semibold overflow-hidden max-w-[130px] mt-0.5 select-none ${video ? "text-zinc-300" : "text-zinc-500"
+                              }`}>
                               <Music className="w-2.5 h-2.5 shrink-0" />
                               <div className="whitespace-nowrap overflow-hidden">
                                 <span className="inline-block animate-[marquee_12s_linear_infinite]">
@@ -410,11 +417,10 @@ function RouteComponent() {
                         {/* Caption Text (Click to open Drawer) */}
                         <div
                           onClick={openCaptionDrawer}
-                          className={`text-[11px] font-normal leading-relaxed max-h-[50px] overflow-hidden line-clamp-2 cursor-pointer select-none p-1.5 rounded-lg border transition-colors w-full mt-1.5 ${
-                            video
-                              ? "text-zinc-100 bg-black/15 hover:bg-black/30 border-white/5"
-                              : "text-zinc-700 bg-zinc-200/50 hover:bg-zinc-200/70 border-zinc-200/60"
-                          }`}
+                          className={`text-[11px] font-normal leading-relaxed max-h-[50px] overflow-hidden line-clamp-2 cursor-pointer select-none p-1.5 rounded-lg border transition-colors w-full mt-1.5 ${video
+                            ? "text-zinc-100 bg-black/15 hover:bg-black/30 border-white/5"
+                            : "text-zinc-700 bg-zinc-200/50 hover:bg-zinc-200/70 border-zinc-200/60"
+                            }`}
                           title="Click to edit Reel caption"
                         >
                           {renderFormattedText(caption, video !== null) || (
@@ -426,9 +432,8 @@ function RouteComponent() {
                       </div>
 
                       {/* Right: Vertical Overlay Actions Sidebar */}
-                      <div className={`flex flex-col items-center gap-4 shrink-0 pointer-events-auto ${
-                        video ? "text-white drop-shadow-[0_1.5px_4px_rgba(0,0,0,0.6)]" : "text-zinc-800"
-                      }`}>
+                      <div className={`flex flex-col items-center gap-4 shrink-0 pointer-events-auto ${video ? "text-white drop-shadow-[0_1.5px_4px_rgba(0,0,0,0.6)]" : "text-zinc-800"
+                        }`}>
                         {/* Like */}
                         <button
                           onClick={(e) => {
@@ -509,9 +514,8 @@ function RouteComponent() {
                         </button>
 
                         {/* Spin Disk Icon */}
-                        <div className={`w-6 h-6 rounded-full border overflow-hidden flex items-center justify-center p-[1px] animate-[spin_5s_linear_infinite] mt-1 shadow-sm shrink-0 ${
-                          video ? "border-white/30 bg-black/40" : "border-zinc-300 bg-zinc-200"
-                        }`}>
+                        <div className={`w-6 h-6 rounded-full border overflow-hidden flex items-center justify-center p-[1px] animate-[spin_5s_linear_infinite] mt-1 shadow-sm shrink-0 ${video ? "border-white/30 bg-black/40" : "border-zinc-300 bg-zinc-200"
+                          }`}>
                           <img
                             src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=50&h=50&q=80"
                             alt="audio disk"
@@ -525,11 +529,10 @@ function RouteComponent() {
                   {/* Actions Overlay (Toggleable on single click on video) */}
                   {video && (
                     <div
-                      className={`absolute inset-0 bg-black/40 flex items-center justify-center gap-4 transition-opacity duration-200 z-20 ${
-                        showOverlay
-                          ? "opacity-100 pointer-events-auto"
-                          : "opacity-0 pointer-events-none"
-                      }`}
+                      className={`absolute inset-0 bg-black/40 flex items-center justify-center gap-4 transition-opacity duration-200 z-20 ${showOverlay
+                        ? "opacity-100 pointer-events-auto"
+                        : "opacity-0 pointer-events-none"
+                        }`}
                       onClick={handleVideoClick}
                     >
                       {/* Describe Button */}
