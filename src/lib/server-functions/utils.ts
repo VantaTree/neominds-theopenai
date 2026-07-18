@@ -49,7 +49,7 @@ export const getStreamCredentialsFn = createServerFn({ method: "GET" })
   });
 
 export const getClientStreamCredentialsFn = createServerFn({ method: "GET" })
-  .validator((d: any) => z.object({ data: z.string() }).parse(d))
+  .validator((d: any) => z.string().min(1, "Business ID is required").parse(d))
   .middleware([authenticatedMiddleware, businessOwnerMiddleware, requirePlanMiddleware("Basic")])
   .handler(async ({ data: businessId, context }) => {
     const decoded = context.user;
