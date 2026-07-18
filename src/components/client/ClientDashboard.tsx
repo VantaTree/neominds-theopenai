@@ -7,6 +7,8 @@ import BusinessTaskCard from "./BusinessTaskCard";
 import UpgradeCard from "./UpgradeCard";
 import PlanGate from "./PlanGate";
 import { useBusiness } from "@/hooks/use-business";
+import { useProjectsByBusiness } from "@/hooks/useDbQueries";
+import { type Project } from "@/lib/schemas";
 import { getAuthUrlFn, getDashboardInsightsFn, activatePlusPlatformFn } from "@/lib/server-functions";
 import { auth } from "@/lib/firebase";
 import type { User } from "firebase/auth";
@@ -15,6 +17,55 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 export default function ClientDashboardDesktop() {
   const navigate = useNavigate();
   const { activeBusiness, loading: businessLoading } = useBusiness();
+  const { data: projects = [], isLoading: projectsLoading } = useProjectsByBusiness(activeBusiness?.id || "", {
+    enabled: !!activeBusiness?.id,
+  });
+
+  const getDomainCardData = (domainName: "Website" | "Marketing" | "Automation") => {
+    const domainProjects = projects
+      .filter(p => p.domain === domainName && p.status !== "User Draft")
+      .sort((a, b) => (b.progress || 0) - (a.progress || 0));
+
+    const totalProgress = domainProjects.reduce((sum, p) => sum + (p.progress || 0), 0);
+    const averageProgress = domainProjects.length > 0 ? Math.round(totalProgress / domainProjects.length) : 0;
+
+    let currentTask = undefined;
+    let upcomingTask = undefined;
+
+    if (domainProjects.length > 0) {
+      currentTask = {
+        title: domainProjects[0].name,
+        description: domainProjects[0].description || "Project in progress",
+      };
+      if (domainProjects.length > 1) {
+        upcomingTask = {
+          title: domainProjects[1].name,
+          description: domainProjects[1].description || "Project in progress",
+        };
+      } else {
+        upcomingTask = {
+          title: "Next Project",
+          description: "Start a conversation to request a new project",
+        };
+      }
+    } else {
+      currentTask = {
+        title: "No active projects",
+        description: "Start a project to see updates here",
+      };
+      upcomingTask = {
+        title: "Ready to start?",
+        description: "Request a project or chat with our team",
+      };
+    }
+
+    return {
+      progress: averageProgress,
+      currentTask,
+      upcomingTask,
+    };
+  };
+
   const [insights, setInsights] = useState<any>(null);
   const [insightsLoading, setInsightsLoading] = useState(true);
   const [activating, setActivating] = useState(false);
@@ -677,171 +728,173 @@ export default function ClientDashboardDesktop() {
       </section>
 
       {/* 4. Action / Task Section */}
-      {isMobile ? (
-        <section className="w-full overflow-hidden py-3">
-          {/* Horizontal Swipable list on mobile */}
-          <div
-            onScroll={handleScroll}
-            className="w-full flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-none px-6"
-          >
-            {/* Card 1: Website and SEO */}
-            <div className="w-[calc(100vw-48px)] sm:w-[340px] shrink-0 snap-center">
-              <BusinessTaskCard
-                name="Website and SEO"
-                category="seo"
-                progress={80}
-                currentTask={{
-                  title: "On-Page SEO Optimization",
-                  description: "Optimizing meta tags and content",
-                }}
-                upcomingTask={{
-                  title: "Technical SEO Audit",
-                  description: "Site speed and mobile usability check",
-                }}
-                onViewMore={() =>
-                  navigate({ to: "/projects", search: { activeCard: "seo" } })
-                }
-              />
-            </div>
+      {(() => {
+        const seoData = getDomainCardData("Website");
+        const marketingData = getDomainCardData("Marketing");
+        const automationData = getDomainCardData("Automation");
 
-            {/* Card 2: Marketing */}
-            <div className="w-[calc(100vw-48px)] sm:w-[340px] shrink-0 snap-center">
-              <BusinessTaskCard
-                name="Marketing"
-                category="marketing"
-                progress={65}
-                currentTask={{
-                  title: "Social Media Campaign",
-                  description: "Running engagement campaign",
-                }}
-                upcomingTask={{
-                  title: "Content Calendar",
-                  description: "Planning posts for next month",
-                }}
-                onViewMore={() =>
-                  navigate({ to: "/projects", search: { activeCard: "marketing" } })
-                }
-              />
-            </div>
+        if (businessLoading || projectsLoading) {
+          return (
+            <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {Array.from({ length: 3 }).map((_, idx) => (
+                <div
+                  key={idx}
+                  className="bg-white border border-mm-border rounded-3xl p-6.5 flex flex-col justify-between min-h-[380px] shadow-[0_8px_30px_rgba(0,0,0,0.015)] animate-pulse"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="h-9 w-9 rounded-xl bg-mm-subtle" />
+                    <div className="h-4.5 w-32 bg-mm-subtle rounded-md" />
+                  </div>
+                  <div className="space-y-4 mt-6">
+                    <div className="h-3 w-16 bg-mm-subtle rounded-md" />
+                    <div className="h-2 w-full bg-mm-subtle rounded-full" />
+                  </div>
+                  <div className="space-y-4 mt-6 flex-1">
+                    <div className="space-y-2">
+                      <div className="h-2.5 w-20 bg-mm-subtle rounded-md" />
+                      <div className="h-4 w-40 bg-mm-subtle rounded-md" />
+                    </div>
+                    <div className="space-y-2">
+                      <div className="h-2.5 w-20 bg-mm-subtle rounded-md" />
+                      <div className="h-4 w-40 bg-mm-subtle rounded-md" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </section>
+          );
+        }
 
-            {/* Card 3: Automation */}
-            <div className="w-[calc(100vw-48px)] sm:w-[340px] shrink-0 snap-center">
-              <PlanGate
-                requiredPlan="Pro"
-                fallback={
+        return isMobile ? (
+          <section className="w-full overflow-hidden py-3">
+            {/* Horizontal Swipable list on mobile */}
+            <div
+              onScroll={handleScroll}
+              className="w-full flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-none px-6"
+            >
+              {/* Card 1: Website and SEO */}
+              <div className="w-[calc(100vw-48px)] sm:w-[340px] shrink-0 snap-center">
+                <BusinessTaskCard
+                  name="Website and SEO"
+                  category="seo"
+                  progress={seoData.progress}
+                  currentTask={seoData.currentTask}
+                  upcomingTask={seoData.upcomingTask}
+                  onViewMore={() =>
+                    navigate({ to: "/projects", search: { activeCard: "seo" } })
+                  }
+                />
+              </div>
+
+              {/* Card 2: Marketing */}
+              <div className="w-[calc(100vw-48px)] sm:w-[340px] shrink-0 snap-center">
+                <BusinessTaskCard
+                  name="Marketing"
+                  category="marketing"
+                  progress={marketingData.progress}
+                  currentTask={marketingData.currentTask}
+                  upcomingTask={marketingData.upcomingTask}
+                  onViewMore={() =>
+                    navigate({ to: "/projects", search: { activeCard: "marketing" } })
+                  }
+                />
+              </div>
+
+              {/* Card 3: Automation */}
+              <div className="w-[calc(100vw-48px)] sm:w-[340px] shrink-0 snap-center">
+                <PlanGate
+                  requiredPlan="Pro"
+                  fallback={
+                    <BusinessTaskCard
+                      name="Automation"
+                      category="automation"
+                      locked={true}
+                    />
+                  }
+                >
                   <BusinessTaskCard
                     name="Automation"
                     category="automation"
-                    locked={true}
+                    progress={automationData.progress}
+                    currentTask={automationData.currentTask}
+                    upcomingTask={automationData.upcomingTask}
+                    onViewMore={() =>
+                      navigate({
+                        to: "/projects",
+                        search: { activeCard: "automation" },
+                      })
+                    }
                   />
-                }
-              >
+                </PlanGate>
+              </div>
+            </div>
+
+            {/* Carousel Scroll Dots Indicator */}
+            <div className="flex justify-center gap-2 mt-3.5">
+              {[0, 1, 2].map((idx) => (
+                <div
+                  key={idx}
+                  className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                    scrollIndex === idx ? "bg-[#FF5924] w-4" : "bg-slate-200"
+                  }`}
+                />
+              ))}
+            </div>
+          </section>
+        ) : (
+          <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Card 1: Website and SEO */}
+            <BusinessTaskCard
+              name="Website and SEO"
+              category="seo"
+              progress={seoData.progress}
+              currentTask={seoData.currentTask}
+              upcomingTask={seoData.upcomingTask}
+              onViewMore={() =>
+                navigate({ to: "/projects", search: { activeCard: "seo" } })
+              }
+            />
+
+            {/* Card 2: Marketing */}
+            <BusinessTaskCard
+              name="Marketing"
+              category="marketing"
+              progress={marketingData.progress}
+              currentTask={marketingData.currentTask}
+              upcomingTask={marketingData.upcomingTask}
+              onViewMore={() =>
+                navigate({ to: "/projects", search: { activeCard: "marketing" } })
+              }
+            />
+
+            {/* Card 3: Automation */}
+            <PlanGate
+              requiredPlan="Pro"
+              fallback={
                 <BusinessTaskCard
                   name="Automation"
                   category="automation"
-                  progress={90}
-                  currentTask={{
-                    title: "Zapier Integration Check",
-                    description: "Testing lead ingestion webhooks",
-                  }}
-                  upcomingTask={{
-                    title: "Email Sequence Automation",
-                    description: "Autopilot campaigns setup",
-                  }}
-                  onViewMore={() =>
-                    navigate({
-                      to: "/projects",
-                      search: { activeCard: "automation" },
-                    })
-                  }
+                  locked={true}
                 />
-              </PlanGate>
-            </div>
-          </div>
-
-          {/* Carousel Scroll Dots Indicator */}
-          <div className="flex justify-center gap-2 mt-3.5">
-            {[0, 1, 2].map((idx) => (
-              <div
-                key={idx}
-                className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                  scrollIndex === idx ? "bg-[#FF5924] w-4" : "bg-slate-200"
-                }`}
-              />
-            ))}
-          </div>
-        </section>
-      ) : (
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Card 1: Website and SEO */}
-          <BusinessTaskCard
-            name="Website and SEO"
-            category="seo"
-            progress={80}
-            currentTask={{
-              title: "On-Page SEO Optimization",
-              description: "Optimizing meta tags and content",
-            }}
-            upcomingTask={{
-              title: "Technical SEO Audit",
-              description: "Site speed and mobile usability check",
-            }}
-            onViewMore={() =>
-              navigate({ to: "/projects", search: { activeCard: "seo" } })
-            }
-          />
-
-          {/* Card 2: Marketing */}
-          <BusinessTaskCard
-            name="Marketing"
-            category="marketing"
-            progress={65}
-            currentTask={{
-              title: "Social Media Campaign",
-              description: "Running engagement campaign",
-            }}
-            upcomingTask={{
-              title: "Content Calendar",
-              description: "Planning posts for next month",
-            }}
-            onViewMore={() =>
-              navigate({ to: "/projects", search: { activeCard: "marketing" } })
-            }
-          />
-
-          {/* Card 3: Automation */}
-          <PlanGate
-            requiredPlan="Pro"
-            fallback={
+              }
+            >
               <BusinessTaskCard
                 name="Automation"
                 category="automation"
-                locked={true}
+                progress={automationData.progress}
+                currentTask={automationData.currentTask}
+                upcomingTask={automationData.upcomingTask}
+                onViewMore={() =>
+                  navigate({
+                    to: "/projects",
+                    search: { activeCard: "automation" },
+                  })
+                }
               />
-            }
-          >
-            <BusinessTaskCard
-              name="Automation"
-              category="automation"
-              progress={90}
-              currentTask={{
-                title: "Zapier Integration Check",
-                description: "Testing lead ingestion webhooks",
-              }}
-              upcomingTask={{
-                title: "Email Sequence Automation",
-                description: "Autopilot campaigns setup",
-              }}
-              onViewMore={() =>
-                navigate({
-                  to: "/projects",
-                  search: { activeCard: "automation" },
-                })
-              }
-            />
-          </PlanGate>
-        </section>
-      )}
+            </PlanGate>
+          </section>
+        );
+      })()}
 
       {/* 5. Full-width Upgrade Card at the Bottom */}
       <div className="mt-8 pt-8 border-t border-slate-100">

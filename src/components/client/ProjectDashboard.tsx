@@ -235,7 +235,7 @@ export function ProjectDashboard({
 
   const planGateFallback = (
     <div className="bg-white border border-mm-border rounded-[32px] p-8 md:p-12 text-center max-w-2xl mx-auto shadow-sm flex flex-col items-center justify-center relative overflow-hidden min-h-[450px]">
-      <div className="absolute inset-0 bg-gradient-to-tr from-purple-500/5 via-transparent to-indigo-500/5 pointer-events-none" />
+      <div className="absolute inset-0 bg-linear-to-tr from-purple-500/5 via-transparent to-indigo-500/5 pointer-events-none" />
       <div className="h-20 w-20 rounded-3xl bg-purple-50 border border-purple-100 flex items-center justify-center mb-6 shadow-md">
         <Lock className="h-8 w-8 text-purple-600 animate-pulse" />
       </div>

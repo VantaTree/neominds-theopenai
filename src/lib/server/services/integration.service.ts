@@ -31,7 +31,7 @@ export class IntegrationService {
   }
 
   async getAuthUrl(platform: "google" | "meta", businessId: string, origin?: string): Promise<{ url: string }> {
-    const redirectUri = `${origin || process.env.VITE_APP_URL || "http://localhost:8080"}/oauth/callback`;
+    const redirectUri = `${process.env.VITE_APP_URL || origin || "http://localhost:8080"}/oauth/callback`;
     const stateObj = { platform, businessId };
     const state = Buffer.from(JSON.stringify(stateObj)).toString("base64");
 
@@ -79,7 +79,7 @@ export class IntegrationService {
   }
 
   async exchangeAuthCode(code: string, platform: "google" | "meta", businessId: string, origin?: string): Promise<{ success: boolean }> {
-    const redirectUri = `${origin || process.env.VITE_APP_URL || "http://localhost:8080"}/oauth/callback`;
+    const redirectUri = `${process.env.VITE_APP_URL || origin || "http://localhost:8080"}/oauth/callback`;
 
     let accessToken = "MOCK_ACCESS_TOKEN";
     let refreshToken = "MOCK_REFRESH_TOKEN";
