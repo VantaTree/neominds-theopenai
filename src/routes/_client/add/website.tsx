@@ -12,6 +12,7 @@ import {
   ChevronDown,
   CheckCircle,
   HelpCircle,
+  AlertTriangle,
   GripVertical
 } from "lucide-react";
 
@@ -50,6 +51,13 @@ interface SavedBrief {
   isFinishedAdding?: boolean;
 }
 
+interface WizardStep {
+  id: number;
+  type: string;
+  label: string;
+  sectionId?: string;
+}
+
 const SECTION_TEMPLATES = [
   {
     type: "home",
@@ -85,6 +93,31 @@ const SECTION_TEMPLATES = [
     type: "faq",
     title: "FAQ Section",
     defaultDescription: "Accordion of frequently asked questions covering booking, cancellation policies, pricing details, and service deliverable times."
+  },
+  {
+    type: "vision",
+    title: "Vision & Mission",
+    defaultDescription: "A section outlining our long-term company vision, immediate mission goals, and our core underlying philosophy."
+  },
+  {
+    type: "team",
+    title: "Our Team",
+    defaultDescription: "A profile section introducing team members, founders, leadership, and their bios with headshots and role descriptions."
+  },
+  {
+    type: "pricing",
+    title: "Pricing Plans",
+    defaultDescription: "A grid comparing our different pricing plans, detailing the features included in each plan and action buttons to select a plan."
+  },
+  {
+    type: "portfolio",
+    title: "Portfolio/Gallery",
+    defaultDescription: "A masonry grid or catalog displaying case studies, past projects, product photography, or recent work highlights."
+  },
+  {
+    type: "footer",
+    title: "Footer Section",
+    defaultDescription: "The bottom area containing site-wide links, social media icons, copyright declarations, newsletters, and contact details."
   }
 ];
 
@@ -116,27 +149,41 @@ function RouteComponent() {
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [maxVisitedStep, setMaxVisitedStep] = useState<number>(1);
   const [isFinishedAdding, setIsFinishedAdding] = useState<boolean>(false);
+  const [showAddSectionStep, setShowAddSectionStep] = useState<boolean>(false);
   const [draggedOverId, setDraggedOverId] = useState<string | null>(null);
+  const [draggedSectionIndex, setDraggedSectionIndex] = useState<number | null>(null);
+  const [draggedOverCardIndex, setDraggedOverCardIndex] = useState<number | null>(null);
+  const [touchPosition, setTouchPosition] = useState<{ x: number; y: number } | null>(null);
   const [isSubmitSuccess, setIsSubmitSuccess] = useState(false);
+  const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
 
   // Compute dynamic steps list dynamically
-  const dynamicSteps = [
+  const dynamicSteps: WizardStep[] = [
     { id: 1, type: "colors", label: "Brand Colors" },
     { id: 2, type: "logo", label: "Brand Logo" },
   ];
 
   // Add existing sections as steps
   sections.forEach((sec, idx) => {
-    dynamicSteps.push({
-      id: 3 + idx,
-      type: "edit-section",
-      sectionId: sec.id,
-      label: sec.title
-    });
+    if (sec.type === "placeholder") {
+      dynamicSteps.push({
+        id: 3 + idx,
+        type: "select-section",
+        sectionId: sec.id,
+        label: "Add Section"
+      });
+    } else {
+      dynamicSteps.push({
+        id: 3 + idx,
+        type: "edit-section",
+        sectionId: sec.id,
+        label: sec.title
+      });
+    }
   });
 
   const canAddMore = sections.length < limits.maxWebsiteSections;
-  const showAddStep = canAddMore && !isFinishedAdding;
+  const showAddStep = canAddMore && showAddSectionStep;
 
   if (showAddStep) {
     dynamicSteps.push({
@@ -197,26 +244,111 @@ function RouteComponent() {
     localStorage.setItem(storageKey, JSON.stringify(dataToSave));
   };
 
-  const handleNextStep = () => {
-    const next = currentStep + 1;
-    if (next <= dynamicSteps.length) {
-      setCurrentStep(next);
-      if (next > maxVisitedStep) {
-        setMaxVisitedStep(next);
+  const cleanAndNavigate = (action: "next" | "prev" | "goto", targetStep?: number) => {
+    const isLeavingAddSectionStep = activeStep.type === "select-section" && !(activeStep as any).sectionId;
+    const placeholderIdx = sections.findIndex(s => s.type === "placeholder");
+
+    if (placeholderIdx === -1) {
+      if (action === "next") {
+        const isLastSectionStep = activeStep.type === "edit-section" && (activeStep as any).sectionId === sections[sections.length - 1]?.id;
+        if (isLastSectionStep && sections.length < limits.maxWebsiteSections) {
+          setShowAddSectionStep(true);
+          setIsFinishedAdding(false);
+          const nextStepId = 3 + sections.length;
+          setCurrentStep(nextStepId);
+          if (nextStepId > maxVisitedStep) {
+            setMaxVisitedStep(nextStepId);
+          }
+          saveProgress(brandSettings, sections, false);
+          return;
+        }
+
+        if (isLeavingAddSectionStep) {
+          setShowAddSectionStep(false);
+          const nextStepId = 3 + sections.length; // Notes step shifts to 3 + sections.length
+          setCurrentStep(nextStepId);
+          if (nextStepId > maxVisitedStep) {
+            setMaxVisitedStep(nextStepId);
+          }
+          return;
+        }
+
+        const next = currentStep + 1;
+        if (next <= dynamicSteps.length) {
+          setCurrentStep(next);
+          if (next > maxVisitedStep) {
+            setMaxVisitedStep(next);
+          }
+        }
+      } else if (action === "prev") {
+        if (isLeavingAddSectionStep) {
+          setShowAddSectionStep(false);
+          const prevStepId = 2 + sections.length; // Last section editor
+          setCurrentStep(prevStepId);
+          return;
+        }
+
+        if (currentStep > 1) {
+          setCurrentStep(currentStep - 1);
+        }
+      } else if (action === "goto" && targetStep !== undefined) {
+        if (isLeavingAddSectionStep) {
+          setShowAddSectionStep(false);
+          const addSectionStepId = 3 + sections.length;
+          if (targetStep > addSectionStepId) {
+            setCurrentStep(targetStep - 1);
+          } else {
+            setCurrentStep(targetStep);
+          }
+        } else {
+          setCurrentStep(targetStep);
+        }
+      }
+      return;
+    }
+
+    // We have a placeholder section! Clean it up.
+    if (isLeavingAddSectionStep) {
+      setShowAddSectionStep(false);
+    }
+    const placeholderStepId = 3 + placeholderIdx;
+    const updatedSections = sections.filter(s => s.type !== "placeholder");
+    setSections(updatedSections);
+    saveProgress(brandSettings, updatedSections, isFinishedAdding);
+
+    if (action === "next") {
+      if (currentStep < placeholderStepId) {
+        setCurrentStep(currentStep + 1);
+      } else {
+        const maxStepsAfterCleanup = dynamicSteps.length - 1;
+        if (currentStep <= maxStepsAfterCleanup) {
+          setCurrentStep(currentStep);
+        } else {
+          setCurrentStep(maxStepsAfterCleanup);
+        }
+      }
+    } else if (action === "prev") {
+      setCurrentStep(placeholderStepId - 1);
+    } else if (action === "goto" && targetStep !== undefined) {
+      if (targetStep > placeholderStepId) {
+        setCurrentStep(targetStep - 1);
+      } else {
+        setCurrentStep(targetStep);
       }
     }
-    saveProgress(brandSettings, sections, isFinishedAdding);
+  };
+
+  const handleNextStep = () => {
+    cleanAndNavigate("next");
   };
 
   const handlePrevStep = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
-    }
+    cleanAndNavigate("prev");
   };
 
   const handleGoToStep = (stepNum: number) => {
     if (stepNum <= maxVisitedStep) {
-      setCurrentStep(stepNum);
+      cleanAndNavigate("goto", stepNum);
     }
   };
 
@@ -264,6 +396,10 @@ function RouteComponent() {
     }
 
     if (isLogo) {
+      if ((brandSettings.logos.length + loadedImages.length) > 2) {
+        alert("You can only upload up to 2 logo images.");
+        return;
+      }
       const newSettings = {
         ...brandSettings,
         logos: [...brandSettings.logos, ...loadedImages]
@@ -303,7 +439,7 @@ function RouteComponent() {
         }
         return s;
       });
-      setSections(updatedSections, isFinishedAdding);
+      setSections(updatedSections);
       saveProgress(brandSettings, updatedSections, isFinishedAdding);
     }
   };
@@ -318,16 +454,23 @@ function RouteComponent() {
       images: []
     };
     
-    const updatedSections = [...sections, newSection];
+    let updatedSections;
+    if (currentSection) {
+      updatedSections = sections.map(s => s.id === currentSection.id ? newSection : s);
+    } else {
+      updatedSections = [...sections, newSection];
+    }
     setSections(updatedSections);
     
-    // Replace the "select-section" step with the config editor for this section
-    const newSectionStepId = 3 + sections.length;
-    setCurrentStep(newSectionStepId);
-    if (newSectionStepId > maxVisitedStep) {
-      setMaxVisitedStep(newSectionStepId);
+    if (!currentSection) {
+      const newSectionStepId = 3 + sections.length;
+      setCurrentStep(newSectionStepId);
+      if (newSectionStepId > maxVisitedStep) {
+        setMaxVisitedStep(newSectionStepId);
+      }
     }
     
+    setShowAddSectionStep(false);
     saveProgress(brandSettings, updatedSections, isFinishedAdding);
   };
 
@@ -342,27 +485,42 @@ function RouteComponent() {
       images: []
     };
     
-    const updatedSections = [...sections, newSection];
+    let updatedSections;
+    if (currentSection) {
+      updatedSections = sections.map(s => s.id === currentSection.id ? newSection : s);
+    } else {
+      updatedSections = [...sections, newSection];
+    }
     setSections(updatedSections);
     
-    const newSectionStepId = 3 + sections.length;
-    setCurrentStep(newSectionStepId);
-    if (newSectionStepId > maxVisitedStep) {
-      setMaxVisitedStep(newSectionStepId);
+    if (!currentSection) {
+      const newSectionStepId = 3 + sections.length;
+      setCurrentStep(newSectionStepId);
+      if (newSectionStepId > maxVisitedStep) {
+        setMaxVisitedStep(newSectionStepId);
+      }
     }
     
+    setShowAddSectionStep(false);
     saveProgress(brandSettings, updatedSections, isFinishedAdding);
   };
 
   const handleRemoveSection = (id: string) => {
-    const updatedSections = sections.filter(s => s.id !== id);
-    setSections(updatedSections);
-
-    // Fall back to step 2 (Brand Logo) or remains
-    setCurrentStep(2);
-    setMaxVisitedStep(2);
-    setIsFinishedAdding(false);
-    saveProgress(brandSettings, updatedSections, false);
+    const sectionIndex = sections.findIndex(s => s.id === id);
+    if (sectionIndex !== -1) {
+      const updatedSections = [...sections];
+      updatedSections[sectionIndex] = {
+        id: `placeholder_${Date.now()}`,
+        type: "placeholder",
+        title: "Add Section",
+        description: "",
+        images: []
+      };
+      setSections(updatedSections);
+      setIsFinishedAdding(false);
+      saveProgress(brandSettings, updatedSections, false);
+      // We remain on the current step, which now resolves to a select-section step!
+    }
   };
 
   const handleFinishAddingSections = () => {
@@ -376,6 +534,7 @@ function RouteComponent() {
   };
 
   const handleTriggerAddSectionFromReview = () => {
+    setShowAddSectionStep(true);
     setIsFinishedAdding(false);
     const addSectionStepId = 3 + sections.length;
     setCurrentStep(addSectionStepId);
@@ -393,6 +552,9 @@ function RouteComponent() {
 
   const handleSectionTitleChange = (id: string, title: string) => {
     if (!limits.eligibilityForCustomSection) return;
+    const targetSec = sections.find(s => s.id === id);
+    if (targetSec && targetSec.type !== "custom") return;
+
     const updatedSections = sections.map(s => (s.id === id ? { ...s, title } : s));
     setSections(updatedSections);
     saveProgress(brandSettings, updatedSections, isFinishedAdding);
@@ -410,7 +572,43 @@ function RouteComponent() {
     setSections(updated);
     saveProgress(brandSettings, updated, isFinishedAdding);
   };
+  const handleCardDrop = (targetIdx: number) => {
+    if (draggedSectionIndex === null || draggedSectionIndex === targetIdx) return;
+    const updated = [...sections];
+    const [removed] = updated.splice(draggedSectionIndex, 1);
+    updated.splice(targetIdx, 0, removed);
+    setSections(updated);
+    saveProgress(brandSettings, updated, isFinishedAdding);
+  };
+  const handleTouchStart = (idx: number, e: React.TouchEvent) => {
+    setDraggedSectionIndex(idx);
+    const touch = e.touches[0];
+    setTouchPosition({ x: touch.clientX, y: touch.clientY });
+  };
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (draggedSectionIndex === null) return;
+    const touch = e.touches[0];
+    setTouchPosition({ x: touch.clientX, y: touch.clientY });
 
+    const element = document.elementFromPoint(touch.clientX, touch.clientY);
+    const cardElement = element?.closest("[data-section-index]");
+    if (cardElement) {
+      const hoveredIdx = parseInt(cardElement.getAttribute("data-section-index") || "", 10);
+      if (!isNaN(hoveredIdx)) {
+        setDraggedOverCardIndex(hoveredIdx);
+      }
+    } else {
+      setDraggedOverCardIndex(null);
+    }
+  };
+  const handleTouchEnd = () => {
+    if (draggedSectionIndex !== null && draggedOverCardIndex !== null && draggedSectionIndex !== draggedOverCardIndex) {
+      handleCardDrop(draggedOverCardIndex);
+    }
+    setDraggedSectionIndex(null);
+    setDraggedOverCardIndex(null);
+    setTouchPosition(null);
+  };
   const handleSubmitBrief = () => {
     setIsSubmitSuccess(true);
     localStorage.removeItem(storageKey);
@@ -419,26 +617,26 @@ function RouteComponent() {
     }, 2500);
   };
 
-  const currentSection = activeStep.type === "edit-section" 
+  const currentSection = activeStep.type === "edit-section" || activeStep.type === "select-section"
     ? sections.find(s => s.id === (activeStep as any).sectionId) 
     : null;
 
   return (
-    <div className="relative h-screen w-screen overflow-hidden bg-white text-[#0F172A] font-sans select-none flex flex-row">
+    <div className="fixed inset-0 w-screen h-full overflow-hidden bg-white text-[#0F172A] font-sans select-none flex flex-row overscroll-none">
       
       {/* 1. Left Sidebar Navigation - Seamless and thin (Only show steps visited/reached) */}
-      <aside className="w-16 md:w-20 shrink-0 flex flex-col justify-between items-center py-10 z-20 h-full">
+      <aside className="w-6 md:w-12 shrink-0 flex flex-col justify-between items-end py-10 z-20 h-full">
         {/* Back Button */}
         <Link
           to="/add"
-          className="p-2 hover:bg-blue-50 hover:text-blue-600 rounded-full transition-colors text-gray-400 cursor-pointer shrink-0"
+          className="hover:bg-blue-50 hover:text-blue-600 rounded-full transition-colors text-gray-400 cursor-pointer shrink-0"
           title="Back to Services"
         >
           <ArrowLeft className="w-4 h-4" />
         </Link>
 
         {/* Stepper container - vertical dashes with a fixed gap of 1 */}
-        <div className="flex-1 w-full flex flex-col justify-center items-center py-12 my-6">
+        <div className="flex-1 w-full flex flex-col justify-center items-end py-12 my-6">
           <div className="flex flex-col items-center gap-1">
             {dynamicSteps
               .filter(step => step.id <= maxVisitedStep)
@@ -475,14 +673,14 @@ function RouteComponent() {
       <main className="flex-1 h-full flex flex-col justify-between overflow-hidden bg-white">
         
         {/* Form Container (Scrollable internally) */}
-        <div className="flex-1 overflow-y-auto px-6 md:px-12 py-8 md:py-12 max-w-3xl w-full mx-auto flex flex-col justify-start">
+        <div className="flex-1 overflow-y-auto overscroll-contain px-6 md:px-12 py-8 md:py-12 max-w-3xl w-full mx-auto flex flex-col justify-start">
           
           {/* STEP 1: Colors selection */}
           {activeStep.type === "colors" && (
             <div className="space-y-8 animate-in fade-in duration-300 text-left">
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-650 bg-blue-50 px-2.5 py-1 rounded border border-blue-100 inline-block mb-3">
-                  Step {activeStep.id}: Color Palette
+                <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 block mb-2">
+                  Step {activeStep.id} / Color Palette
                 </span>
                 <h2 className="text-2xl md:text-3xl font-extrabold text-[#0F172A] tracking-tight">
                   Pick your brand colors
@@ -492,11 +690,11 @@ function RouteComponent() {
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4">
-                <div className="p-6 bg-white border border-gray-200 hover:border-blue-600 transition-colors rounded-[24px] shadow-xs flex flex-col items-center group">
-                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Primary Color</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 pt-4">
+                {/* Primary Color */}
+                <div className="flex items-center gap-6 text-left">
                   <div
-                    className="w-24 h-24 rounded-3xl border border-gray-150 shadow-inner mb-4 transition-transform duration-200 hover:scale-105 cursor-pointer relative overflow-hidden"
+                    className="w-28 h-28 rounded-3xl border border-gray-200 shadow-inner cursor-pointer relative overflow-hidden transition-transform duration-200 hover:scale-105 shrink-0"
                     style={{ backgroundColor: brandSettings.primaryColor }}
                     onClick={() => document.getElementById("primary_picker")?.click()}
                   >
@@ -508,27 +706,21 @@ function RouteComponent() {
                       className="absolute inset-0 w-full h-full scale-150 opacity-0 cursor-pointer"
                     />
                   </div>
-                  <div className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-xl px-3 py-1.5 w-full justify-between">
-                    <span className="text-xs font-bold text-gray-500">HEX Code</span>
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Primary Color</span>
                     <input
                       type="text"
                       value={brandSettings.primaryColor}
                       onChange={(e) => handleColorChange("primaryColor", e.target.value)}
-                      className="text-xs font-black text-[#0F172A] uppercase bg-transparent text-right outline-none w-20"
+                      className="text-sm font-bold text-[#0F172A] uppercase bg-transparent outline-none border-b border-gray-200 focus:border-blue-600 pb-0.5 w-24"
                     />
                   </div>
-                  {/* <button
-                    onClick={() => document.getElementById("primary_picker")?.click()}
-                    className="mt-4 text-xs font-bold text-blue-600 hover:underline cursor-pointer"
-                  >
-                    Open Palette
-                  </button> */}
                 </div>
 
-                <div className="p-6 bg-white border border-gray-200 hover:border-blue-600 transition-colors rounded-[24px] shadow-xs flex flex-col items-center group">
-                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Secondary Color</span>
+                {/* Secondary Color */}
+                <div className="flex items-center gap-6 text-left">
                   <div
-                    className="w-24 h-24 rounded-3xl border border-gray-150 shadow-inner mb-4 transition-transform duration-200 hover:scale-105 cursor-pointer relative overflow-hidden"
+                    className="w-28 h-28 rounded-3xl border border-gray-200 shadow-inner cursor-pointer relative overflow-hidden transition-transform duration-200 hover:scale-105 shrink-0"
                     style={{ backgroundColor: brandSettings.secondaryColor }}
                     onClick={() => document.getElementById("secondary_picker")?.click()}
                   >
@@ -540,21 +732,15 @@ function RouteComponent() {
                       className="absolute inset-0 w-full h-full scale-150 opacity-0 cursor-pointer"
                     />
                   </div>
-                  <div className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-xl px-3 py-1.5 w-full justify-between">
-                    <span className="text-xs font-bold text-gray-500">HEX Code</span>
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Secondary Color</span>
                     <input
                       type="text"
                       value={brandSettings.secondaryColor}
                       onChange={(e) => handleColorChange("secondaryColor", e.target.value)}
-                      className="text-xs font-black text-[#0F172A] uppercase bg-transparent text-right outline-none w-20"
+                      className="text-sm font-bold text-[#0F172A] uppercase bg-transparent outline-none border-b border-gray-200 focus:border-blue-600 pb-0.5 w-24"
                     />
                   </div>
-                  {/* <button
-                    onClick={() => document.getElementById("secondary_picker")?.click()}
-                    className="mt-4 text-xs font-bold text-blue-600 hover:underline cursor-pointer"
-                  >
-                    Open Palette
-                  </button> */}
                 </div>
               </div>
             </div>
@@ -564,8 +750,8 @@ function RouteComponent() {
           {activeStep.type === "logo" && (
             <div className="space-y-8 animate-in fade-in duration-300 text-left">
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-650 bg-blue-50 px-2.5 py-1 rounded border border-blue-100 inline-block mb-3">
-                  Step {activeStep.id}: Brand Identity
+                <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 block mb-2">
+                  Step {activeStep.id} / Brand Identity
                 </span>
                 <h2 className="text-2xl md:text-3xl font-extrabold text-[#0F172A] tracking-tight">
                   Brand Logo
@@ -584,10 +770,13 @@ function RouteComponent() {
                       {brandSettings.logos.map(logo => (
                         <div key={logo.id} className="relative rounded-xl border border-gray-200 overflow-hidden bg-gray-50 aspect-video shadow-xs animate-in zoom-in-95 duration-200 group">
                           <img src={logo.url} alt={logo.name} className="w-full h-full object-contain p-2" />
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-2">
+                          <div className="absolute top-2 right-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity z-10">
                             <button
-                              onClick={() => removeImage("logo", logo.id, true)}
-                              className="p-1.5 rounded-lg bg-red-655 hover:bg-red-700 text-white cursor-pointer"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeImage("logo", logo.id, true);
+                              }}
+                              className="p-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white cursor-pointer shadow-md flex items-center justify-center"
                               title="Delete Logo"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -598,29 +787,37 @@ function RouteComponent() {
                     </div>
                   )}
 
-                  <div
-                    onDragOver={(e) => { e.preventDefault(); setDraggedOverId("logo"); }}
-                    onDragLeave={() => setDraggedOverId(null)}
-                    onDrop={(e) => { e.preventDefault(); setDraggedOverId(null); processFiles("logo", e.dataTransfer.files, true); }}
-                    onClick={() => document.getElementById("logo_file")?.click()}
-                    className={`border-2 border-dashed rounded-[20px] p-6 text-center flex flex-col items-center justify-center transition-all cursor-pointer bg-gray-50/50 min-h-[160px] ${
-                      draggedOverId === "logo" ? "border-blue-600 bg-blue-50/30" : "border-gray-200 hover:border-blue-600 hover:bg-gray-50"
-                    }`}
-                  >
-                    <input
-                      id="logo_file"
-                      type="file"
-                      multiple
-                      accept="image/*"
-                      onChange={(e) => processFiles("logo", e.target.files, true)}
-                      className="hidden"
-                    />
-                    <UploadCloud className="w-8 h-8 text-gray-400 mb-2.5" />
-                    <p className="text-xs font-bold text-gray-700">
-                      Drag & drop logo file, or <span className="text-blue-600 hover:underline">browse</span>
-                    </p>
-                    <p className="text-[10px] text-gray-400 mt-1">PNG, JPG, SVG up to 1.5MB</p>
-                  </div>
+                   {brandSettings.logos.length >= 2 ? (
+                    <div className="border-2 border-dashed border-gray-200 rounded-[20px] p-6 text-center flex flex-col items-center justify-center bg-gray-50/50 min-h-[160px] opacity-75">
+                      <CheckCircle className="w-8 h-8 text-green-500 mb-2.5" />
+                      <p className="text-xs font-bold text-gray-700">Logo files uploaded (maximum 2)</p>
+                      <p className="text-[10px] text-gray-400 mt-1">To upload a different logo, remove one of the existing files first.</p>
+                    </div>
+                  ) : (
+                    <div
+                      onDragOver={(e) => { e.preventDefault(); setDraggedOverId("logo"); }}
+                      onDragLeave={() => setDraggedOverId(null)}
+                      onDrop={(e) => { e.preventDefault(); setDraggedOverId(null); processFiles("logo", e.dataTransfer.files, true); }}
+                      onClick={() => document.getElementById("logo_file")?.click()}
+                      className={`border-2 border-dashed rounded-[20px] p-6 text-center flex flex-col items-center justify-center transition-all cursor-pointer bg-gray-50/50 min-h-[160px] ${
+                        draggedOverId === "logo" ? "border-blue-600 bg-blue-50/30" : "border-gray-200 hover:border-blue-600 hover:bg-gray-50"
+                      }`}
+                    >
+                      <input
+                        id="logo_file"
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        onChange={(e) => processFiles("logo", e.target.files, true)}
+                        className="hidden"
+                      />
+                      <UploadCloud className="w-8 h-8 text-gray-400 mb-2.5" />
+                      <p className="text-xs font-bold text-gray-700">
+                        Drag & drop logo file, or <span className="text-blue-600 hover:underline">browse</span>
+                      </p>
+                      <p className="text-[10px] text-gray-400 mt-1">PNG, JPG, SVG up to 1.5MB (max 2 logos)</p>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-4 flex flex-col">
@@ -645,8 +842,8 @@ function RouteComponent() {
           {activeStep.type === "select-section" && (
             <div className="space-y-8 animate-in fade-in duration-300 text-left">
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-650 bg-blue-50 px-2.5 py-1 rounded border border-blue-100 inline-block mb-3">
-                  Step {activeStep.id}: Blueprint Section Choice
+                <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 block mb-2">
+                  Step {activeStep.id} / Blueprint Section Choice
                 </span>
                 <h2 className="text-2xl md:text-3xl font-extrabold text-[#0F172A] tracking-tight">
                   Add website section
@@ -656,7 +853,16 @@ function RouteComponent() {
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-4 pt-4">
+                {limits.eligibilityForCustomSection && (
+                  <button
+                    onClick={handleAddCustomSection}
+                    className="flex flex-col items-start p-5 bg-white border border-dashed border-gray-300 rounded-[20px] text-left hover:border-blue-600 hover:shadow-xs transition-all cursor-pointer group"
+                  >
+                    <h4 className="font-bold text-sm text-blue-600 mb-1">Custom Section</h4>
+                    <p className="hidden md:block text-[10px] text-gray-400 leading-relaxed">Specify a completely custom structural section with unique goals.</p>
+                  </button>
+                )}
                 {SECTION_TEMPLATES.map((tmpl) => (
                   <button
                     key={tmpl.type}
@@ -664,19 +870,9 @@ function RouteComponent() {
                     className="flex flex-col items-start p-5 bg-white border border-gray-200 rounded-[20px] text-left hover:border-blue-600 hover:shadow-xs transition-all cursor-pointer group"
                   >
                     <h4 className="font-bold text-sm text-[#0F172A] mb-1 group-hover:text-blue-600">{tmpl.title}</h4>
-                    <p className="text-[10px] text-gray-400 leading-relaxed line-clamp-3">{tmpl.defaultDescription}</p>
+                    <p className="hidden md:block text-[10px] text-gray-400 leading-relaxed line-clamp-3">{tmpl.defaultDescription}</p>
                   </button>
                 ))}
-                
-                {limits.eligibilityForCustomSection && (
-                  <button
-                    onClick={handleAddCustomSection}
-                    className="flex flex-col items-start p-5 bg-white border border-dashed border-gray-300 rounded-[20px] text-left hover:border-blue-600 hover:shadow-xs transition-all cursor-pointer group"
-                  >
-                    <h4 className="font-bold text-sm text-blue-600 mb-1">Custom Section</h4>
-                    <p className="text-[10px] text-gray-400 leading-relaxed">Specify a completely custom structural section with unique goals.</p>
-                  </button>
-                )}
               </div>
             </div>
           )}
@@ -686,8 +882,8 @@ function RouteComponent() {
             <div className="space-y-8 animate-in fade-in duration-300 text-left">
               <div>
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-blue-650 bg-blue-50 px-2.5 py-1 rounded border border-blue-100 inline-block">
-                    Step {activeStep.id}: Configure Section
+                  <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 block">
+                    Step {activeStep.id} / Configure Section
                   </span>
                   <button
                     onClick={() => handleRemoveSection(currentSection.id)}
@@ -712,17 +908,19 @@ function RouteComponent() {
                     type="text"
                     value={currentSection.title}
                     onChange={(e) => handleSectionTitleChange(currentSection.id, e.target.value)}
-                    disabled={!limits.eligibilityForCustomSection}
+                    disabled={currentSection.type !== "custom" || !limits.eligibilityForCustomSection}
                     className={`w-full text-sm font-bold text-[#0F172A] p-3 border border-gray-200 rounded-xl outline-none bg-white transition-all ${
-                      !limits.eligibilityForCustomSection 
+                      currentSection.type !== "custom" || !limits.eligibilityForCustomSection
                         ? "bg-gray-50 text-gray-400 cursor-not-allowed border-gray-150" 
                         : "focus:border-blue-600"
                     }`}
                     placeholder="Enter section name"
                   />
-                  {!limits.eligibilityForCustomSection && (
+                  {currentSection.type !== "custom" ? (
+                    <p className="text-[10px] text-gray-400 font-medium">Standard section names are fixed.</p>
+                  ) : !limits.eligibilityForCustomSection ? (
                     <p className="text-[10px] text-amber-600 font-medium">Upgrade to Pro plan to customize section names.</p>
-                  )}
+                  ) : null}
                 </div>
 
                 <div className="space-y-1.5">
@@ -748,10 +946,13 @@ function RouteComponent() {
                       {currentSection.images.map(img => (
                         <div key={img.id} className="relative rounded-xl border border-gray-200 overflow-hidden bg-gray-50 aspect-video shadow-xs group">
                           <img src={img.url} alt={img.name} className="w-full h-full object-cover" />
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-2">
+                          <div className="absolute top-2 right-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity z-10">
                             <button
-                              onClick={() => removeImage(currentSection.id, img.id)}
-                              className="p-1 text-white bg-red-650 hover:bg-red-700 rounded cursor-pointer"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeImage(currentSection.id, img.id);
+                              }}
+                              className="p-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white cursor-pointer shadow-md flex items-center justify-center"
                               title="Delete reference image"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -796,8 +997,8 @@ function RouteComponent() {
           {activeStep.type === "notes" && (
             <div className="space-y-8 animate-in fade-in duration-300 text-left">
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-650 bg-blue-50 px-2.5 py-1 rounded border border-blue-100 inline-block mb-3">
-                  Step {activeStep.id}: Context & Details
+                <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 block mb-2">
+                  Step {activeStep.id} / Context & Details
                 </span>
                 <h2 className="text-2xl md:text-3xl font-extrabold text-[#0F172A] tracking-tight">
                   Final details & notes
@@ -866,8 +1067,8 @@ function RouteComponent() {
           {activeStep.type === "review" && (
             <div className="space-y-8 animate-in fade-in duration-300 text-left">
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-650 bg-blue-50 px-2.5 py-1 rounded border border-blue-100 inline-block mb-3">
-                  Step {activeStep.id}: Confirmation
+                <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 block mb-2">
+                  Step {activeStep.id} / Confirmation
                 </span>
                 <h2 className="text-2xl md:text-3xl font-extrabold text-[#0F172A] tracking-tight">
                   Review & Rearrange Sections
@@ -891,8 +1092,8 @@ function RouteComponent() {
                     <div className="space-y-2">
                       <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Palette</span>
                       <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full border border-gray-300" style={{ backgroundColor: brandSettings.primaryColor }} />
-                        <div className="w-6 h-6 rounded-full border border-gray-300" style={{ backgroundColor: brandSettings.secondaryColor }} />
+                        <div className="size-6 aspect-square rounded-full border border-gray-300" style={{ backgroundColor: brandSettings.primaryColor }} />
+                        <div className="size-6 aspect-square rounded-full border border-gray-300" style={{ backgroundColor: brandSettings.secondaryColor }} />
                         <span className="text-xs font-bold text-gray-550 uppercase">{brandSettings.primaryColor} / {brandSettings.secondaryColor}</span>
                       </div>
                     </div>
@@ -936,25 +1137,71 @@ function RouteComponent() {
                           return (
                             <div
                               key={section.id}
-                              className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-2xl shadow-xs hover:shadow-sm transition-all"
+                              data-section-index={idx}
+                              draggable
+                              onDragStart={(e) => {
+                                setDraggedSectionIndex(idx);
+                                e.dataTransfer.effectAllowed = "move";
+                              }}
+                              onDragOver={(e) => {
+                                e.preventDefault();
+                              }}
+                              onDragEnter={(e) => {
+                                e.preventDefault();
+                                setDraggedOverCardIndex(idx);
+                              }}
+                              onDragLeave={() => setDraggedOverCardIndex(null)}
+                              onDrop={(e) => {
+                                e.preventDefault();
+                                handleCardDrop(idx);
+                                setDraggedOverCardIndex(null);
+                              }}
+                              onDragEnd={() => {
+                                setDraggedSectionIndex(null);
+                                setDraggedOverCardIndex(null);
+                              }}
+                              className={`relative flex items-center justify-between p-4 rounded-2xl transition-all duration-200 select-none cursor-default ${
+                                draggedSectionIndex === idx
+                                  ? "opacity-40 border border-dashed border-blue-400 bg-blue-50/10 shadow-none scale-[0.98]"
+                                  : draggedOverCardIndex === idx && draggedSectionIndex !== null
+                                  ? `${
+                                      draggedSectionIndex < idx ? "-translate-y-2" : "translate-y-2"
+                                    } bg-blue-50/5 border border-blue-500 shadow-md`
+                                  : "bg-white border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300 translate-y-0"
+                              }`}
                             >
-                              <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                                <GripVertical className="text-gray-300 w-4 h-4 shrink-0 cursor-grab active:cursor-grabbing" />
+                              {/* Drag insertion indicator line */}
+                              {draggedSectionIndex !== null && draggedOverCardIndex === idx && draggedSectionIndex !== idx && (
+                                <div
+                                  className={`absolute left-4 right-4 h-0.5 bg-blue-600 rounded-full z-20 pointer-events-none animate-pulse ${
+                                    draggedSectionIndex < idx ? "bottom-[-8px]" : "top-[-8px]"
+                                  }`}
+                                />
+                              )}
+                              <div className={`flex items-center gap-3.5 min-w-0 flex-1 ${draggedSectionIndex !== null ? "pointer-events-none" : ""}`}>
+                                <div
+                                  onTouchStart={(e) => handleTouchStart(idx, e)}
+                                  onTouchMove={handleTouchMove}
+                                  onTouchEnd={handleTouchEnd}
+                                  className="p-1 cursor-grab active:cursor-grabbing hover:bg-gray-50 rounded shrink-0 pointer-events-auto"
+                                >
+                                  <GripVertical className="text-gray-300 w-4 h-4 hover:text-gray-400 transition-colors" />
+                                </div>
                                 <div className="min-w-0 text-left">
                                   <h4 className="font-bold text-sm text-[#0F172A] truncate">{section.title}</h4>
                                   <p className="text-[11px] text-gray-400 truncate mt-0.5 max-w-md">{subtitle}</p>
                                 </div>
                               </div>
                               
-                              <div className="flex items-center gap-4 shrink-0 pl-4">
+                              <div className={`flex items-center gap-4 shrink-0 pl-4 ${draggedSectionIndex !== null ? "pointer-events-none" : ""}`}>
                                 <button
                                   onClick={() => handleGoToStep(3 + idx)}
-                                  className="text-xs font-bold text-blue-650 hover:underline cursor-pointer"
+                                  className="text-xs font-bold text-blue-650 hover:underline cursor-pointer pointer-events-auto"
                                 >
                                   Edit
                                 </button>
-
-                                <div className="flex items-center gap-0.5 border border-gray-150 rounded-lg p-0.5">
+ 
+                                <div className="flex items-center gap-0.5 border border-gray-150 rounded-lg p-0.5 bg-gray-50/50 pointer-events-auto">
                                   <button
                                     onClick={() => moveSection(idx, "up")}
                                     disabled={idx === 0}
@@ -988,38 +1235,40 @@ function RouteComponent() {
 
         {/* Footer Navigation Buttons */}
         {!isSubmitSuccess && (
-          <div className="border-t border-gray-100 bg-white px-6 md:px-12 py-5 max-w-3xl w-full mx-auto flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-2">
+          <div className="border-t border-gray-100 bg-white px-4 sm:px-6 md:px-12 py-4 sm:py-5 max-w-3xl w-full mx-auto flex items-center justify-between gap-2 shrink-0">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <button
                 onClick={handlePrevStep}
                 disabled={currentStep === 1}
-                className="px-4 py-2.5 text-xs font-bold text-gray-500 hover:text-[#0F172A] disabled:opacity-20 transition-all cursor-pointer disabled:cursor-not-allowed"
+                className="px-2.5 sm:px-4 py-2.5 text-[10px] sm:text-xs font-bold text-gray-500 hover:text-[#0F172A] disabled:opacity-20 transition-all cursor-pointer disabled:cursor-not-allowed whitespace-nowrap"
               >
-                Previous Step
+                <span className="hidden sm:inline">Previous Step</span>
+                <span className="sm:hidden">Previous</span>
               </button>
 
               {/* Finished Adding Sections button available during section building */}
               {(activeStep.type === "edit-section" || activeStep.type === "select-section") && (
                 <button
                   onClick={handleFinishAddingSections}
-                  className="px-4 py-2.5 text-xs font-bold text-amber-600 hover:text-amber-700 bg-amber-50 rounded-xl border border-amber-100 transition-all cursor-pointer"
+                  className="px-2.5 sm:px-4 py-2.5 text-[10px] sm:text-xs font-bold text-amber-600 hover:text-amber-700 bg-amber-50 rounded-xl border border-amber-100 transition-all cursor-pointer whitespace-nowrap"
                 >
-                  Finished Adding Sections
+                  <span className="hidden sm:inline">Finished Adding Sections</span>
+                  <span className="sm:hidden">Finish Adding</span>
                 </button>
               )}
             </div>
 
             {currentStep === dynamicSteps.length ? (
               <button
-                onClick={handleSubmitBrief}
-                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded-xl shadow-xs cursor-pointer transition-all active:scale-95"
+                onClick={() => setShowSubmitConfirm(true)}
+                className="px-4 sm:px-6 py-2.5 sm:py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-[10px] sm:text-xs rounded-xl shadow-xs cursor-pointer transition-all active:scale-95 whitespace-nowrap"
               >
                 Submit Brief
               </button>
             ) : (
               <button
                 onClick={handleNextStep}
-                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+                className="px-4 sm:px-6 py-2.5 sm:py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-[10px] sm:text-xs rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 whitespace-nowrap"
               >
                 <span>Next Step</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -1028,6 +1277,53 @@ function RouteComponent() {
           </div>
         )}
       </main>
+
+      {/* 4. Submission Confirmation Modal */}
+      {showSubmitConfirm && (
+        <div className="fixed inset-0 bg-[#0F172A]/40 backdrop-blur-xs flex items-center justify-center z-50 animate-in fade-in duration-200">
+          <div className="bg-white p-6 rounded-[24px] max-w-sm w-full mx-4 shadow-xl border border-gray-150 text-center animate-in zoom-in-95 duration-200">
+            <div className="w-12 h-12 rounded-full bg-red-50 text-red-600 flex items-center justify-center mx-auto mb-4 animate-pulse">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <h3 className="text-lg font-extrabold text-[#0F172A] tracking-tight">Submit & Lock Brief?</h3>
+            <p className="text-xs text-gray-500 mt-2 leading-relaxed">
+              This action is irreversible. Once submitted, your brief is locked for production and cannot be modified. Please confirm all details are correct.
+            </p>
+            <div className="flex items-center gap-3 mt-6">
+              <button
+                onClick={() => setShowSubmitConfirm(false)}
+                className="flex-1 py-2.5 text-xs font-bold text-gray-500 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer bg-white"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowSubmitConfirm(false);
+                  handleSubmitBrief();
+                }}
+                className="flex-1 py-2.5 text-xs font-extrabold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors cursor-pointer"
+              >
+                Yes, Submit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* 5. Mobile Drag Floating Preview */}
+      {draggedSectionIndex !== null && touchPosition && (
+        <div 
+          className="fixed pointer-events-none z-50 bg-white/95 border border-blue-500 rounded-2xl shadow-lg px-4 py-3 flex items-center gap-3 opacity-90 transition-all transform scale-[1.02] max-w-xs truncate"
+          style={{
+            left: `${touchPosition.x - 120}px`,
+            top: `${touchPosition.y - 65}px`,
+          }}
+        >
+          <GripVertical className="text-blue-500 w-4 h-4 shrink-0" />
+          <span className="font-extrabold text-xs text-[#0F172A] truncate">
+            {sections[draggedSectionIndex]?.title || "Moving section..."}
+          </span>
+        </div>
+      )}
     </div>
   );
 }

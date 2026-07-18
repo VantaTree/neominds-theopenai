@@ -99,22 +99,22 @@ export interface PlanLimits {
 
 export const PLAN_LIMITS: Record<string, PlanLimits> = {
   Basic: {
-    maxWebsiteSections: 3,
-    maxImagesPerSection: 2,
+    maxWebsiteSections: 5,
+    maxImagesPerSection: 1,
     eligibilityForCustomSection: false
   },
   Plus: {
-    maxWebsiteSections: 5,
+    maxWebsiteSections: 8,
     maxImagesPerSection: 3,
     eligibilityForCustomSection: false
   },
   Pro: {
-    maxWebsiteSections: 8,
+    maxWebsiteSections: 16,
     maxImagesPerSection: 5,
     eligibilityForCustomSection: true
   },
   Customize: {
-    maxWebsiteSections: 8,
+    maxWebsiteSections: 16,
     maxImagesPerSection: 5,
     eligibilityForCustomSection: true
   }
