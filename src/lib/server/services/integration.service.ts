@@ -242,7 +242,7 @@ export class IntegrationService {
     return response;
   }
 
-  async getDashboardInsights(business: any): Promise<any> {
+  async getDashboardInsights(business: any, range: string = "30days"): Promise<any> {
     const plan = business.plan || "None";
     const integrations = business.integrations || {};
 
@@ -252,7 +252,9 @@ export class IntegrationService {
 
     const CACHE_DURATION_MS = 12 * 60 * 60 * 1000;
     const now = new Date();
-    const cache = business.insightsCache;
+    
+    // Support range-specific caching in Firestore, falling back to legacy flat cache for 30days
+    const cache = business.insightsCache?.[range] || (range === "30days" && business.insightsCache?.lastFetchedAt ? business.insightsCache : null);
     const isCacheValid =
       cache &&
       cache.lastFetchedAt &&
@@ -270,9 +272,13 @@ export class IntegrationService {
               isConnected: websiteIsConnected,
               needsSetup: websiteIsConnected,
               metrics: [
-                { label: "Visitors", value: "0", trend: "0%", isPositive: true },
+                { label: "Users", value: "0", trend: "0%", isPositive: true },
                 { label: "Sessions", value: "0", trend: "0%", isPositive: true },
+                { label: "Bounce Rate", value: "0%", trend: "0%", isPositive: false },
+                { label: "Avg. Session", value: "0s", trend: "0%", isPositive: true },
               ],
+              chartData: [],
+              topPages: [],
             },
             google: cache.google || {
               isConnected: googleIsConnected,
@@ -303,11 +309,18 @@ export class IntegrationService {
       }
     }
 
+    const startDate = range === "7days" ? "7daysAgo" : "30daysAgo";
     let websiteNeedsSetup = false;
+    
     let websiteMetrics = [
-      { label: "Visitors", value: "0", trend: "0%", isPositive: true },
+      { label: "Users", value: "0", trend: "0%", isPositive: true },
       { label: "Sessions", value: "0", trend: "0%", isPositive: true },
+      { label: "Bounce Rate", value: "0%", trend: "0%", isPositive: false },
+      { label: "Avg. Session", value: "0s", trend: "0%", isPositive: true },
     ];
+
+    let websiteChartData: any[] = [];
+    let websiteTopPages: any[] = [];
 
     if (websiteIsConnected && googleIntegration) {
       try {
@@ -330,14 +343,27 @@ export class IntegrationService {
           console.warn("No Google Analytics property found for this user account.");
           websiteNeedsSetup = true;
         } else {
+          // 1. Fetch Summary Metrics: activeUsers, sessions, bounceRate, averageSessionDuration
+          const prevStartDate = range === "7days" ? "14daysAgo" : "60daysAgo";
+          const prevEndDate = range === "7days" ? "8daysAgo" : "31daysAgo";
+
           const reportRes = await this.callGoogleApi(
             `https://analyticsdata.googleapis.com/v1beta/${propertyPath}:runReport`,
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                dateRanges: [{ startDate: "30daysAgo", endDate: "today" }],
-                metrics: [{ name: "activeUsers" }, { name: "sessions" }],
+                dateRanges: [
+                  { startDate: startDate, endDate: "today", name: "current" },
+                  { startDate: prevStartDate, endDate: prevEndDate, name: "previous" }
+                ],
+                dimensions: [{ name: "dateRange" }],
+                metrics: [
+                  { name: "activeUsers" },
+                  { name: "sessions" },
+                  { name: "bounceRate" },
+                  { name: "averageSessionDuration" }
+                ],
               }),
             },
             googleIntegration,
@@ -352,22 +378,134 @@ export class IntegrationService {
           const rows = reportData.rows || [];
           let activeUsers = 0;
           let sessions = 0;
+          let bounceRateVal = 0;
+          let avgSessionSec = 0;
+
+          let prevActiveUsers = 0;
+          let prevSessions = 0;
+          let prevBounceRateVal = 0;
+          let prevAvgSessionSec = 0;
 
           if (rows.length > 0) {
-            const metricValues = rows[0].metricValues || [];
-            activeUsers = parseInt(metricValues[0]?.value || "0", 10);
-            sessions = parseInt(metricValues[1]?.value || "0", 10);
+            for (const row of rows) {
+              const rangeName = row.dimensionValues?.[0]?.value;
+              const vals = row.metricValues || [];
+              const users = parseInt(vals[0]?.value || "0", 10);
+              const sess = parseInt(vals[1]?.value || "0", 10);
+              const bounce = parseFloat(vals[2]?.value || "0") * 100;
+              const duration = parseFloat(vals[3]?.value || "0");
+
+              if (rangeName === "current" || rows.length === 1) {
+                activeUsers = users;
+                sessions = sess;
+                bounceRateVal = bounce;
+                avgSessionSec = duration;
+              } else if (rangeName === "previous") {
+                prevActiveUsers = users;
+                prevSessions = sess;
+                prevBounceRateVal = bounce;
+                prevAvgSessionSec = duration;
+              }
+            }
           }
 
           const formatNumber = (num: number) => {
-            if (num >= 1000) return (num / 1000).toFixed(1) + "K";
-            return num.toString();
+            return num.toLocaleString();
           };
 
+          const formatDuration = (sec: number) => {
+            const m = Math.floor(sec / 60);
+            const s = Math.round(sec % 60);
+            return `${m}m ${s}s`;
+          };
+
+          const calculateTrend = (curr: number, prev: number, invert: boolean = false) => {
+            if (prev === 0) return { trend: "0%", isPositive: true };
+            const pct = ((curr - prev) / prev) * 100;
+            const absolutePct = Math.abs(pct).toFixed(1) + "%";
+            const isPositive = invert ? pct < 0 : pct >= 0;
+            return { trend: absolutePct, isPositive };
+          };
+
+          const usersTrend = calculateTrend(activeUsers, prevActiveUsers);
+          const sessionsTrend = calculateTrend(sessions, prevSessions);
+          const bounceTrend = calculateTrend(bounceRateVal, prevBounceRateVal, true);
+          const durationTrend = calculateTrend(avgSessionSec, prevAvgSessionSec);
+
           websiteMetrics = [
-            { label: "Visitors", value: formatNumber(activeUsers), trend: "15.4%", isPositive: true },
-            { label: "Sessions", value: formatNumber(sessions), trend: "12.8%", isPositive: true },
+            { label: "Users", value: formatNumber(activeUsers), trend: `${usersTrend.isPositive ? "↑" : "↓"} ${usersTrend.trend}`, isPositive: usersTrend.isPositive },
+            { label: "Sessions", value: formatNumber(sessions), trend: `${sessionsTrend.isPositive ? "↑" : "↓"} ${sessionsTrend.trend}`, isPositive: sessionsTrend.isPositive },
+            { label: "Bounce Rate", value: `${bounceRateVal.toFixed(1)}%`, trend: `${bounceTrend.isPositive ? "↓" : "↑"} ${bounceTrend.trend}`, isPositive: bounceTrend.isPositive },
+            { label: "Avg. Session", value: formatDuration(avgSessionSec), trend: `${durationTrend.isPositive ? "↑" : "↓"} ${durationTrend.trend}`, isPositive: durationTrend.isPositive },
           ];
+
+          // 2. Fetch Chart Data (daily views/sessions)
+          const chartRes = await this.callGoogleApi(
+            `https://analyticsdata.googleapis.com/v1beta/${propertyPath}:runReport`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                dateRanges: [{ startDate: startDate, endDate: "today" }],
+                dimensions: [{ name: "date" }],
+                metrics: [{ name: "activeUsers" }],
+                orderBys: [{ dimension: { dimensionName: "date" } }]
+              }),
+            },
+            googleIntegration,
+            business.id
+          );
+
+          if (chartRes.ok) {
+            const chartDataRes = await chartRes.json();
+            const chartRows = chartDataRes.rows || [];
+            if (chartRows.length > 0) {
+              websiteChartData = chartRows.map((r: any) => {
+                const dateStr = r.dimensionValues?.[0]?.value || "";
+                const val = parseInt(r.metricValues?.[0]?.value || "0", 10);
+                
+                let formattedDate = dateStr;
+                if (dateStr.length === 8) {
+                  const year = parseInt(dateStr.substring(0, 4), 10);
+                  const month = parseInt(dateStr.substring(4, 6), 10) - 1;
+                  const day = parseInt(dateStr.substring(6, 8), 10);
+                  const d = new Date(year, month, day);
+                  formattedDate = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+                }
+                return { date: formattedDate, views: val };
+              });
+            }
+          }
+
+          // 3. Fetch Top Pages
+          const pagesRes = await this.callGoogleApi(
+            `https://analyticsdata.googleapis.com/v1beta/${propertyPath}:runReport`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                dateRanges: [{ startDate: startDate, endDate: "today" }],
+                dimensions: [{ name: "pagePath" }],
+                metrics: [{ name: "screenPageViews" }],
+                orderBys: [{ metric: { metricName: "screenPageViews" }, "desc": true }],
+                limit: 5
+              }),
+            },
+            googleIntegration,
+            business.id
+          );
+
+          if (pagesRes.ok) {
+            const pagesData = await pagesRes.json();
+            const pagesRows = pagesData.rows || [];
+            if (pagesRows.length > 0) {
+              websiteTopPages = pagesRows.map((r: any) => {
+                const path = r.dimensionValues?.[0]?.value || "";
+                const views = parseInt(r.metricValues?.[0]?.value || "0", 10);
+                return { path, views };
+              });
+            }
+          }
         }
       } catch (err) {
         console.error("Failed to fetch live GA4 metrics:", err);
@@ -426,8 +564,9 @@ export class IntegrationService {
               : locationName;
 
             const nowLimit = new Date();
+            const daysOffset = range === "7days" ? 7 : 30;
             const start = new Date();
-            start.setDate(nowLimit.getDate() - 30);
+            start.setDate(nowLimit.getDate() - (daysOffset * 2));
 
             const perfRes = await this.callGoogleApi(
               `https://businessprofileperformance.googleapis.com/v1/${locId}:fetchMultiDailyMetrics`,
@@ -455,16 +594,42 @@ export class IntegrationService {
 
             const perfData = await perfRes.json();
             const timeSeries = perfData.multiDailyMetricTimeSeries || [];
-            let totalSearches = 0;
+            
+            const midPointDate = new Date();
+            midPointDate.setDate(nowLimit.getDate() - daysOffset);
+
+            let currentSearches = 0;
+            let previousSearches = 0;
 
             for (const series of timeSeries) {
               const dailyValues = series.dailyMetricTimeSeries?.dailyValues || [];
               for (const val of dailyValues) {
-                totalSearches += parseInt(val.value || "0", 10);
+                const dateObj = val.date;
+                if (dateObj) {
+                  const valDate = new Date(dateObj.year, dateObj.month - 1, dateObj.day);
+                  const searchesVal = parseInt(val.value || "0", 10);
+                  if (valDate >= midPointDate) {
+                    currentSearches += searchesVal;
+                  } else {
+                    previousSearches += searchesVal;
+                  }
+                }
               }
             }
 
-            const profileViews = Math.round(totalSearches * 1.8);
+            const currentProfileViews = Math.round(currentSearches * 1.8);
+            const previousProfileViews = Math.round(previousSearches * 1.8);
+
+            const calculateTrend = (curr: number, prev: number, invert: boolean = false) => {
+              if (prev === 0) return { trend: "0%", isPositive: true };
+              const pct = ((curr - prev) / prev) * 100;
+              const absolutePct = Math.abs(pct).toFixed(1) + "%";
+              const isPositive = invert ? pct < 0 : pct >= 0;
+              return { trend: absolutePct, isPositive };
+            };
+
+            const searchesTrendResult = calculateTrend(currentSearches, previousSearches);
+            const profileViewsTrendResult = calculateTrend(currentProfileViews, previousProfileViews);
 
             const formatNumber = (num: number) => {
               if (num >= 1000) return (num / 1000).toFixed(1) + "K";
@@ -472,8 +637,8 @@ export class IntegrationService {
             };
 
             googleMetrics = [
-              { label: "Searches", value: formatNumber(totalSearches), trend: "11.2%", isPositive: true },
-              { label: "Profile Views", value: formatNumber(profileViews), trend: "16.4%", isPositive: true },
+              { label: "Searches", value: formatNumber(currentSearches), trend: `${searchesTrendResult.isPositive ? "↑" : "↓"} ${searchesTrendResult.trend}`, isPositive: searchesTrendResult.isPositive },
+              { label: "Profile Views", value: formatNumber(currentProfileViews), trend: `${profileViewsTrendResult.isPositive ? "↑" : "↓"} ${profileViewsTrendResult.trend}`, isPositive: profileViewsTrendResult.isPositive },
             ];
           }
         }
@@ -486,12 +651,19 @@ export class IntegrationService {
     try {
       const currentBusiness = await this.businessService.getBusiness(business.id);
       if (currentBusiness) {
-        currentBusiness.insightsCache = {
+        let cache = currentBusiness.insightsCache;
+        if (!cache || (typeof cache === "object" && "lastFetchedAt" in cache)) {
+          cache = {};
+        }
+        const recordCache = cache as Record<string, any>;
+        recordCache[range] = {
           lastFetchedAt: now.toISOString(),
           website: {
             isConnected: websiteIsConnected,
             needsSetup: websiteNeedsSetup,
             metrics: websiteMetrics,
+            chartData: websiteChartData,
+            topPages: websiteTopPages,
           },
           google: {
             isConnected: googleIsConnected,
@@ -499,6 +671,7 @@ export class IntegrationService {
             metrics: googleMetrics,
           },
         };
+        currentBusiness.insightsCache = recordCache;
         await this.businessService.saveBusiness(currentBusiness);
       }
     } catch (dbErr) {
@@ -512,6 +685,8 @@ export class IntegrationService {
           isConnected: websiteIsConnected,
           needsSetup: websiteNeedsSetup,
           metrics: websiteMetrics,
+          chartData: websiteChartData,
+          topPages: websiteTopPages,
         },
         google: {
           isConnected: googleIsConnected,

@@ -45,14 +45,17 @@ export const activatePlusPlatformFn = createServerFn({ method: "POST" })
 
 // 4. Get Dashboard Analytics Metrics Gated by Plan Level
 export const getDashboardInsightsFn = createServerFn({ method: "GET" })
-  .validator((d: string) => z.string().parse(d)) // businessId
+  .validator((d: any) => z.object({
+    businessId: z.string(),
+    range: z.string().optional()
+  }).parse(typeof d === "string" ? { businessId: d, range: "30days" } : d))
   .middleware([businessOwnerMiddleware, requirePlanMiddleware("Basic")])
-  .handler(async ({ context }) => {
+  .handler(async ({ context, data }) => {
     const business = (context as any)?.business;
     if (!business) {
       throw new Error("Business context not found.");
     }
     const { IntegrationService } = await import("../server/services/integration.service");
     const integrationService = new IntegrationService();
-    return integrationService.getDashboardInsights(business);
+    return integrationService.getDashboardInsights(business, data.range);
   });

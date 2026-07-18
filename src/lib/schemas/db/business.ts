@@ -52,6 +52,8 @@ export const InsightsCacheSchema = z.object({
     isConnected: z.boolean(),
     needsSetup: z.boolean(),
     metrics: z.array(InsightMetricSchema),
+    chartData: z.array(z.any()).optional().nullable(),
+    topPages: z.array(z.any()).optional().nullable(),
   }).optional().nullable(),
   google: z.object({
     isConnected: z.boolean(),
@@ -75,7 +77,10 @@ export const BusinessSchema = z.object({
   websiteUrl: z.string().default(""),
   paymentStatus: PaymentStatusEnum.default("Pending"),
   integrations: IntegrationsSchema.optional().nullable(),
-  insightsCache: InsightsCacheSchema.optional().nullable(),
+  insightsCache: z.union([
+    InsightsCacheSchema,
+    z.record(z.string(), InsightsCacheSchema)
+  ]).optional().nullable(),
   createdAt: DateField,
   updatedAt: DateField,
 });
