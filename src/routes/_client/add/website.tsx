@@ -250,8 +250,10 @@ function RouteComponent() {
 
     if (placeholderIdx === -1) {
       if (action === "next") {
+        const isFromLogoWithNoSections = activeStep.type === "logo" && sections.length === 0;
         const isLastSectionStep = activeStep.type === "edit-section" && (activeStep as any).sectionId === sections[sections.length - 1]?.id;
-        if (isLastSectionStep && sections.length < limits.maxWebsiteSections) {
+        
+        if ((isFromLogoWithNoSections || isLastSectionStep) && sections.length < limits.maxWebsiteSections) {
           setShowAddSectionStep(true);
           setIsFinishedAdding(false);
           const nextStepId = 3 + sections.length;
@@ -450,7 +452,8 @@ function RouteComponent() {
       id: `${template.type}_${Date.now()}`,
       type: template.type,
       title: template.title,
-      description: template.defaultDescription,
+    //   description: template.defaultDescription,
+      description: "",
       images: []
     };
     
@@ -1088,24 +1091,57 @@ function RouteComponent() {
                 </div>
               ) : (
                 <div className="space-y-6 pt-2">
-                  <div className="p-5 border border-gray-150 rounded-[20px] bg-gray-50/30 grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Palette</span>
-                      <div className="flex items-center gap-2">
-                        <div className="size-6 aspect-square rounded-full border border-gray-300" style={{ backgroundColor: brandSettings.primaryColor }} />
-                        <div className="size-6 aspect-square rounded-full border border-gray-300" style={{ backgroundColor: brandSettings.secondaryColor }} />
-                        <span className="text-xs font-bold text-gray-550 uppercase">{brandSettings.primaryColor} / {brandSettings.secondaryColor}</span>
+                  <div className="grid grid-cols-2 gap-4">
+                    <button
+                      onClick={() => handleGoToStep(1)}
+                      className="p-5 border border-gray-150 rounded-[20px] bg-gray-50/30 text-left hover:bg-gray-50 hover:border-blue-200 hover:shadow-xs transition-all cursor-pointer group flex flex-col justify-between"
+                    >
+                      <div className="space-y-2">
+                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block group-hover:text-blue-500 transition-colors">Palette</span>
+                        <div className="flex items-center gap-2">
+                          <div className="size-6 aspect-square rounded-full border border-gray-300" style={{ backgroundColor: brandSettings.primaryColor }} />
+                          <div className="size-6 aspect-square rounded-full border border-gray-300" style={{ backgroundColor: brandSettings.secondaryColor }} />
+                          <span className="text-xs font-bold text-gray-550 uppercase">{brandSettings.primaryColor} / {brandSettings.secondaryColor}</span>
+                        </div>
                       </div>
-                    </div>
+                    </button>
 
-                    <div className="space-y-2">
-                      <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Brand Logo / Concept</span>
-                      <span className="text-xs font-semibold text-gray-700 line-clamp-2">
-                        {brandSettings.logos.length > 0
-                          ? `Uploaded ${brandSettings.logos.length} logo file(s)`
-                          : brandSettings.logoDescription || "No logo concept specified"}
-                      </span>
-                    </div>
+                    <button
+                      onClick={() => handleGoToStep(2)}
+                      className="p-5 border border-gray-150 rounded-[20px] bg-gray-50/30 text-left hover:bg-gray-50 hover:border-blue-200 hover:shadow-xs transition-all cursor-pointer group flex flex-col justify-between"
+                    >
+                      <div className="space-y-2.5 w-full">
+                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block group-hover:text-blue-500 transition-colors">Brand Logo / Concept</span>
+                        <div className="flex items-center gap-2 min-w-0">
+                          {brandSettings.logos.length > 0 ? (
+                            <div className="flex items-center gap-2">
+                              <div className="flex -space-x-1.5">
+                                {brandSettings.logos.map((logo) => (
+                                  <img
+                                    key={logo.id}
+                                    src={logo.url}
+                                    alt="Logo preview"
+                                    className="w-7 h-7 rounded-lg object-contain border border-gray-250 bg-white p-0.5 shadow-xs shrink-0"
+                                  />
+                                ))}
+                              </div>
+                              <span className="text-xs font-bold text-gray-700">
+                                {brandSettings.logos.length} logo file(s)
+                              </span>
+                            </div>
+                          ) : brandSettings.logoDescription ? (
+                            <p className="text-xs font-medium text-gray-700 italic border-l-2 border-blue-500 pl-2 line-clamp-2 leading-relaxed">
+                              "{brandSettings.logoDescription}"
+                            </p>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold text-amber-600 bg-amber-50 border border-amber-100">
+                              <AlertTriangle className="w-3 h-3" />
+                              <span>No logo or concept specified</span>
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </button>
                   </div>
 
                   <div className="space-y-4">
@@ -1160,7 +1196,13 @@ function RouteComponent() {
                                 setDraggedSectionIndex(null);
                                 setDraggedOverCardIndex(null);
                               }}
-                              className={`relative flex items-center justify-between p-4 rounded-2xl transition-all duration-200 select-none cursor-default ${
+                              onClick={(e) => {
+                                if (draggedSectionIndex !== null) return;
+                                const target = e.target as HTMLElement;
+                                if (target.closest("button") || target.closest(".cursor-grab")) return;
+                                handleGoToStep(3 + idx);
+                              }}
+                              className={`relative flex items-center justify-between p-4 rounded-2xl transition-all duration-200 select-none cursor-pointer ${
                                 draggedSectionIndex === idx
                                   ? "opacity-40 border border-dashed border-blue-400 bg-blue-50/10 shadow-none scale-[0.98]"
                                   : draggedOverCardIndex === idx && draggedSectionIndex !== null
