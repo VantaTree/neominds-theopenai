@@ -36,6 +36,8 @@ import { Route as ClientAddIndexRouteImport } from './routes/_client/add/index'
 import { Route as AdminAdminIndexRouteImport } from './routes/_admin/admin/index'
 import { Route as ClientChatDomainRouteImport } from './routes/_client/chat/$domain'
 import { Route as ClientAddWebsiteRouteImport } from './routes/_client/add/website'
+import { Route as ClientAddReelRouteImport } from './routes/_client/add/reel'
+import { Route as ClientAddPostRouteImport } from './routes/_client/add/post'
 import { Route as AdminAdminUsersRouteImport } from './routes/_admin/admin/users'
 import { Route as AdminAdminTemplatesRouteImport } from './routes/_admin/admin/templates'
 import { Route as AdminAdminSupportRouteImport } from './routes/_admin/admin/support'
@@ -182,6 +184,16 @@ const ClientAddWebsiteRoute = ClientAddWebsiteRouteImport.update({
   path: '/website',
   getParentRoute: () => ClientAddRouteRoute,
 } as any)
+const ClientAddReelRoute = ClientAddReelRouteImport.update({
+  id: '/reel',
+  path: '/reel',
+  getParentRoute: () => ClientAddRouteRoute,
+} as any)
+const ClientAddPostRoute = ClientAddPostRouteImport.update({
+  id: '/post',
+  path: '/post',
+  getParentRoute: () => ClientAddRouteRoute,
+} as any)
 const AdminAdminUsersRoute = AdminAdminUsersRouteImport.update({
   id: '/admin/users',
   path: '/admin/users',
@@ -270,6 +282,8 @@ export interface FileRoutesByFullPath {
   '/admin/support': typeof AdminAdminSupportRoute
   '/admin/templates': typeof AdminAdminTemplatesRoute
   '/admin/users': typeof AdminAdminUsersRoute
+  '/add/post': typeof ClientAddPostRoute
+  '/add/reel': typeof ClientAddReelRoute
   '/add/website': typeof ClientAddWebsiteRoute
   '/chat/$domain': typeof ClientChatDomainRoute
   '/admin/': typeof AdminAdminIndexRoute
@@ -306,6 +320,8 @@ export interface FileRoutesByTo {
   '/admin/support': typeof AdminAdminSupportRoute
   '/admin/templates': typeof AdminAdminTemplatesRoute
   '/admin/users': typeof AdminAdminUsersRoute
+  '/add/post': typeof ClientAddPostRoute
+  '/add/reel': typeof ClientAddReelRoute
   '/add/website': typeof ClientAddWebsiteRoute
   '/chat/$domain': typeof ClientChatDomainRoute
   '/admin': typeof AdminAdminIndexRoute
@@ -348,6 +364,8 @@ export interface FileRoutesById {
   '/_admin/admin/support': typeof AdminAdminSupportRoute
   '/_admin/admin/templates': typeof AdminAdminTemplatesRoute
   '/_admin/admin/users': typeof AdminAdminUsersRoute
+  '/_client/add/post': typeof ClientAddPostRoute
+  '/_client/add/reel': typeof ClientAddReelRoute
   '/_client/add/website': typeof ClientAddWebsiteRoute
   '/_client/chat/$domain': typeof ClientChatDomainRoute
   '/_admin/admin/': typeof AdminAdminIndexRoute
@@ -389,6 +407,8 @@ export interface FileRouteTypes {
     | '/admin/support'
     | '/admin/templates'
     | '/admin/users'
+    | '/add/post'
+    | '/add/reel'
     | '/add/website'
     | '/chat/$domain'
     | '/admin/'
@@ -425,6 +445,8 @@ export interface FileRouteTypes {
     | '/admin/support'
     | '/admin/templates'
     | '/admin/users'
+    | '/add/post'
+    | '/add/reel'
     | '/add/website'
     | '/chat/$domain'
     | '/admin'
@@ -466,6 +488,8 @@ export interface FileRouteTypes {
     | '/_admin/admin/support'
     | '/_admin/admin/templates'
     | '/_admin/admin/users'
+    | '/_client/add/post'
+    | '/_client/add/reel'
     | '/_client/add/website'
     | '/_client/chat/$domain'
     | '/_admin/admin/'
@@ -684,6 +708,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClientAddWebsiteRouteImport
       parentRoute: typeof ClientAddRouteRoute
     }
+    '/_client/add/reel': {
+      id: '/_client/add/reel'
+      path: '/reel'
+      fullPath: '/add/reel'
+      preLoaderRoute: typeof ClientAddReelRouteImport
+      parentRoute: typeof ClientAddRouteRoute
+    }
+    '/_client/add/post': {
+      id: '/_client/add/post'
+      path: '/post'
+      fullPath: '/add/post'
+      preLoaderRoute: typeof ClientAddPostRouteImport
+      parentRoute: typeof ClientAddRouteRoute
+    }
     '/_admin/admin/users': {
       id: '/_admin/admin/users'
       path: '/admin/users'
@@ -808,11 +846,15 @@ const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(
 )
 
 interface ClientAddRouteRouteChildren {
+  ClientAddPostRoute: typeof ClientAddPostRoute
+  ClientAddReelRoute: typeof ClientAddReelRoute
   ClientAddWebsiteRoute: typeof ClientAddWebsiteRoute
   ClientAddIndexRoute: typeof ClientAddIndexRoute
 }
 
 const ClientAddRouteRouteChildren: ClientAddRouteRouteChildren = {
+  ClientAddPostRoute: ClientAddPostRoute,
+  ClientAddReelRoute: ClientAddReelRoute,
   ClientAddWebsiteRoute: ClientAddWebsiteRoute,
   ClientAddIndexRoute: ClientAddIndexRoute,
 }
