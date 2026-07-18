@@ -261,6 +261,7 @@ function ProjectsPage() {
 
   const [modalFiles, setModalFiles] = useState<File[]>([]);
   const [isCreatingProject, setIsCreatingProject] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
 
@@ -301,30 +302,38 @@ function ProjectsPage() {
   };
 
   const handleDelete = async (p: Project) => {
-    const biz =
-      typeof p.businessId === "object" && p.businessId !== null
-        ? p.businessId
-        : businesses.find((b) => b.id === p.businessId);
-    const client = biz?.businessName || "No business";
-    const manager = p.assignee;
-    
-    // Delete all assets from Firebase Storage
-    if (p.assets && p.assets.length > 0) {
-      await Promise.all(p.assets.map((url) => deleteFileFromStorage(url)));
-    }
+    setIsDeleting(true);
+    try {
+      const biz =
+        typeof p.businessId === "object" && p.businessId !== null
+          ? p.businessId
+          : businesses.find((b) => b.id === p.businessId);
+      const client = biz?.businessName || "No business";
+      const manager = p.assignee;
+      
+      // Delete all assets from Firebase Storage
+      if (p.assets && p.assets.length > 0) {
+        await Promise.all(p.assets.map((url) => deleteFileFromStorage(url)));
+      }
 
-    await deleteProjectFn({ data: p.id });
-    await logAuditEventFn({
-      data: {
-        uid: "admin",
-        action: "project_deleted",
-        payload: { projectId: p.id, client, manager },
-        userName: "Admin",
-      },
-    });
-    setProjectList((prev) => prev.filter((x) => x.id !== p.id));
-    setConfirmDelete(null);
-    setToast(`✓ Project "${p.id}" deleted successfully.`);
+      await deleteProjectFn({ data: p.id });
+      await logAuditEventFn({
+        data: {
+          uid: "admin",
+          action: "project_deleted",
+          payload: { projectId: p.id, client, manager },
+          userName: "Admin",
+        },
+      });
+      setProjectList((prev) => prev.filter((x) => x.id !== p.id));
+      setConfirmDelete(null);
+      setToast(`✓ Project "${p.id}" deleted successfully.`);
+    } catch (err) {
+      console.error(err);
+      setToast("Failed to delete project.");
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -606,9 +615,7 @@ function ProjectsPage() {
           : businesses.find((b) => b.id === p.businessId);
       const manager = p.assignee;
 
-      let status: "Pending" | "In Progress" | "Completed" = "In Progress";
-      if (p.progress === 0) status = "Pending";
-      else if (p.progress === 100) status = "Completed";
+      const status = p.status || (p.progress === 100 ? "Completed" : p.progress === 0 ? "Pending" : "In Progress");
 
       let matchType = true;
       if (!ignoreDomainFilter && domainFilter !== "All Domains") {
@@ -1188,7 +1195,7 @@ function ProjectsPage() {
                       color: "var(--color-mm-gray)",
                     },
                     {
-                      label: "Requested",
+                      label: "User Draft",
                       bg: "var(--color-mm-subtle)",
                       color: "var(--color-mm-gray)",
                     },
@@ -1572,7 +1579,7 @@ function ProjectsPage() {
                             : null;
                           const matchedUser = users.find((u) => u.id === userIdStr);
 
-                          let status = p.status;
+                          const status = p.status || (p.progress === 100 ? "Completed" : p.progress === 0 ? "Pending" : "In Progress");
 
                           const startDateStr = p.startDate
                             ? new Date(p.startDate).toLocaleDateString()
@@ -1777,10 +1784,7 @@ function ProjectsPage() {
                               : null;
                             const matchedUser = users.find((u) => u.id === userIdStr);
 
-                            let status: "Pending" | "In Progress" | "Completed" =
-                              "In Progress";
-                            if (p.progress === 0) status = "Pending";
-                            else if (p.progress === 100) status = "Completed";
+                            const status = p.status || (p.progress === 100 ? "Completed" : p.progress === 0 ? "Pending" : "In Progress");
 
                             const startDateStr = p.startDate
                               ? new Date(p.startDate).toLocaleDateString()
@@ -2889,7 +2893,8 @@ function ProjectsPage() {
                 <div className="flex gap-3 justify-end pt-2">
                   <button
                     onClick={() => setConfirmDelete(null)}
-                    className="px-4 py-2 rounded-xl text-sm font-semibold border border-mm-border hover:bg-mm-subtle cursor-pointer"
+                    disabled={isDeleting}
+                    className="px-4 py-2 rounded-xl text-sm font-semibold border border-mm-border hover:bg-mm-subtle cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{
                       background: "white",
                       color: "var(--color-mm-gray)",
@@ -2899,10 +2904,12 @@ function ProjectsPage() {
                   </button>
                   <button
                     onClick={() => handleDelete(confirmDelete)}
-                    className="px-4 py-2 rounded-xl text-sm font-semibold hover:opacity-95 text-white cursor-pointer"
+                    disabled={isDeleting}
+                    className="px-4 py-2 rounded-xl text-sm font-semibold hover:opacity-95 text-white cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
                     style={{ background: "var(--color-mm-red)" }}
                   >
-                    Delete
+                    {isDeleting && <Loader2 size={16} className="animate-spin text-white" />}
+                    {isDeleting ? "Deleting..." : "Delete"}
                   </button>
                 </div>
               </div>

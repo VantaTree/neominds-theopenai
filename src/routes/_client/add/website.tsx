@@ -1,7 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useBusiness } from "@/hooks/use-business";
 import { PLAN_LIMITS } from "@/data/plans";
+import { clientGetOrCreateWebsiteDraftFn, clientSaveProjectFn } from "@/lib/server-functions/projects";
+import { uploadFileToStorage, deleteFileFromStorage } from "@/lib/firebase";
 import {
   ArrowLeft,
   ArrowRight,
@@ -131,8 +133,14 @@ function RouteComponent() {
   const currentPlan = activeBusiness?.plan || "Basic";
   const limits = PLAN_LIMITS[currentPlan] || PLAN_LIMITS["Basic"];
 
+  // Draft project state & status helpers
+  const [projectId, setProjectId] = useState<string | null>(null);
+  const [loadingProject, setLoadingProject] = useState<boolean>(true);
+  const [saveTimeoutId, setSaveTimeoutId] = useState<any>(null);
+  const [submitting, setSubmitting] = useState<boolean>(false);
+
   // Brand & identity settings
-  const [brandSettings, setBrandSettings] = useState<BrandSettings>({
+  const [brandSettings, _setBrandSettings] = useState<BrandSettings>({
     primaryColor: "#2563EB",
     secondaryColor: "#1E293B",
     logos: [],
@@ -143,12 +151,12 @@ function RouteComponent() {
   });
 
   // Dynamic website sections list
-  const [sections, setSections] = useState<WebsiteSection[]>([]);
+  const [sections, _setSections] = useState<WebsiteSection[]>([]);
   
   // Dynamic step management
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [maxVisitedStep, setMaxVisitedStep] = useState<number>(1);
-  const [isFinishedAdding, setIsFinishedAdding] = useState<boolean>(false);
+  const [isFinishedAdding, _setIsFinishedAdding] = useState<boolean>(false);
   const [showAddSectionStep, setShowAddSectionStep] = useState<boolean>(false);
   const [draggedOverId, setDraggedOverId] = useState<string | null>(null);
   const [draggedSectionIndex, setDraggedSectionIndex] = useState<number | null>(null);
@@ -156,6 +164,39 @@ function RouteComponent() {
   const [touchPosition, setTouchPosition] = useState<{ x: number; y: number } | null>(null);
   const [isSubmitSuccess, setIsSubmitSuccess] = useState(false);
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [showValidationModal, setShowValidationModal] = useState(false);
+  const [draftSaveStatus, setDraftSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("saved");
+
+  // Refs for tracking latest state to guarantee save-on-unmount
+  const brandSettingsRef = useRef(brandSettings);
+  const sectionsRef = useRef(sections);
+  const isFinishedAddingRef = useRef(isFinishedAdding);
+
+  // Wrapper setters that synchronously update both React state and ref values
+  const setBrandSettings = (val: BrandSettings | ((prev: BrandSettings) => BrandSettings)) => {
+    _setBrandSettings(prev => {
+      const next = typeof val === "function" ? val(prev) : val;
+      brandSettingsRef.current = next;
+      return next;
+    });
+  };
+
+  const setSections = (val: WebsiteSection[] | ((prev: WebsiteSection[]) => WebsiteSection[])) => {
+    _setSections(prev => {
+      const next = typeof val === "function" ? val(prev) : val;
+      sectionsRef.current = next;
+      return next;
+    });
+  };
+
+  const setIsFinishedAdding = (val: boolean | ((prev: boolean) => boolean)) => {
+    _setIsFinishedAdding(prev => {
+      const next = typeof val === "function" ? val(prev) : val;
+      isFinishedAddingRef.current = next;
+      return next;
+    });
+  };
 
   // Compute dynamic steps list dynamically
   const dynamicSteps: WizardStep[] = [
@@ -209,42 +250,230 @@ function RouteComponent() {
 
   const activeStep = dynamicSteps.find(s => s.id === currentStep) || dynamicSteps[0];
 
-  // Load from local storage
+  // Load project draft from database (or fall back to local storage cache if offline/configuring)
   useEffect(() => {
-    const saved = localStorage.getItem(storageKey);
-    if (saved) {
-      try {
-        const parsed: SavedBrief = JSON.parse(saved);
-        if (parsed.brandSettings) {
-          setBrandSettings(prev => ({ ...prev, ...parsed.brandSettings }));
-        }
-        if (parsed.sections) {
-          setSections(parsed.sections);
-        }
-        if (typeof parsed.isFinishedAdding === "boolean") {
-          setIsFinishedAdding(parsed.isFinishedAdding);
-        }
-      } catch (e) {
-        console.error("Failed to parse website brief settings", e);
-      }
+    if (!activeBusiness?.id) {
+      setLoadingProject(false);
+      return;
     }
-  }, [storageKey]);
 
-  // Save to local storage helper
+    setLoadingProject(true);
+    clientGetOrCreateWebsiteDraftFn({ data: activeBusiness.id })
+      .then((project: any) => {
+        setProjectId(project.id);
+        if (project.data) {
+          const loadedBrand: BrandSettings = {
+            primaryColor: project.data.primaryColor || "#2563EB",
+            secondaryColor: project.data.secondaryColor || "#1E293B",
+            logos: project.data.logos || [],
+            logoDescription: project.data.logoDescription || "",
+            generalNotes: project.data.generalNotes || "",
+            targetAudience: project.data.targetAudience || "",
+            referenceLinks: project.data.referenceLinks || ""
+          };
+          setBrandSettings(loadedBrand);
+          setSections(project.data.blueprint || []);
+        } else {
+          // Fallback to local storage if data field is empty
+          const saved = localStorage.getItem(storageKey);
+          if (saved) {
+            try {
+              const parsed: SavedBrief = JSON.parse(saved);
+              if (parsed.brandSettings) setBrandSettings(prev => ({ ...prev, ...parsed.brandSettings }));
+              if (parsed.sections) setSections(parsed.sections);
+              if (typeof parsed.isFinishedAdding === "boolean") setIsFinishedAdding(parsed.isFinishedAdding);
+            } catch (e) {
+              console.error("Failed to parse website brief settings", e);
+            }
+          }
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to load project draft from Firestore:", err);
+        // Fallback to local storage if API error
+        const saved = localStorage.getItem(storageKey);
+        if (saved) {
+          try {
+            const parsed: SavedBrief = JSON.parse(saved);
+            if (parsed.brandSettings) setBrandSettings(prev => ({ ...prev, ...parsed.brandSettings }));
+            if (parsed.sections) setSections(parsed.sections);
+            if (typeof parsed.isFinishedAdding === "boolean") setIsFinishedAdding(parsed.isFinishedAdding);
+          } catch (e) {
+            console.error("Failed to parse website brief settings", e);
+          }
+        }
+      })
+      .finally(() => {
+        setLoadingProject(false);
+      });
+  }, [activeBusiness?.id, storageKey]);
+
+  // Debounced save progress function to write to database in background
   const saveProgress = (
     updatedBrand: BrandSettings,
     updatedSections: WebsiteSection[],
     finishedState: boolean = isFinishedAdding
   ) => {
+    // 1. Instantly write to local storage (local backup cache)
     const dataToSave: SavedBrief = {
       brandSettings: updatedBrand,
       sections: updatedSections,
       isFinishedAdding: finishedState
     };
     localStorage.setItem(storageKey, JSON.stringify(dataToSave));
+
+    // 2. Debounced background save to Firestore via clientSaveProjectFn
+    if (!projectId || !activeBusiness?.id) return;
+
+    setDraftSaveStatus("saving");
+
+    if (saveTimeoutId) {
+      clearTimeout(saveTimeoutId);
+    }
+
+    const newTimeout = setTimeout(async () => {
+      try {
+        await clientSaveProjectFn({
+          data: {
+            id: projectId,
+            businessId: activeBusiness.id,
+            name: "Website Blueprint Draft",
+            domain: "Website",
+            services: ["Website Development"],
+            status: "User Draft",
+            assignee: "Admin",
+            data: {
+              primaryColor: updatedBrand.primaryColor,
+              secondaryColor: updatedBrand.secondaryColor,
+              logos: updatedBrand.logos,
+              logoDescription: updatedBrand.logoDescription,
+              targetAudience: updatedBrand.targetAudience,
+              referenceLinks: updatedBrand.referenceLinks,
+              generalNotes: updatedBrand.generalNotes,
+              blueprint: updatedSections.filter(s => s.type !== "placeholder")
+            },
+            startDate: new Date(),
+            createdAt: new Date(),
+            updatedAt: new Date()
+          }
+        });
+        console.log("Successfully saved project draft progress to server.");
+        setDraftSaveStatus("saved");
+      } catch (err) {
+        console.error("Failed to auto-save project progress to server:", err);
+        setDraftSaveStatus("error");
+      }
+    }, 30000);
+
+    setSaveTimeoutId(newTimeout);
   };
 
+  // Instant save progress function to write to database immediately when navigating steps
+  const saveProgressInstant = async (
+    updatedBrand: BrandSettings,
+    updatedSections: WebsiteSection[],
+    finishedState: boolean = isFinishedAdding
+  ) => {
+    // 1. Instantly write to local storage (local backup cache)
+    const dataToSave: SavedBrief = {
+      brandSettings: updatedBrand,
+      sections: updatedSections,
+      isFinishedAdding: finishedState
+    };
+    localStorage.setItem(storageKey, JSON.stringify(dataToSave));
+
+    // 2. Immediate save to Firestore via clientSaveProjectFn
+    if (!projectId || !activeBusiness?.id) return;
+
+    setDraftSaveStatus("saving");
+
+    if (saveTimeoutId) {
+      clearTimeout(saveTimeoutId);
+    }
+
+    try {
+      await clientSaveProjectFn({
+        data: {
+          id: projectId,
+          businessId: activeBusiness.id,
+          name: "Website Blueprint Draft",
+          domain: "Website",
+          services: ["Website Development"],
+          status: "User Draft",
+          assignee: "Admin",
+          data: {
+            primaryColor: updatedBrand.primaryColor,
+            secondaryColor: updatedBrand.secondaryColor,
+            logos: updatedBrand.logos,
+            logoDescription: updatedBrand.logoDescription,
+            targetAudience: updatedBrand.targetAudience,
+            referenceLinks: updatedBrand.referenceLinks,
+            generalNotes: updatedBrand.generalNotes,
+            blueprint: updatedSections.filter(s => s.type !== "placeholder")
+          },
+          startDate: new Date(),
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+      });
+      console.log("Successfully saved project draft progress to server instantly.");
+      setDraftSaveStatus("saved");
+    } catch (err) {
+      console.error("Failed to auto-save project progress to server instantly:", err);
+      setDraftSaveStatus("error");
+    }
+  };
+
+  // Auto-save on page leave / unmount
+  useEffect(() => {
+    return () => {
+      if (projectId && activeBusiness?.id) {
+        clientSaveProjectFn({
+          data: {
+            id: projectId,
+            businessId: activeBusiness.id,
+            name: "Website Blueprint Draft",
+            domain: "Website",
+            services: ["Website Development"],
+            status: "User Draft",
+            assignee: "Admin",
+            data: {
+              primaryColor: brandSettingsRef.current.primaryColor,
+              secondaryColor: brandSettingsRef.current.secondaryColor,
+              logos: brandSettingsRef.current.logos,
+              logoDescription: brandSettingsRef.current.logoDescription,
+              targetAudience: brandSettingsRef.current.targetAudience,
+              referenceLinks: brandSettingsRef.current.referenceLinks,
+              generalNotes: brandSettingsRef.current.generalNotes,
+              blueprint: sectionsRef.current.filter(s => s.type !== "placeholder")
+            },
+            startDate: new Date(),
+            createdAt: new Date(),
+            updatedAt: new Date()
+          }
+        })
+          .then(() => {
+            console.log("Successfully saved project draft progress to server on unmount.");
+          })
+          .catch((err) => {
+            console.error("Failed to auto-save draft on unmount:", err);
+          });
+      }
+    };
+  }, [projectId, activeBusiness?.id]);
+
+  // Auto-hide draft save status indicator after 3 seconds
+  useEffect(() => {
+    if (draftSaveStatus === "saved" || draftSaveStatus === "error") {
+      const timer = setTimeout(() => {
+        setDraftSaveStatus("idle");
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [draftSaveStatus]);
+
   const cleanAndNavigate = (action: "next" | "prev" | "goto", targetStep?: number) => {
+    saveProgressInstant(brandSettings, sections, isFinishedAdding);
     const isLeavingAddSectionStep = activeStep.type === "select-section" && !(activeStep as any).sectionId;
     const placeholderIdx = sections.findIndex(s => s.type === "placeholder");
 
@@ -364,6 +593,11 @@ function RouteComponent() {
   const processFiles = async (targetId: string, files: FileList | null, isLogo: boolean = false) => {
     if (!files) return;
 
+    if (!projectId) {
+      alert("Project draft is initializing. Please wait a moment and try again.");
+      return;
+    }
+
     const loadedImages: ImageFile[] = [];
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
@@ -375,12 +609,7 @@ function RouteComponent() {
       }
 
       try {
-        const base64Url = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.readAsDataURL(file);
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = e => reject(e);
-        });
+        const downloadUrl = await uploadFileToStorage(file, "projects", projectId, "projectImg");
 
         const sizeStr = file.size > 1024 * 1024 
           ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
@@ -389,17 +618,22 @@ function RouteComponent() {
         loadedImages.push({
           id: `${file.name}_${Date.now()}_${i}`,
           name: file.name,
-          url: base64Url,
+          url: downloadUrl,
           size: sizeStr
         });
       } catch (err) {
-        console.error("Error reading file", err);
+        console.error("Error uploading file", err);
+        alert(`Failed to upload ${file.name} to storage.`);
       }
     }
 
     if (isLogo) {
       if ((brandSettings.logos.length + loadedImages.length) > 2) {
         alert("You can only upload up to 2 logo images.");
+        // Clean up any uploaded images from Storage that exceeded the limit
+        for (const img of loadedImages) {
+          await deleteFileFromStorage(img.url);
+        }
         return;
       }
       const newSettings = {
@@ -412,6 +646,10 @@ function RouteComponent() {
       const targetSec = sections.find(s => s.id === targetId);
       if (targetSec && (targetSec.images.length + loadedImages.length) > limits.maxImagesPerSection) {
         alert(`You can only upload up to ${limits.maxImagesPerSection} reference images per section on the ${currentPlan} plan.`);
+        // Clean up any uploaded images from Storage that exceeded the limit
+        for (const img of loadedImages) {
+          await deleteFileFromStorage(img.url);
+        }
         return;
       }
 
@@ -426,8 +664,12 @@ function RouteComponent() {
     }
   };
 
-  const removeImage = (sectionId: string, imageId: string, isLogo: boolean = false) => {
+  const removeImage = async (sectionId: string, imageId: string, isLogo: boolean = false) => {
     if (isLogo) {
+      const targetImg = brandSettings.logos.find(img => img.id === imageId);
+      if (targetImg) {
+        await deleteFileFromStorage(targetImg.url);
+      }
       const newSettings = {
         ...brandSettings,
         logos: brandSettings.logos.filter(img => img.id !== imageId)
@@ -435,6 +677,11 @@ function RouteComponent() {
       setBrandSettings(newSettings);
       saveProgress(newSettings, sections, isFinishedAdding);
     } else {
+      const targetSec = sections.find(s => s.id === sectionId);
+      const targetImg = targetSec?.images.find(img => img.id === imageId);
+      if (targetImg) {
+        await deleteFileFromStorage(targetImg.url);
+      }
       const updatedSections = sections.map(s => {
         if (s.id === sectionId) {
           return { ...s, images: s.images.filter(img => img.id !== imageId) };
@@ -508,9 +755,19 @@ function RouteComponent() {
     saveProgress(brandSettings, updatedSections, isFinishedAdding);
   };
 
-  const handleRemoveSection = (id: string) => {
+  const handleRemoveSection = async (id: string) => {
     const sectionIndex = sections.findIndex(s => s.id === id);
     if (sectionIndex !== -1) {
+      const targetSec = sections[sectionIndex];
+      if (targetSec.images && targetSec.images.length > 0) {
+        for (const img of targetSec.images) {
+          try {
+            await deleteFileFromStorage(img.url);
+          } catch (err) {
+            console.error("Failed to delete section image from storage:", err);
+          }
+        }
+      }
       const updatedSections = [...sections];
       updatedSections[sectionIndex] = {
         id: `placeholder_${Date.now()}`,
@@ -612,26 +869,126 @@ function RouteComponent() {
     setDraggedOverCardIndex(null);
     setTouchPosition(null);
   };
-  const handleSubmitBrief = () => {
-    setIsSubmitSuccess(true);
-    localStorage.removeItem(storageKey);
-    setTimeout(() => {
-      navigate({ to: "/projects" });
-    }, 2500);
+  const validateBrief = (): string[] => {
+    const errors: string[] = [];
+
+    // 1. Check Colors
+    if (!brandSettings.primaryColor || !brandSettings.secondaryColor) {
+      errors.push("Brand colors must be specified.");
+    }
+
+    // 2. Check Logo/Description
+    const hasLogos = brandSettings.logos.length > 0;
+    const hasLogoDesc = brandSettings.logoDescription.trim().length > 0;
+    if (!hasLogos && !hasLogoDesc) {
+      errors.push("Please upload at least one logo image or describe your logo concept.");
+    }
+
+    // 3. Check Sections existence
+    const realSections = sections.filter(s => s.type !== "placeholder");
+    if (realSections.length === 0) {
+      errors.push("At least one website section must be added to your brief blueprint.");
+    } else {
+      // 4. Check Section Details
+      realSections.forEach((section, idx) => {
+        const secNum = idx + 1;
+        const displayTitle = section.type === "custom" && section.title ? `"${section.title}"` : `${section.title || "Section"} (#${secNum})`;
+        
+        if (section.type === "custom" && !section.title.trim()) {
+          errors.push(`Custom Section #${secNum} must have a title.`);
+        }
+        if (!section.description || !section.description.trim()) {
+          errors.push(`Please provide details/description for section: ${displayTitle}.`);
+        }
+      });
+    }
+
+    return errors;
+  };
+
+  const handleSubmitBrief = async () => {
+    if (!projectId || !activeBusiness?.id) return;
+
+    if (saveTimeoutId) {
+      clearTimeout(saveTimeoutId);
+    }
+
+    setSubmitting(true);
+    try {
+      const result = await clientSaveProjectFn({
+        data: {
+          id: projectId,
+          businessId: activeBusiness.id,
+          name: "Website Blueprint",
+          domain: "Website",
+          services: ["Website Development"],
+          status: "Requested",
+          assignee: "Admin",
+          data: {
+            primaryColor: brandSettings.primaryColor,
+            secondaryColor: brandSettings.secondaryColor,
+            logos: brandSettings.logos,
+            logoDescription: brandSettings.logoDescription,
+            targetAudience: brandSettings.targetAudience,
+            referenceLinks: brandSettings.referenceLinks,
+            generalNotes: brandSettings.generalNotes,
+            blueprint: sections.filter(s => s.type !== "placeholder")
+          },
+          startDate: new Date(),
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+      });
+
+      if (result.success) {
+        setIsSubmitSuccess(true);
+        localStorage.removeItem(storageKey);
+        setTimeout(() => {
+          navigate({ to: "/projects" });
+        }, 2500);
+      }
+    } catch (err: any) {
+      console.error("Failed to submit website brief:", err);
+      alert(err.message || "An unexpected error occurred during submission.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const currentSection = activeStep.type === "edit-section" || activeStep.type === "select-section"
     ? sections.find(s => s.id === (activeStep as any).sectionId) 
     : null;
 
+  if (loadingProject) {
+    return (
+      <div className="fixed inset-0 w-screen h-screen bg-white flex flex-col items-center justify-center z-50">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 rounded-full border-4 border-blue-100 border-t-blue-600 animate-spin" />
+          <h2 className="text-xs font-extrabold text-gray-600 tracking-wider uppercase">Loading website blueprint...</h2>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 w-screen h-full overflow-hidden bg-white text-[#0F172A] font-sans select-none flex flex-row overscroll-none">
+      {submitting && (
+        <div className="fixed inset-0 bg-white/80 backdrop-blur-xs flex flex-col items-center justify-center z-55">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-10 h-10 rounded-full border-4 border-blue-100 border-t-blue-600 animate-spin" />
+            <h2 className="text-xs font-extrabold text-gray-600 tracking-wider uppercase">Submitting Website Brief...</h2>
+          </div>
+        </div>
+      )}
       
       {/* 1. Left Sidebar Navigation - Seamless and thin (Only show steps visited/reached) */}
       <aside className="w-6 md:w-12 shrink-0 flex flex-col justify-between items-end py-10 z-20 h-full">
         {/* Back Button */}
         <Link
           to="/add"
+          onClick={() => {
+            saveProgressInstant(brandSettings, sections, isFinishedAdding);
+          }}
           className="hover:bg-blue-50 hover:text-blue-600 rounded-full transition-colors text-gray-400 cursor-pointer shrink-0"
           title="Back to Services"
         >
@@ -1300,9 +1657,39 @@ function RouteComponent() {
               )}
             </div>
 
+            {/* Draft Saving Status Indicator */}
+            <div className="flex items-center gap-1.5 text-gray-400 select-none mx-2">
+              {draftSaveStatus === "saving" && (
+                <>
+                  <div className="w-2.5 h-2.5 rounded-full border border-blue-200 border-t-blue-600 animate-spin" />
+                  <span className="text-[10px] font-medium text-gray-400">Saving draft...</span>
+                </>
+              )}
+              {draftSaveStatus === "saved" && (
+                <>
+                  <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
+                  <span className="text-[10px] font-semibold text-emerald-600">Draft saved</span>
+                </>
+              )}
+              {draftSaveStatus === "error" && (
+                <>
+                  <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
+                  <span className="text-[10px] font-semibold text-red-500">Save failed</span>
+                </>
+              )}
+            </div>
+
             {currentStep === dynamicSteps.length ? (
               <button
-                onClick={() => setShowSubmitConfirm(true)}
+                onClick={() => {
+                  const errors = validateBrief();
+                  if (errors.length > 0) {
+                    setValidationErrors(errors);
+                    setShowValidationModal(true);
+                  } else {
+                    setShowSubmitConfirm(true);
+                  }
+                }}
                 className="px-4 sm:px-6 py-2.5 sm:py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-[10px] sm:text-xs rounded-xl shadow-xs cursor-pointer transition-all active:scale-95 whitespace-nowrap"
               >
                 Submit Brief
@@ -1364,6 +1751,37 @@ function RouteComponent() {
           <span className="font-extrabold text-xs text-[#0F172A] truncate">
             {sections[draggedSectionIndex]?.title || "Moving section..."}
           </span>
+        </div>
+      )}
+
+      {/* 6. Validation Errors Modal */}
+      {showValidationModal && (
+        <div className="fixed inset-0 bg-[#0F172A]/40 backdrop-blur-xs flex items-center justify-center z-55 animate-in fade-in duration-200">
+          <div className="bg-white p-6 rounded-[24px] max-w-md w-full mx-4 shadow-xl border border-gray-150 text-left animate-in zoom-in-95 duration-200">
+            <div className="w-12 h-12 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mb-4">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <h3 className="text-lg font-extrabold text-[#0F172A] tracking-tight">Missing Information</h3>
+            <p className="text-xs text-gray-500 mt-1.5 leading-relaxed">
+              Please resolve the following required items before submitting your blueprint brief:
+            </p>
+            <div className="mt-4 max-h-[200px] overflow-y-auto pr-1 space-y-2 border-y border-gray-100 py-3">
+              {validationErrors.map((err, i) => (
+                <div key={i} className="flex items-start gap-2 text-xs font-semibold text-gray-700 leading-relaxed">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
+                  <span>{err}</span>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-end mt-5">
+              <button
+                onClick={() => setShowValidationModal(false)}
+                className="px-5 py-2.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors cursor-pointer"
+              >
+                Go Back & Fix
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
