@@ -126,8 +126,6 @@ const SECTION_TEMPLATES = [
 function RouteComponent() {
   const { activeBusiness } = useBusiness();
   const navigate = useNavigate();
-  
-  const storageKey = activeBusiness ? `website_brief_${activeBusiness.id}` : "website_brief_default";
 
   // Resolve business plan limits
   const currentPlan = activeBusiness?.plan || "Basic";
@@ -250,7 +248,7 @@ function RouteComponent() {
 
   const activeStep = dynamicSteps.find(s => s.id === currentStep) || dynamicSteps[0];
 
-  // Load project draft from database (or fall back to local storage cache if offline/configuring)
+  // Load project draft from database
   useEffect(() => {
     if (!activeBusiness?.id) {
       setLoadingProject(false);
@@ -273,40 +271,15 @@ function RouteComponent() {
           };
           setBrandSettings(loadedBrand);
           setSections(project.data.blueprint || []);
-        } else {
-          // Fallback to local storage if data field is empty
-          const saved = localStorage.getItem(storageKey);
-          if (saved) {
-            try {
-              const parsed: SavedBrief = JSON.parse(saved);
-              if (parsed.brandSettings) setBrandSettings(prev => ({ ...prev, ...parsed.brandSettings }));
-              if (parsed.sections) setSections(parsed.sections);
-              if (typeof parsed.isFinishedAdding === "boolean") setIsFinishedAdding(parsed.isFinishedAdding);
-            } catch (e) {
-              console.error("Failed to parse website brief settings", e);
-            }
-          }
         }
       })
       .catch((err) => {
         console.error("Failed to load project draft from Firestore:", err);
-        // Fallback to local storage if API error
-        const saved = localStorage.getItem(storageKey);
-        if (saved) {
-          try {
-            const parsed: SavedBrief = JSON.parse(saved);
-            if (parsed.brandSettings) setBrandSettings(prev => ({ ...prev, ...parsed.brandSettings }));
-            if (parsed.sections) setSections(parsed.sections);
-            if (typeof parsed.isFinishedAdding === "boolean") setIsFinishedAdding(parsed.isFinishedAdding);
-          } catch (e) {
-            console.error("Failed to parse website brief settings", e);
-          }
-        }
       })
       .finally(() => {
         setLoadingProject(false);
       });
-  }, [activeBusiness?.id, storageKey]);
+  }, [activeBusiness?.id]);
 
   // Debounced save progress function to write to database in background
   const saveProgress = (
@@ -314,15 +287,7 @@ function RouteComponent() {
     updatedSections: WebsiteSection[],
     finishedState: boolean = isFinishedAdding
   ) => {
-    // 1. Instantly write to local storage (local backup cache)
-    const dataToSave: SavedBrief = {
-      brandSettings: updatedBrand,
-      sections: updatedSections,
-      isFinishedAdding: finishedState
-    };
-    localStorage.setItem(storageKey, JSON.stringify(dataToSave));
-
-    // 2. Debounced background save to Firestore via clientSaveProjectFn
+    // Debounced background save to Firestore via clientSaveProjectFn
     if (!projectId || !activeBusiness?.id) return;
 
     setDraftSaveStatus("saving");
@@ -378,15 +343,7 @@ function RouteComponent() {
     updatedSections: WebsiteSection[],
     finishedState: boolean = isFinishedAdding
   ) => {
-    // 1. Instantly write to local storage (local backup cache)
-    const dataToSave: SavedBrief = {
-      brandSettings: updatedBrand,
-      sections: updatedSections,
-      isFinishedAdding: finishedState
-    };
-    localStorage.setItem(storageKey, JSON.stringify(dataToSave));
-
-    // 2. Immediate save to Firestore via clientSaveProjectFn
+    // Immediate save to Firestore via clientSaveProjectFn
     if (!projectId || !activeBusiness?.id) return;
 
     setDraftSaveStatus("saving");
@@ -958,7 +915,6 @@ function RouteComponent() {
 
       if (result.success) {
         setIsSubmitSuccess(true);
-        localStorage.removeItem(storageKey);
         setTimeout(() => {
           navigate({ to: "/projects" });
         }, 2500);

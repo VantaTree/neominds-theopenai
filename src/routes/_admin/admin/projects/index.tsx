@@ -658,8 +658,11 @@ function ProjectsPage() {
         }
 
         let matchStatus = true;
-        if (statusFilter !== "All Status")
+        if (statusFilter !== "All Status") {
           matchStatus = status === statusFilter;
+        } else {
+          matchStatus = status !== "User Draft";
+        }
 
         let matchServices = true;
         if (selectedServices.length > 0) {
@@ -728,7 +731,7 @@ function ProjectsPage() {
       Automation: [],
     };
     filteredProjects.forEach((p) => {
-      if (p.status !== "Requested") {
+      if (p.status !== "Requested" && p.status !== "User Draft") {
         if (map[p.domain]) {
           map[p.domain].push(p);
         }
@@ -738,7 +741,9 @@ function ProjectsPage() {
   }, [filteredProjects]);
 
   const userDraftProjects = useMemo(() => {
-    return filteredProjects.filter((p) => p.status === "Requested");
+    return filteredProjects.filter(
+      (p) => p.status === "Requested" || p.status === "User Draft",
+    );
   }, [filteredProjects]);
 
   const domainCounts = useMemo(() => {
@@ -1249,7 +1254,7 @@ function ProjectsPage() {
                     },
                     {
                       label: "On Hold",
-                      bg: "rgba(224, 86, 36, 0.1)",
+                      bg: "rgba(239, 83, 80, 0.1)",
                       color: "var(--color-mm-red)",
                     },
                     {
@@ -1275,7 +1280,7 @@ function ProjectsPage() {
                   ].map((opt) => {
                     const count =
                       opt.label === "All Status"
-                        ? projectList.length
+                        ? projectList.filter((p) => p.status !== "User Draft").length
                         : projectList.filter((p) => {
                             const status =
                               p.status ||
@@ -1666,7 +1671,7 @@ function ProjectsPage() {
               <div className="space-y-3">
                 <h3 className="text-base font-bold text-mm-dark flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-amber-500" />
-                  Requested
+                  {statusFilter === "User Draft" ? "User Draft" : "Requested"}
                   <span className="text-xs font-medium text-mm-gray">
                     ({userDraftProjects.length})
                   </span>
@@ -3084,7 +3089,7 @@ function ProjectsPage() {
           const client = biz?.businessName || "No business";
           return (
             <div
-              className="fixed inset-0 z-[110] flex items-center justify-center p-4 animate-in fade-in duration-200"
+              className="fixed inset-0 z-110 flex items-center justify-center p-4 animate-in fade-in duration-200"
               style={{ background: "rgba(0,0,0,0.3)" }}
             >
               <div
@@ -3140,7 +3145,7 @@ function ProjectsPage() {
       {/* Lightbox Modal */}
       {lightboxImage && (
         <div
-          className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+          className="fixed inset-0 z-120 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
           onClick={() => setLightboxImage(null)}
         >
           <div
@@ -3164,7 +3169,7 @@ function ProjectsPage() {
 
       {toast && (
         <div
-          className="fixed bottom-6 right-6 z-[100] px-5 py-3 rounded-xl shadow-lg transition-all animate-in slide-in-from-bottom-5"
+          className="fixed bottom-6 right-6 z-100 px-5 py-3 rounded-xl shadow-lg transition-all animate-in slide-in-from-bottom-5"
           style={{
             background: "rgba(92, 177, 62, 0.1)",
             border: "1px solid var(--color-mm-green)",
