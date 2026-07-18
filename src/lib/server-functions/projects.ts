@@ -43,6 +43,20 @@ export const getProjectsByBusinessFn = createServerFn({ method: "GET" })
     return projectService.getProjectsByBusiness(businessId);
   });
 
+export const clientGetOrCreateWebsiteDraftFn = createServerFn({ method: "POST" })
+  .validator((businessId: any) => {
+    if (typeof businessId !== "string" || !businessId.trim()) {
+      throw new Error("BadRequest: businessId must be a non-empty string");
+    }
+    return businessId;
+  })
+  .middleware([authenticatedMiddleware])
+  .handler(async ({ data: businessId }) => {
+    const { WebsiteProjectService } = await import("../server/services/website-project.service");
+    const websiteService = new WebsiteProjectService();
+    return websiteService.createOrGetWebsiteDraft(businessId);
+  });
+
 export const clientSaveProjectFn = createServerFn({ method: "POST" })
   .validator((d: any) => SaveProjectSchema.parse(d))
   .middleware([authenticatedMiddleware])
@@ -78,6 +92,15 @@ export const clientSaveProjectFn = createServerFn({ method: "POST" })
       throw new Error("Forbidden: Client users can only save projects with 'User Draft' or 'Requested' status.");
     }
 
-    await projectService.saveProject(data);
+    // Delegate Website Blueprint specific validation and compilation to WebsiteProjectService
+    if (data.domain === "Website") {
+      const { WebsiteProjectService } = await import("../server/services/website-project.service");
+      const websiteService = new WebsiteProjectService();
+      await websiteService.validateAndSaveWebsiteDraft(data, businessId);
+    } else {
+      // General project save for other domains
+      await projectService.saveProject(data);
+    }
+
     return { success: true };
   });

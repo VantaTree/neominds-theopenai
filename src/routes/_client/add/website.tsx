@@ -1,6 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useBusiness } from "@/hooks/use-business";
+import { PLAN_LIMITS } from "@/data/plans";
+import { clientGetOrCreateWebsiteDraftFn, clientSaveProjectFn } from "@/lib/server-functions/projects";
+import { uploadFileToStorage, deleteFileFromStorage } from "@/lib/firebase";
 import {
   ArrowLeft,
   ArrowRight,
@@ -9,9 +12,10 @@ import {
   UploadCloud,
   ChevronUp,
   ChevronDown,
-  Layers,
   CheckCircle,
-  HelpCircle
+  HelpCircle,
+  AlertTriangle,
+  GripVertical
 } from "lucide-react";
 
 export const Route = createFileRoute("/_client/add/website")({
@@ -46,6 +50,14 @@ interface BrandSettings {
 interface SavedBrief {
   brandSettings: BrandSettings;
   sections: WebsiteSection[];
+  isFinishedAdding?: boolean;
+}
+
+interface WizardStep {
+  id: number;
+  type: string;
+  label: string;
+  sectionId?: string;
 }
 
 const SECTION_TEMPLATES = [
@@ -83,21 +95,50 @@ const SECTION_TEMPLATES = [
     type: "faq",
     title: "FAQ Section",
     defaultDescription: "Accordion of frequently asked questions covering booking, cancellation policies, pricing details, and service deliverable times."
+  },
+  {
+    type: "vision",
+    title: "Vision & Mission",
+    defaultDescription: "A section outlining our long-term company vision, immediate mission goals, and our core underlying philosophy."
+  },
+  {
+    type: "team",
+    title: "Our Team",
+    defaultDescription: "A profile section introducing team members, founders, leadership, and their bios with headshots and role descriptions."
+  },
+  {
+    type: "pricing",
+    title: "Pricing Plans",
+    defaultDescription: "A grid comparing our different pricing plans, detailing the features included in each plan and action buttons to select a plan."
+  },
+  {
+    type: "portfolio",
+    title: "Portfolio/Gallery",
+    defaultDescription: "A masonry grid or catalog displaying case studies, past projects, product photography, or recent work highlights."
+  },
+  {
+    type: "footer",
+    title: "Footer Section",
+    defaultDescription: "The bottom area containing site-wide links, social media icons, copyright declarations, newsletters, and contact details."
   }
 ];
 
 function RouteComponent() {
   const { activeBusiness } = useBusiness();
   const navigate = useNavigate();
-  
-  const storageKey = activeBusiness ? `website_brief_${activeBusiness.id}` : "website_brief_default";
 
-  // Step state
-  const [currentStep, setCurrentStep] = useState<number>(1);
-  const [maxVisitedStep, setMaxVisitedStep] = useState<number>(1);
+  // Resolve business plan limits
+  const currentPlan = activeBusiness?.plan || "Basic";
+  const limits = PLAN_LIMITS[currentPlan] || PLAN_LIMITS["Basic"];
+
+  // Draft project state & status helpers
+  const [projectId, setProjectId] = useState<string | null>(null);
+  const [loadingProject, setLoadingProject] = useState<boolean>(true);
+  const [saveTimeoutId, setSaveTimeoutId] = useState<any>(null);
+  const [submitting, setSubmitting] = useState<boolean>(false);
 
   // Brand & identity settings
-  const [brandSettings, setBrandSettings] = useState<BrandSettings>({
+  const [brandSettings, _setBrandSettings] = useState<BrandSettings>({
     primaryColor: "#2563EB",
     secondaryColor: "#1E293B",
     logos: [],
@@ -108,76 +149,423 @@ function RouteComponent() {
   });
 
   // Dynamic website sections list
-  const [sections, setSections] = useState<WebsiteSection[]>([]);
+  const [sections, _setSections] = useState<WebsiteSection[]>([]);
   
-  // Section workspace views
-  const [sectionWorkspaceView, setSectionWorkspaceView] = useState<"list" | "select" | "edit">("list");
-  const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
-  
+  // Dynamic step management
+  const [currentStep, setCurrentStep] = useState<number>(1);
+  const [maxVisitedStep, setMaxVisitedStep] = useState<number>(1);
+  const [isFinishedAdding, _setIsFinishedAdding] = useState<boolean>(false);
+  const [showAddSectionStep, setShowAddSectionStep] = useState<boolean>(false);
   const [draggedOverId, setDraggedOverId] = useState<string | null>(null);
+  const [draggedSectionIndex, setDraggedSectionIndex] = useState<number | null>(null);
+  const [draggedOverCardIndex, setDraggedOverCardIndex] = useState<number | null>(null);
+  const [touchPosition, setTouchPosition] = useState<{ x: number; y: number } | null>(null);
   const [isSubmitSuccess, setIsSubmitSuccess] = useState(false);
+  const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [showValidationModal, setShowValidationModal] = useState(false);
+  const [draftSaveStatus, setDraftSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("saved");
 
-  // Load from local storage
+  // Refs for tracking latest state to guarantee save-on-unmount
+  const brandSettingsRef = useRef(brandSettings);
+  const sectionsRef = useRef(sections);
+  const isFinishedAddingRef = useRef(isFinishedAdding);
+
+  // Wrapper setters that synchronously update both React state and ref values
+  const setBrandSettings = (val: BrandSettings | ((prev: BrandSettings) => BrandSettings)) => {
+    _setBrandSettings(prev => {
+      const next = typeof val === "function" ? val(prev) : val;
+      brandSettingsRef.current = next;
+      return next;
+    });
+  };
+
+  const setSections = (val: WebsiteSection[] | ((prev: WebsiteSection[]) => WebsiteSection[])) => {
+    _setSections(prev => {
+      const next = typeof val === "function" ? val(prev) : val;
+      sectionsRef.current = next;
+      return next;
+    });
+  };
+
+  const setIsFinishedAdding = (val: boolean | ((prev: boolean) => boolean)) => {
+    _setIsFinishedAdding(prev => {
+      const next = typeof val === "function" ? val(prev) : val;
+      isFinishedAddingRef.current = next;
+      return next;
+    });
+  };
+
+  // Compute dynamic steps list dynamically
+  const dynamicSteps: WizardStep[] = [
+    { id: 1, type: "colors", label: "Brand Colors" },
+    { id: 2, type: "logo", label: "Brand Logo" },
+  ];
+
+  // Add existing sections as steps
+  sections.forEach((sec, idx) => {
+    if (sec.type === "placeholder") {
+      dynamicSteps.push({
+        id: 3 + idx,
+        type: "select-section",
+        sectionId: sec.id,
+        label: "Add Section"
+      });
+    } else {
+      dynamicSteps.push({
+        id: 3 + idx,
+        type: "edit-section",
+        sectionId: sec.id,
+        label: sec.title
+      });
+    }
+  });
+
+  const canAddMore = sections.length < limits.maxWebsiteSections;
+  const showAddStep = canAddMore && showAddSectionStep;
+
+  if (showAddStep) {
+    dynamicSteps.push({
+      id: 3 + sections.length,
+      type: "select-section",
+      label: "Add Section"
+    });
+  }
+
+  const offset = showAddStep ? 1 : 0;
+  dynamicSteps.push(
+    {
+      id: 3 + sections.length + offset,
+      type: "notes",
+      label: "Final Details"
+    },
+    {
+      id: 4 + sections.length + offset,
+      type: "review",
+      label: "Review & Order"
+    }
+  );
+
+  const activeStep = dynamicSteps.find(s => s.id === currentStep) || dynamicSteps[0];
+
+  // Load project draft from database
   useEffect(() => {
-    const saved = localStorage.getItem(storageKey);
-    if (saved) {
+    if (!activeBusiness?.id) {
+      setLoadingProject(false);
+      return;
+    }
+
+    setLoadingProject(true);
+    clientGetOrCreateWebsiteDraftFn({ data: activeBusiness.id })
+      .then((project: any) => {
+        setProjectId(project.id);
+        if (project.data) {
+          const loadedBrand: BrandSettings = {
+            primaryColor: project.data.primaryColor || "#2563EB",
+            secondaryColor: project.data.secondaryColor || "#1E293B",
+            logos: project.data.logos || [],
+            logoDescription: project.data.logoDescription || "",
+            generalNotes: project.data.generalNotes || "",
+            targetAudience: project.data.targetAudience || "",
+            referenceLinks: project.data.referenceLinks || ""
+          };
+          setBrandSettings(loadedBrand);
+          setSections(project.data.blueprint || []);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to load project draft from Firestore:", err);
+      })
+      .finally(() => {
+        setLoadingProject(false);
+      });
+  }, [activeBusiness?.id]);
+
+  // Debounced save progress function to write to database in background
+  const saveProgress = (
+    updatedBrand: BrandSettings,
+    updatedSections: WebsiteSection[],
+    finishedState: boolean = isFinishedAdding
+  ) => {
+    // Debounced background save to Firestore via clientSaveProjectFn
+    if (!projectId || !activeBusiness?.id) return;
+
+    setDraftSaveStatus("saving");
+
+    if (saveTimeoutId) {
+      clearTimeout(saveTimeoutId);
+    }
+
+    const newTimeout = setTimeout(async () => {
       try {
-        const parsed: SavedBrief = JSON.parse(saved);
-        if (parsed.brandSettings) {
-          setBrandSettings(prev => ({
-            ...prev,
-            ...parsed.brandSettings
-          }));
+        await clientSaveProjectFn({
+          data: {
+            id: projectId,
+            businessId: activeBusiness.id,
+            name: "Website Blueprint Draft",
+            domain: "Website",
+            services: ["Website Development"],
+            status: "User Draft",
+            assignee: "Admin Reviewer",
+            assets: [
+              ...brandSettings.logos.map(img => img.url),
+              ...sections.flatMap(section => section.images.map(img => img.url))
+            ],
+            data: {
+              primaryColor: updatedBrand.primaryColor,
+              secondaryColor: updatedBrand.secondaryColor,
+              logos: updatedBrand.logos,
+              logoDescription: updatedBrand.logoDescription,
+              targetAudience: updatedBrand.targetAudience,
+              referenceLinks: updatedBrand.referenceLinks,
+              generalNotes: updatedBrand.generalNotes,
+              blueprint: updatedSections.filter(s => s.type !== "placeholder")
+            },
+            startDate: new Date(),
+            createdAt: new Date(),
+            updatedAt: new Date()
+          }
+        });
+        console.log("Successfully saved project draft progress to server.");
+        setDraftSaveStatus("saved");
+      } catch (err) {
+        console.error("Failed to auto-save project progress to server:", err);
+        setDraftSaveStatus("error");
+      }
+    }, 30000);
+
+    setSaveTimeoutId(newTimeout);
+  };
+
+  // Instant save progress function to write to database immediately when navigating steps
+  const saveProgressInstant = async (
+    updatedBrand: BrandSettings,
+    updatedSections: WebsiteSection[],
+    finishedState: boolean = isFinishedAdding
+  ) => {
+    // Immediate save to Firestore via clientSaveProjectFn
+    if (!projectId || !activeBusiness?.id) return;
+
+    setDraftSaveStatus("saving");
+
+    if (saveTimeoutId) {
+      clearTimeout(saveTimeoutId);
+    }
+
+    try {
+      await clientSaveProjectFn({
+        data: {
+          id: projectId,
+          businessId: activeBusiness.id,
+          name: "Website Blueprint Draft",
+          domain: "Website",
+          services: ["Website Development"],
+          status: "User Draft",
+          assignee: "Admin Reviewer",
+          assets: [
+            ...brandSettings.logos.map(img => img.url),
+            ...sections.flatMap(section => section.images.map(img => img.url))
+          ],
+          data: {
+            primaryColor: updatedBrand.primaryColor,
+            secondaryColor: updatedBrand.secondaryColor,
+            logos: updatedBrand.logos,
+            logoDescription: updatedBrand.logoDescription,
+            targetAudience: updatedBrand.targetAudience,
+            referenceLinks: updatedBrand.referenceLinks,
+            generalNotes: updatedBrand.generalNotes,
+            blueprint: updatedSections.filter(s => s.type !== "placeholder")
+          },
+          startDate: new Date(),
+          createdAt: new Date(),
+          updatedAt: new Date()
         }
-        if (parsed.sections) {
-          setSections(parsed.sections);
+      });
+      console.log("Successfully saved project draft progress to server instantly.");
+      setDraftSaveStatus("saved");
+    } catch (err) {
+      console.error("Failed to auto-save project progress to server instantly:", err);
+      setDraftSaveStatus("error");
+    }
+  };
+
+  // Auto-save on page leave / unmount
+  useEffect(() => {
+    return () => {
+      if (projectId && activeBusiness?.id) {
+        clientSaveProjectFn({
+          data: {
+            id: projectId,
+            businessId: activeBusiness.id,
+            name: "Website Blueprint Draft",
+            domain: "Website",
+            services: ["Website Development"],
+            status: "User Draft",
+            assignee: "Admin Reviewer",
+            assets: [
+              ...brandSettings.logos.map(img => img.url),
+              ...sections.flatMap(section => section.images.map(img => img.url))
+            ],
+            data: {
+              primaryColor: brandSettingsRef.current.primaryColor,
+              secondaryColor: brandSettingsRef.current.secondaryColor,
+              logos: brandSettingsRef.current.logos,
+              logoDescription: brandSettingsRef.current.logoDescription,
+              targetAudience: brandSettingsRef.current.targetAudience,
+              referenceLinks: brandSettingsRef.current.referenceLinks,
+              generalNotes: brandSettingsRef.current.generalNotes,
+              blueprint: sectionsRef.current.filter(s => s.type !== "placeholder")
+            },
+            startDate: new Date(),
+            createdAt: new Date(),
+            updatedAt: new Date()
+          }
+        })
+          .then(() => {
+            console.log("Successfully saved project draft progress to server on unmount.");
+          })
+          .catch((err) => {
+            console.error("Failed to auto-save draft on unmount:", err);
+          });
+      }
+    };
+  }, [projectId, activeBusiness?.id]);
+
+  // Auto-hide draft save status indicator after 3 seconds
+  useEffect(() => {
+    if (draftSaveStatus === "saved" || draftSaveStatus === "error") {
+      const timer = setTimeout(() => {
+        setDraftSaveStatus("idle");
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [draftSaveStatus]);
+
+  const cleanAndNavigate = (action: "next" | "prev" | "goto", targetStep?: number) => {
+    saveProgressInstant(brandSettings, sections, isFinishedAdding);
+    const isLeavingAddSectionStep = activeStep.type === "select-section" && !(activeStep as any).sectionId;
+    const placeholderIdx = sections.findIndex(s => s.type === "placeholder");
+
+    if (placeholderIdx === -1) {
+      if (action === "next") {
+        const isFromLogoWithNoSections = activeStep.type === "logo" && sections.length === 0;
+        const isLastSectionStep = activeStep.type === "edit-section" && (activeStep as any).sectionId === sections[sections.length - 1]?.id;
+        
+        if ((isFromLogoWithNoSections || isLastSectionStep) && sections.length < limits.maxWebsiteSections) {
+          setShowAddSectionStep(true);
+          setIsFinishedAdding(false);
+          const nextStepId = 3 + sections.length;
+          setCurrentStep(nextStepId);
+          if (nextStepId > maxVisitedStep) {
+            setMaxVisitedStep(nextStepId);
+          }
+          saveProgress(brandSettings, sections, false);
+          return;
         }
-      } catch (e) {
-        console.error("Failed to parse website brief settings", e);
+
+        if (isLeavingAddSectionStep) {
+          setShowAddSectionStep(false);
+          const nextStepId = 3 + sections.length; // Notes step shifts to 3 + sections.length
+          setCurrentStep(nextStepId);
+          if (nextStepId > maxVisitedStep) {
+            setMaxVisitedStep(nextStepId);
+          }
+          return;
+        }
+
+        const next = currentStep + 1;
+        if (next <= dynamicSteps.length) {
+          setCurrentStep(next);
+          if (next > maxVisitedStep) {
+            setMaxVisitedStep(next);
+          }
+        }
+      } else if (action === "prev") {
+        if (isLeavingAddSectionStep) {
+          setShowAddSectionStep(false);
+          const prevStepId = 2 + sections.length; // Last section editor
+          setCurrentStep(prevStepId);
+          return;
+        }
+
+        if (currentStep > 1) {
+          setCurrentStep(currentStep - 1);
+        }
+      } else if (action === "goto" && targetStep !== undefined) {
+        if (isLeavingAddSectionStep) {
+          setShowAddSectionStep(false);
+          const addSectionStepId = 3 + sections.length;
+          if (targetStep > addSectionStepId) {
+            setCurrentStep(targetStep - 1);
+          } else {
+            setCurrentStep(targetStep);
+          }
+        } else {
+          setCurrentStep(targetStep);
+        }
+      }
+      return;
+    }
+
+    // We have a placeholder section! Clean it up.
+    if (isLeavingAddSectionStep) {
+      setShowAddSectionStep(false);
+    }
+    const placeholderStepId = 3 + placeholderIdx;
+    const updatedSections = sections.filter(s => s.type !== "placeholder");
+    setSections(updatedSections);
+    saveProgress(brandSettings, updatedSections, isFinishedAdding);
+
+    if (action === "next") {
+      if (currentStep < placeholderStepId) {
+        setCurrentStep(currentStep + 1);
+      } else {
+        const maxStepsAfterCleanup = dynamicSteps.length - 1;
+        if (currentStep <= maxStepsAfterCleanup) {
+          setCurrentStep(currentStep);
+        } else {
+          setCurrentStep(maxStepsAfterCleanup);
+        }
+      }
+    } else if (action === "prev") {
+      setCurrentStep(placeholderStepId - 1);
+    } else if (action === "goto" && targetStep !== undefined) {
+      if (targetStep > placeholderStepId) {
+        setCurrentStep(targetStep - 1);
+      } else {
+        setCurrentStep(targetStep);
       }
     }
-  }, [storageKey]);
-
-  // Save to local storage helper
-  const saveProgress = (updatedBrand: BrandSettings, updatedSections: WebsiteSection[]) => {
-    const dataToSave: SavedBrief = {
-      brandSettings: updatedBrand,
-      sections: updatedSections
-    };
-    localStorage.setItem(storageKey, JSON.stringify(dataToSave));
   };
 
   const handleNextStep = () => {
-    const next = currentStep + 1;
-    setCurrentStep(next);
-    if (next > maxVisitedStep) {
-      setMaxVisitedStep(next);
-    }
-    saveProgress(brandSettings, sections);
+    cleanAndNavigate("next");
   };
 
   const handlePrevStep = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
-    }
+    cleanAndNavigate("prev");
   };
 
   const handleGoToStep = (stepNum: number) => {
     if (stepNum <= maxVisitedStep) {
-      setCurrentStep(stepNum);
+      cleanAndNavigate("goto", stepNum);
     }
   };
 
-  // Color selection helpers
   const handleColorChange = (key: "primaryColor" | "secondaryColor", value: string) => {
     const newSettings = { ...brandSettings, [key]: value };
     setBrandSettings(newSettings);
-    saveProgress(newSettings, sections);
+    saveProgress(newSettings, sections, isFinishedAdding);
   };
 
   // File Upload Handlers
   const processFiles = async (targetId: string, files: FileList | null, isLogo: boolean = false) => {
     if (!files) return;
+
+    if (!projectId) {
+      alert("Project draft is initializing. Please wait a moment and try again.");
+      return;
+    }
 
     const loadedImages: ImageFile[] = [];
     for (let i = 0; i < files.length; i++) {
@@ -190,12 +578,7 @@ function RouteComponent() {
       }
 
       try {
-        const base64Url = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.readAsDataURL(file);
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = e => reject(e);
-        });
+        const downloadUrl = await uploadFileToStorage(file, "projects", projectId, "projectImg");
 
         const sizeStr = file.size > 1024 * 1024 
           ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
@@ -204,22 +587,41 @@ function RouteComponent() {
         loadedImages.push({
           id: `${file.name}_${Date.now()}_${i}`,
           name: file.name,
-          url: base64Url,
+          url: downloadUrl,
           size: sizeStr
         });
       } catch (err) {
-        console.error("Error reading file", err);
+        console.error("Error uploading file", err);
+        alert(`Failed to upload ${file.name} to storage.`);
       }
     }
 
     if (isLogo) {
+      if ((brandSettings.logos.length + loadedImages.length) > 2) {
+        alert("You can only upload up to 2 logo images.");
+        // Clean up any uploaded images from Storage that exceeded the limit
+        for (const img of loadedImages) {
+          await deleteFileFromStorage(img.url);
+        }
+        return;
+      }
       const newSettings = {
         ...brandSettings,
         logos: [...brandSettings.logos, ...loadedImages]
       };
       setBrandSettings(newSettings);
-      saveProgress(newSettings, sections);
+      saveProgress(newSettings, sections, isFinishedAdding);
     } else {
+      const targetSec = sections.find(s => s.id === targetId);
+      if (targetSec && (targetSec.images.length + loadedImages.length) > limits.maxImagesPerSection) {
+        alert(`You can only upload up to ${limits.maxImagesPerSection} reference images per section on the ${currentPlan} plan.`);
+        // Clean up any uploaded images from Storage that exceeded the limit
+        for (const img of loadedImages) {
+          await deleteFileFromStorage(img.url);
+        }
+        return;
+      }
+
       const updatedSections = sections.map(s => {
         if (s.id === targetId) {
           return { ...s, images: [...s.images, ...loadedImages] };
@@ -227,19 +629,28 @@ function RouteComponent() {
         return s;
       });
       setSections(updatedSections);
-      saveProgress(brandSettings, updatedSections);
+      saveProgress(brandSettings, updatedSections, isFinishedAdding);
     }
   };
 
-  const removeImage = (sectionId: string, imageId: string, isLogo: boolean = false) => {
+  const removeImage = async (sectionId: string, imageId: string, isLogo: boolean = false) => {
     if (isLogo) {
+      const targetImg = brandSettings.logos.find(img => img.id === imageId);
+      if (targetImg) {
+        await deleteFileFromStorage(targetImg.url);
+      }
       const newSettings = {
         ...brandSettings,
         logos: brandSettings.logos.filter(img => img.id !== imageId)
       };
       setBrandSettings(newSettings);
-      saveProgress(newSettings, sections);
+      saveProgress(newSettings, sections, isFinishedAdding);
     } else {
+      const targetSec = sections.find(s => s.id === sectionId);
+      const targetImg = targetSec?.images.find(img => img.id === imageId);
+      if (targetImg) {
+        await deleteFileFromStorage(targetImg.url);
+      }
       const updatedSections = sections.map(s => {
         if (s.id === sectionId) {
           return { ...s, images: s.images.filter(img => img.id !== imageId) };
@@ -247,28 +658,44 @@ function RouteComponent() {
         return s;
       });
       setSections(updatedSections);
-      saveProgress(brandSettings, updatedSections);
+      saveProgress(brandSettings, updatedSections, isFinishedAdding);
     }
   };
 
-  // Section blueprint add/edit helpers
+  // Section flow template selector and addition triggers
   const handleAddSectionTemplate = (template: typeof SECTION_TEMPLATES[number]) => {
     const newSection: WebsiteSection = {
       id: `${template.type}_${Date.now()}`,
       type: template.type,
       title: template.title,
-      description: template.defaultDescription,
+    //   description: template.defaultDescription,
+      description: "",
       images: []
     };
     
-    const updatedSections = [...sections, newSection];
+    let updatedSections;
+    if (currentSection) {
+      updatedSections = sections.map(s => s.id === currentSection.id ? newSection : s);
+    } else {
+      updatedSections = [...sections, newSection];
+    }
     setSections(updatedSections);
-    setEditingSectionId(newSection.id);
-    setSectionWorkspaceView("edit");
-    saveProgress(brandSettings, updatedSections);
+    
+    if (!currentSection) {
+      const newSectionStepId = 3 + sections.length;
+      setCurrentStep(newSectionStepId);
+      if (newSectionStepId > maxVisitedStep) {
+        setMaxVisitedStep(newSectionStepId);
+      }
+    }
+    
+    setShowAddSectionStep(false);
+    saveProgress(brandSettings, updatedSections, isFinishedAdding);
   };
 
   const handleAddCustomSection = () => {
+    if (!limits.eligibilityForCustomSection) return;
+
     const newSection: WebsiteSection = {
       id: `custom_${Date.now()}`,
       type: "custom",
@@ -277,33 +704,89 @@ function RouteComponent() {
       images: []
     };
     
-    const updatedSections = [...sections, newSection];
+    let updatedSections;
+    if (currentSection) {
+      updatedSections = sections.map(s => s.id === currentSection.id ? newSection : s);
+    } else {
+      updatedSections = [...sections, newSection];
+    }
     setSections(updatedSections);
-    setEditingSectionId(newSection.id);
-    setSectionWorkspaceView("edit");
-    saveProgress(brandSettings, updatedSections);
+    
+    if (!currentSection) {
+      const newSectionStepId = 3 + sections.length;
+      setCurrentStep(newSectionStepId);
+      if (newSectionStepId > maxVisitedStep) {
+        setMaxVisitedStep(newSectionStepId);
+      }
+    }
+    
+    setShowAddSectionStep(false);
+    saveProgress(brandSettings, updatedSections, isFinishedAdding);
   };
 
-  const handleRemoveSection = (id: string) => {
-    const updatedSections = sections.filter(s => s.id !== id);
-    setSections(updatedSections);
-    if (editingSectionId === id) {
-      setEditingSectionId(null);
-      setSectionWorkspaceView("list");
+  const handleRemoveSection = async (id: string) => {
+    const sectionIndex = sections.findIndex(s => s.id === id);
+    if (sectionIndex !== -1) {
+      const targetSec = sections[sectionIndex];
+      if (targetSec.images && targetSec.images.length > 0) {
+        for (const img of targetSec.images) {
+          try {
+            await deleteFileFromStorage(img.url);
+          } catch (err) {
+            console.error("Failed to delete section image from storage:", err);
+          }
+        }
+      }
+      const updatedSections = [...sections];
+      updatedSections[sectionIndex] = {
+        id: `placeholder_${Date.now()}`,
+        type: "placeholder",
+        title: "Add Section",
+        description: "",
+        images: []
+      };
+      setSections(updatedSections);
+      setIsFinishedAdding(false);
+      saveProgress(brandSettings, updatedSections, false);
+      // We remain on the current step, which now resolves to a select-section step!
     }
-    saveProgress(brandSettings, updatedSections);
+  };
+
+  const handleFinishAddingSections = () => {
+    setIsFinishedAdding(true);
+    const notesStepId = 3 + sections.length;
+    setCurrentStep(notesStepId);
+    if (notesStepId > maxVisitedStep) {
+      setMaxVisitedStep(notesStepId);
+    }
+    saveProgress(brandSettings, sections, true);
+  };
+
+  const handleTriggerAddSectionFromReview = () => {
+    setShowAddSectionStep(true);
+    setIsFinishedAdding(false);
+    const addSectionStepId = 3 + sections.length;
+    setCurrentStep(addSectionStepId);
+    if (addSectionStepId > maxVisitedStep) {
+      setMaxVisitedStep(addSectionStepId);
+    }
+    saveProgress(brandSettings, sections, false);
   };
 
   const handleSectionTextChange = (id: string, text: string) => {
     const updatedSections = sections.map(s => (s.id === id ? { ...s, description: text } : s));
     setSections(updatedSections);
-    saveProgress(brandSettings, updatedSections);
+    saveProgress(brandSettings, updatedSections, isFinishedAdding);
   };
 
   const handleSectionTitleChange = (id: string, title: string) => {
+    if (!limits.eligibilityForCustomSection) return;
+    const targetSec = sections.find(s => s.id === id);
+    if (targetSec && targetSec.type !== "custom") return;
+
     const updatedSections = sections.map(s => (s.id === id ? { ...s, title } : s));
     setSections(updatedSections);
-    saveProgress(brandSettings, updatedSections);
+    saveProgress(brandSettings, updatedSections, isFinishedAdding);
   };
 
   const moveSection = (index: number, direction: "up" | "down") => {
@@ -316,76 +799,204 @@ function RouteComponent() {
     updated[targetIndex] = temp;
     
     setSections(updated);
-    saveProgress(brandSettings, updated);
+    saveProgress(brandSettings, updated, isFinishedAdding);
+  };
+  const handleCardDrop = (targetIdx: number) => {
+    if (draggedSectionIndex === null || draggedSectionIndex === targetIdx) return;
+    const updated = [...sections];
+    const [removed] = updated.splice(draggedSectionIndex, 1);
+    updated.splice(targetIdx, 0, removed);
+    setSections(updated);
+    saveProgress(brandSettings, updated, isFinishedAdding);
+  };
+  const handleTouchStart = (idx: number, e: React.TouchEvent) => {
+    setDraggedSectionIndex(idx);
+    const touch = e.touches[0];
+    setTouchPosition({ x: touch.clientX, y: touch.clientY });
+  };
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (draggedSectionIndex === null) return;
+    const touch = e.touches[0];
+    setTouchPosition({ x: touch.clientX, y: touch.clientY });
+
+    const element = document.elementFromPoint(touch.clientX, touch.clientY);
+    const cardElement = element?.closest("[data-section-index]");
+    if (cardElement) {
+      const hoveredIdx = parseInt(cardElement.getAttribute("data-section-index") || "", 10);
+      if (!isNaN(hoveredIdx)) {
+        setDraggedOverCardIndex(hoveredIdx);
+      }
+    } else {
+      setDraggedOverCardIndex(null);
+    }
+  };
+  const handleTouchEnd = () => {
+    if (draggedSectionIndex !== null && draggedOverCardIndex !== null && draggedSectionIndex !== draggedOverCardIndex) {
+      handleCardDrop(draggedOverCardIndex);
+    }
+    setDraggedSectionIndex(null);
+    setDraggedOverCardIndex(null);
+    setTouchPosition(null);
+  };
+  const validateBrief = (): string[] => {
+    const errors: string[] = [];
+
+    // 1. Check Colors
+    if (!brandSettings.primaryColor || !brandSettings.secondaryColor) {
+      errors.push("Brand colors must be specified.");
+    }
+
+    // 2. Check Logo/Description
+    const hasLogos = brandSettings.logos.length > 0;
+    const hasLogoDesc = brandSettings.logoDescription.trim().length > 0;
+    if (!hasLogos && !hasLogoDesc) {
+      errors.push("Please upload at least one logo image or describe your logo concept.");
+    }
+
+    // 3. Check Sections existence
+    const realSections = sections.filter(s => s.type !== "placeholder");
+    if (realSections.length === 0) {
+      errors.push("At least one website section must be added to your brief blueprint.");
+    } else {
+      // 4. Check Section Details
+      realSections.forEach((section, idx) => {
+        const secNum = idx + 1;
+        const displayTitle = section.type === "custom" && section.title ? `"${section.title}"` : `${section.title || "Section"} (#${secNum})`;
+        
+        if (section.type === "custom" && !section.title.trim()) {
+          errors.push(`Custom Section #${secNum} must have a title.`);
+        }
+        if (!section.description || !section.description.trim()) {
+          errors.push(`Please provide details/description for section: ${displayTitle}.`);
+        }
+      });
+    }
+
+    return errors;
   };
 
-  const handleSubmitBrief = () => {
-    setIsSubmitSuccess(true);
-    localStorage.removeItem(storageKey);
-    setTimeout(() => {
-      navigate({ to: "/projects" });
-    }, 2500);
+  const handleSubmitBrief = async () => {
+    if (!projectId || !activeBusiness?.id) return;
+
+    if (saveTimeoutId) {
+      clearTimeout(saveTimeoutId);
+    }
+
+    setSubmitting(true);
+    try {
+      const result = await clientSaveProjectFn({
+        data: {
+          id: projectId,
+          businessId: activeBusiness.id,
+          name: "Website Blueprint",
+          domain: "Website",
+          services: ["Website Development"],
+          status: "Requested",
+          assignee: "Admin Reviewer",
+          assets: [
+            ...brandSettings.logos.map(img => img.url),
+            ...sections.flatMap(section => section.images.map(img => img.url))
+          ],
+          data: {
+            primaryColor: brandSettings.primaryColor,
+            secondaryColor: brandSettings.secondaryColor,
+            logos: brandSettings.logos,
+            logoDescription: brandSettings.logoDescription,
+            targetAudience: brandSettings.targetAudience,
+            referenceLinks: brandSettings.referenceLinks,
+            generalNotes: brandSettings.generalNotes,
+            blueprint: sections.filter(s => s.type !== "placeholder")
+          },
+          startDate: new Date(),
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+      });
+
+      if (result.success) {
+        setIsSubmitSuccess(true);
+        setTimeout(() => {
+          navigate({ to: "/projects" });
+        }, 2500);
+      }
+    } catch (err: any) {
+      console.error("Failed to submit website brief:", err);
+      alert(err.message || "An unexpected error occurred during submission.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const stepsList = [
-    { id: 1, label: "Brand Colors" },
-    { id: 2, label: "Brand Logo" },
-    { id: 3, label: "Page Sections" },
-    { id: 4, label: "Final Details" },
-    { id: 5, label: "Review & Order" }
-  ];
+  const currentSection = activeStep.type === "edit-section" || activeStep.type === "select-section"
+    ? sections.find(s => s.id === (activeStep as any).sectionId) 
+    : null;
 
-  const editingSection = sections.find(s => s.id === editingSectionId);
+  if (loadingProject) {
+    return (
+      <div className="fixed inset-0 w-screen h-screen bg-white flex flex-col items-center justify-center z-50">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 rounded-full border-4 border-blue-100 border-t-blue-600 animate-spin" />
+          <h2 className="text-xs font-extrabold text-gray-600 tracking-wider uppercase">Loading website blueprint...</h2>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="relative h-screen w-screen overflow-hidden bg-white text-[#0F172A] font-sans select-none flex flex-row">
+    <div className="fixed inset-0 w-screen h-full overflow-hidden bg-white text-[#0F172A] font-sans select-none flex flex-row overscroll-none">
+      {submitting && (
+        <div className="fixed inset-0 bg-white/80 backdrop-blur-xs flex flex-col items-center justify-center z-55">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-10 h-10 rounded-full border-4 border-blue-100 border-t-blue-600 animate-spin" />
+            <h2 className="text-xs font-extrabold text-gray-600 tracking-wider uppercase">Submitting Website Brief...</h2>
+          </div>
+        </div>
+      )}
       
-      {/* 1. Left Sidebar Navigation (Dots and Dashes only) */}
-      <aside className="w-16 md:w-20 shrink-0 border-r border-gray-100 flex flex-col justify-between items-center py-8 bg-white z-20 h-full">
+      {/* 1. Left Sidebar Navigation - Seamless and thin (Only show steps visited/reached) */}
+      <aside className="w-6 md:w-12 shrink-0 flex flex-col justify-between items-end py-10 z-20 h-full">
         {/* Back Button */}
         <Link
           to="/add"
-          className="p-2 hover:bg-blue-50 hover:text-blue-600 rounded-full transition-colors text-gray-400 cursor-pointer"
+          onClick={() => {
+            saveProgressInstant(brandSettings, sections, isFinishedAdding);
+          }}
+          className="hover:bg-blue-50 hover:text-blue-600 rounded-full transition-colors text-gray-400 cursor-pointer shrink-0"
           title="Back to Services"
         >
           <ArrowLeft className="w-4 h-4" />
         </Link>
 
-        {/* Stepper container - dots & dashes only */}
-        <div className="flex flex-col items-center gap-4">
-          {stepsList.map((step, idx) => {
-            const isActive = currentStep === step.id;
-            const isVisited = step.id <= maxVisitedStep;
-            const isNextVisited = idx < stepsList.length - 1 && stepsList[idx + 1].id <= maxVisitedStep;
+        {/* Stepper container - vertical dashes with a fixed gap of 1 */}
+        <div className="flex-1 w-full flex flex-col justify-center items-end py-12 my-6">
+          <div className="flex flex-col items-center gap-1">
+            {dynamicSteps
+              .filter(step => step.id <= maxVisitedStep)
+              .map((step) => {
+                const isActive = currentStep === step.id;
+                const isVisited = step.id <= maxVisitedStep;
 
-            return (
-              <div key={step.id} className="flex flex-col items-center">
-                <button
-                  onClick={() => handleGoToStep(step.id)}
-                  disabled={!isVisited}
-                  className={`transition-all duration-350 cursor-pointer outline-none ${
-                    isActive
-                      ? "w-6 h-1 bg-blue-600 rounded-full my-1.5"
-                      : isVisited
-                        ? "w-1.5 h-1.5 rounded-full bg-blue-600 hover:scale-125 my-1.5"
-                        : "w-1.5 h-1.5 rounded-full bg-gray-200 my-1.5"
-                  }`}
-                  title={step.label}
-                />
-                {idx < stepsList.length - 1 && (
-                  <div
-                    className={`w-[1px] h-6 transition-colors duration-300 ${
-                      isNextVisited ? "bg-blue-600" : "bg-gray-100"
+                return (
+                  <button
+                    key={step.id}
+                    onClick={() => handleGoToStep(step.id)}
+                    disabled={!isVisited}
+                    className={`transition-all duration-350 cursor-pointer outline-none w-[2px] ${
+                      isActive
+                        ? "h-8 bg-blue-600 rounded-full"
+                        : isVisited
+                          ? "h-3 bg-blue-600/40 hover:bg-blue-600 rounded-full"
+                          : "h-3 bg-gray-150 rounded-full"
                     }`}
+                    title={step.label}
                   />
-                )}
-              </div>
-            );
-          })}
+                );
+              })}
+          </div>
         </div>
 
-        {/* Info Icon instead of block to maintain minimal look */}
-        <div className="text-gray-300 hover:text-blue-600 transition-colors cursor-pointer" title="Need help? Go back to chat.">
+        {/* Info Icon */}
+        <div className="text-gray-300 hover:text-blue-600 transition-colors cursor-pointer shrink-0" title="Need help? Go back to chat.">
           <HelpCircle className="w-4 h-4" />
         </div>
       </aside>
@@ -394,14 +1005,14 @@ function RouteComponent() {
       <main className="flex-1 h-full flex flex-col justify-between overflow-hidden bg-white">
         
         {/* Form Container (Scrollable internally) */}
-        <div className="flex-1 overflow-y-auto px-6 md:px-12 py-8 md:py-12 max-w-3xl w-full mx-auto flex flex-col justify-start">
+        <div className="flex-1 overflow-y-auto overscroll-contain px-6 md:px-12 py-8 md:py-12 max-w-3xl w-full mx-auto flex flex-col justify-start">
           
           {/* STEP 1: Colors selection */}
-          {currentStep === 1 && (
+          {activeStep.type === "colors" && (
             <div className="space-y-8 animate-in fade-in duration-300 text-left">
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-650 bg-blue-50 px-2.5 py-1 rounded border border-blue-100 inline-block mb-3">
-                  Step 1: Color Palette
+                <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 block mb-2">
+                  Step {activeStep.id} / Color Palette
                 </span>
                 <h2 className="text-2xl md:text-3xl font-extrabold text-[#0F172A] tracking-tight">
                   Pick your brand colors
@@ -411,12 +1022,11 @@ function RouteComponent() {
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4">
-                {/* Primary color selection card */}
-                <div className="p-6 bg-white border border-gray-200 hover:border-blue-600 transition-colors rounded-[24px] shadow-xs flex flex-col items-center group">
-                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Primary Color</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 pt-4">
+                {/* Primary Color */}
+                <div className="flex items-center gap-6 text-left">
                   <div
-                    className="w-24 h-24 rounded-3xl border border-gray-150 shadow-inner mb-4 transition-transform duration-200 hover:scale-105 cursor-pointer relative overflow-hidden"
+                    className="w-28 h-28 rounded-3xl border border-gray-200 shadow-inner cursor-pointer relative overflow-hidden transition-transform duration-200 hover:scale-105 shrink-0"
                     style={{ backgroundColor: brandSettings.primaryColor }}
                     onClick={() => document.getElementById("primary_picker")?.click()}
                   >
@@ -428,28 +1038,21 @@ function RouteComponent() {
                       className="absolute inset-0 w-full h-full scale-150 opacity-0 cursor-pointer"
                     />
                   </div>
-                  <div className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-xl px-3 py-1.5 w-full justify-between">
-                    <span className="text-xs font-bold text-gray-500">HEX Code</span>
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Primary Color</span>
                     <input
                       type="text"
                       value={brandSettings.primaryColor}
                       onChange={(e) => handleColorChange("primaryColor", e.target.value)}
-                      className="text-xs font-black text-[#0F172A] uppercase bg-transparent text-right outline-none w-20"
+                      className="text-sm font-bold text-[#0F172A] uppercase bg-transparent outline-none border-b border-gray-200 focus:border-blue-600 pb-0.5 w-24"
                     />
                   </div>
-                  <button
-                    onClick={() => document.getElementById("primary_picker")?.click()}
-                    className="mt-4 text-xs font-bold text-blue-600 hover:underline cursor-pointer"
-                  >
-                    Open Palette
-                  </button>
                 </div>
 
-                {/* Secondary color selection card */}
-                <div className="p-6 bg-white border border-gray-200 hover:border-blue-600 transition-colors rounded-[24px] shadow-xs flex flex-col items-center group">
-                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Secondary Color</span>
+                {/* Secondary Color */}
+                <div className="flex items-center gap-6 text-left">
                   <div
-                    className="w-24 h-24 rounded-3xl border border-gray-150 shadow-inner mb-4 transition-transform duration-200 hover:scale-105 cursor-pointer relative overflow-hidden"
+                    className="w-28 h-28 rounded-3xl border border-gray-200 shadow-inner cursor-pointer relative overflow-hidden transition-transform duration-200 hover:scale-105 shrink-0"
                     style={{ backgroundColor: brandSettings.secondaryColor }}
                     onClick={() => document.getElementById("secondary_picker")?.click()}
                   >
@@ -461,32 +1064,26 @@ function RouteComponent() {
                       className="absolute inset-0 w-full h-full scale-150 opacity-0 cursor-pointer"
                     />
                   </div>
-                  <div className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-xl px-3 py-1.5 w-full justify-between">
-                    <span className="text-xs font-bold text-gray-500">HEX Code</span>
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Secondary Color</span>
                     <input
                       type="text"
                       value={brandSettings.secondaryColor}
                       onChange={(e) => handleColorChange("secondaryColor", e.target.value)}
-                      className="text-xs font-black text-[#0F172A] uppercase bg-transparent text-right outline-none w-20"
+                      className="text-sm font-bold text-[#0F172A] uppercase bg-transparent outline-none border-b border-gray-200 focus:border-blue-600 pb-0.5 w-24"
                     />
                   </div>
-                  <button
-                    onClick={() => document.getElementById("secondary_picker")?.click()}
-                    className="mt-4 text-xs font-bold text-blue-600 hover:underline cursor-pointer"
-                  >
-                    Open Palette
-                  </button>
                 </div>
               </div>
             </div>
           )}
 
           {/* STEP 2: Logo upload or description */}
-          {currentStep === 2 && (
+          {activeStep.type === "logo" && (
             <div className="space-y-8 animate-in fade-in duration-300 text-left">
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-650 bg-blue-50 px-2.5 py-1 rounded border border-blue-100 inline-block mb-3">
-                  Step 2: Brand Identity
+                <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 block mb-2">
+                  Step {activeStep.id} / Brand Identity
                 </span>
                 <h2 className="text-2xl md:text-3xl font-extrabold text-[#0F172A] tracking-tight">
                   Brand Logo
@@ -497,7 +1094,6 @@ function RouteComponent() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
-                {/* Left Side: Upload Zone */}
                 <div className="space-y-4">
                   <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Option A: Upload Logo</span>
                   
@@ -506,10 +1102,13 @@ function RouteComponent() {
                       {brandSettings.logos.map(logo => (
                         <div key={logo.id} className="relative rounded-xl border border-gray-200 overflow-hidden bg-gray-50 aspect-video shadow-xs animate-in zoom-in-95 duration-200 group">
                           <img src={logo.url} alt={logo.name} className="w-full h-full object-contain p-2" />
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-2">
+                          <div className="absolute top-2 right-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity z-10">
                             <button
-                              onClick={() => removeImage("logo", logo.id, true)}
-                              className="p-1.5 rounded-lg bg-red-650 hover:bg-red-700 text-white cursor-pointer"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeImage("logo", logo.id, true);
+                              }}
+                              className="p-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white cursor-pointer shadow-md flex items-center justify-center"
                               title="Delete Logo"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -520,32 +1119,39 @@ function RouteComponent() {
                     </div>
                   )}
 
-                  <div
-                    onDragOver={(e) => { e.preventDefault(); setDraggedOverId("logo"); }}
-                    onDragLeave={() => setDraggedOverId(null)}
-                    onDrop={(e) => { e.preventDefault(); setDraggedOverId(null); processFiles("logo", e.dataTransfer.files, true); }}
-                    onClick={() => document.getElementById("logo_file")?.click()}
-                    className={`border-2 border-dashed rounded-[20px] p-6 text-center flex flex-col items-center justify-center transition-all cursor-pointer bg-gray-50/50 min-h-[160px] ${
-                      draggedOverId === "logo" ? "border-blue-600 bg-blue-50/30" : "border-gray-200 hover:border-blue-600 hover:bg-gray-50"
-                    }`}
-                  >
-                    <input
-                      id="logo_file"
-                      type="file"
-                      multiple
-                      accept="image/*"
-                      onChange={(e) => processFiles("logo", e.target.files, true)}
-                      className="hidden"
-                    />
-                    <UploadCloud className="w-8 h-8 text-gray-400 mb-2.5" />
-                    <p className="text-xs font-bold text-gray-700">
-                      Drag & drop logo file, or <span className="text-blue-600 hover:underline">browse</span>
-                    </p>
-                    <p className="text-[10px] text-gray-400 mt-1">PNG, JPG, SVG up to 1.5MB</p>
-                  </div>
+                   {brandSettings.logos.length >= 2 ? (
+                    <div className="border-2 border-dashed border-gray-200 rounded-[20px] p-6 text-center flex flex-col items-center justify-center bg-gray-50/50 min-h-[160px] opacity-75">
+                      <CheckCircle className="w-8 h-8 text-green-500 mb-2.5" />
+                      <p className="text-xs font-bold text-gray-700">Logo files uploaded (maximum 2)</p>
+                      <p className="text-[10px] text-gray-400 mt-1">To upload a different logo, remove one of the existing files first.</p>
+                    </div>
+                  ) : (
+                    <div
+                      onDragOver={(e) => { e.preventDefault(); setDraggedOverId("logo"); }}
+                      onDragLeave={() => setDraggedOverId(null)}
+                      onDrop={(e) => { e.preventDefault(); setDraggedOverId(null); processFiles("logo", e.dataTransfer.files, true); }}
+                      onClick={() => document.getElementById("logo_file")?.click()}
+                      className={`border-2 border-dashed rounded-[20px] p-6 text-center flex flex-col items-center justify-center transition-all cursor-pointer bg-gray-50/50 min-h-[160px] ${
+                        draggedOverId === "logo" ? "border-blue-600 bg-blue-50/30" : "border-gray-200 hover:border-blue-600 hover:bg-gray-50"
+                      }`}
+                    >
+                      <input
+                        id="logo_file"
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        onChange={(e) => processFiles("logo", e.target.files, true)}
+                        className="hidden"
+                      />
+                      <UploadCloud className="w-8 h-8 text-gray-400 mb-2.5" />
+                      <p className="text-xs font-bold text-gray-700">
+                        Drag & drop logo file, or <span className="text-blue-600 hover:underline">browse</span>
+                      </p>
+                      <p className="text-[10px] text-gray-400 mt-1">PNG, JPG, SVG up to 1.5MB (max 2 logos)</p>
+                    </div>
+                  )}
                 </div>
 
-                {/* Right Side: Description Textarea */}
                 <div className="space-y-4 flex flex-col">
                   <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Option B: Describe Logo Concept</span>
                   <textarea
@@ -553,7 +1159,7 @@ function RouteComponent() {
                     onChange={(e) => {
                       const newSettings = { ...brandSettings, logoDescription: e.target.value };
                       setBrandSettings(newSettings);
-                      saveProgress(newSettings, sections);
+                      saveProgress(newSettings, sections, isFinishedAdding);
                     }}
                     rows={7}
                     placeholder="Describe what you'd like your logo to look like (e.g. style, symbols, emblem, text, key ideas)..."
@@ -564,224 +1170,167 @@ function RouteComponent() {
             </div>
           )}
 
-          {/* STEP 3: Website sections manager */}
-          {currentStep === 3 && (
+          {/* STEP 3 (Template selector step for adding sections) */}
+          {activeStep.type === "select-section" && (
             <div className="space-y-8 animate-in fade-in duration-300 text-left">
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-650 bg-blue-50 px-2.5 py-1 rounded border border-blue-100 inline-block mb-3">
-                  Step 3: Site Blueprint
+                <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 block mb-2">
+                  Step {activeStep.id} / Blueprint Section Choice
                 </span>
                 <h2 className="text-2xl md:text-3xl font-extrabold text-[#0F172A] tracking-tight">
-                  Website Structure & Outline
+                  Add website section
                 </h2>
                 <p className="text-sm text-gray-500 mt-1">
-                  Choose the structural sections you want to include on your page.
+                  Choose a structural template block to add. You can add up to {limits.maxWebsiteSections} sections under your {currentPlan} plan (currently: {sections.length}).
                 </p>
               </div>
 
-              {/* View A: Section workspace list overview */}
-              {sectionWorkspaceView === "list" && (
-                <div className="space-y-6 pt-4">
-                  {sections.length === 0 ? (
-                    <div className="text-center py-12 border border-dashed border-gray-200 rounded-[24px] bg-gray-50/50 animate-in fade-in duration-200">
-                      <Layers className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-                      <h3 className="font-bold text-gray-700 text-sm">No sections added yet</h3>
-                      <p className="text-xs text-gray-400 mt-1 mb-4">Add sections to start outlining your page layout.</p>
-                      <button
-                        onClick={() => setSectionWorkspaceView("select")}
-                        className="bg-blue-600 text-white hover:bg-blue-700 font-extrabold text-xs px-5 py-2.5 rounded-full cursor-pointer transition-all active:scale-95 shadow-sm"
-                      >
-                        Add Your First Section
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between border-b border-gray-100 pb-2">
-                        <span className="text-xs font-bold text-gray-400">Added Sections ({sections.length})</span>
-                        <button
-                          onClick={() => setSectionWorkspaceView("select")}
-                          className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1 cursor-pointer"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                          Add Section
-                        </button>
-                      </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-4 pt-4">
+                {limits.eligibilityForCustomSection && (
+                  <button
+                    onClick={handleAddCustomSection}
+                    className="flex flex-col items-start p-5 bg-white border border-dashed border-gray-300 rounded-[20px] text-left hover:border-blue-600 hover:shadow-xs transition-all cursor-pointer group"
+                  >
+                    <h4 className="font-bold text-sm text-blue-600 mb-1">Custom Section</h4>
+                    <p className="hidden md:block text-[10px] text-gray-400 leading-relaxed">Specify a completely custom structural section with unique goals.</p>
+                  </button>
+                )}
+                {SECTION_TEMPLATES.map((tmpl) => (
+                  <button
+                    key={tmpl.type}
+                    onClick={() => handleAddSectionTemplate(tmpl)}
+                    className="flex flex-col items-start p-5 bg-white border border-gray-200 rounded-[20px] text-left hover:border-blue-600 hover:shadow-xs transition-all cursor-pointer group"
+                  >
+                    <h4 className="font-bold text-sm text-[#0F172A] mb-1 group-hover:text-blue-600">{tmpl.title}</h4>
+                    <p className="hidden md:block text-[10px] text-gray-400 leading-relaxed line-clamp-3">{tmpl.defaultDescription}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
-                      <div className="grid grid-cols-1 gap-3">
-                        {sections.map((section, idx) => (
-                          <div
-                            key={section.id}
-                            className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-2xl shadow-xs transition-colors hover:border-gray-300"
-                          >
-                            <div className="flex items-center gap-3">
-                              <span className="text-xs font-extrabold text-gray-300">{(idx + 1).toString().padStart(2, "0")}</span>
-                              <div>
-                                <span className="font-bold text-sm text-[#0F172A]">{section.title}</span>
-                                <span className="text-[10px] text-gray-400 font-medium block capitalize">{section.type} outline</span>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => {
-                                  setEditingSectionId(section.id);
-                                  setSectionWorkspaceView("edit");
-                                }}
-                                className="text-xs font-bold text-blue-605 hover:text-blue-700 hover:underline px-3 py-1.5 hover:bg-blue-50/30 rounded-lg cursor-pointer"
-                              >
-                                Edit Details
-                              </button>
-                              <button
-                                onClick={() => handleRemoveSection(section.id)}
-                                className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 cursor-pointer"
-                                title="Remove section"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
+          {/* STEP 3+ (Dynamic sections editors) */}
+          {activeStep.type === "edit-section" && currentSection && (
+            <div className="space-y-8 animate-in fade-in duration-300 text-left">
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 block">
+                    Step {activeStep.id} / Configure Section
+                  </span>
+                  <button
+                    onClick={() => handleRemoveSection(currentSection.id)}
+                    className="text-xs font-bold text-red-500 hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Delete Section</span>
+                  </button>
+                </div>
+                <h2 className="text-2xl md:text-3xl font-extrabold text-[#0F172A] tracking-tight mt-3">
+                  {currentSection.title}
+                </h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  Specify details, objectives, reference layout, or images for this block.
+                </p>
+              </div>
+
+              <div className="space-y-6 pt-2">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Section Name</label>
+                  <input
+                    type="text"
+                    value={currentSection.title}
+                    onChange={(e) => handleSectionTitleChange(currentSection.id, e.target.value)}
+                    disabled={currentSection.type !== "custom" || !limits.eligibilityForCustomSection}
+                    className={`w-full text-sm font-bold text-[#0F172A] p-3 border border-gray-200 rounded-xl outline-none bg-white transition-all ${
+                      currentSection.type !== "custom" || !limits.eligibilityForCustomSection
+                        ? "bg-gray-50 text-gray-400 cursor-not-allowed border-gray-150" 
+                        : "focus:border-blue-600"
+                    }`}
+                    placeholder="Enter section name"
+                  />
+                  {currentSection.type !== "custom" ? (
+                    <p className="text-[10px] text-gray-400 font-medium">Standard section names are fixed.</p>
+                  ) : !limits.eligibilityForCustomSection ? (
+                    <p className="text-[10px] text-amber-600 font-medium">Upgrade to Pro plan to customize section names.</p>
+                  ) : null}
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block font-sans">
+                    What Copy / Layout goes here?
+                  </label>
+                  <textarea
+                    value={currentSection.description}
+                    onChange={(e) => handleSectionTextChange(currentSection.id, e.target.value)}
+                    rows={6}
+                    className="w-full text-sm text-[#0F172A] p-3.5 border border-gray-200 rounded-xl focus:border-blue-600 outline-none bg-white transition-all resize-y placeholder:text-gray-400"
+                    placeholder="Describe the content details, headings, action buttons, pricing info, or layout details for this section..."
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">
+                    Reference Images / Layouts (Max {limits.maxImagesPerSection} images under {currentPlan} plan)
+                  </label>
+                  
+                  {currentSection.images.length > 0 && (
+                    <div className="grid grid-cols-3 gap-3 mb-2">
+                      {currentSection.images.map(img => (
+                        <div key={img.id} className="relative rounded-xl border border-gray-200 overflow-hidden bg-gray-50 aspect-video shadow-xs group">
+                          <img src={img.url} alt={img.name} className="w-full h-full object-cover" />
+                          <div className="absolute top-2 right-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity z-10">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeImage(currentSection.id, img.id);
+                              }}
+                              className="p-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white cursor-pointer shadow-md flex items-center justify-center"
+                              title="Delete reference image"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
                           </div>
-                        ))}
-                      </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {currentSection.images.length < limits.maxImagesPerSection && (
+                    <div
+                      onDragOver={(e) => { e.preventDefault(); setDraggedOverId(currentSection.id); }}
+                      onDragLeave={() => setDraggedOverId(null)}
+                      onDrop={(e) => { e.preventDefault(); setDraggedOverId(null); processFiles(currentSection.id, e.dataTransfer.files); }}
+                      onClick={() => document.getElementById(`sect_file_${currentSection.id}`)?.click()}
+                      className={`border-2 border-dashed rounded-xl p-5 text-center flex flex-col items-center justify-center transition-all cursor-pointer bg-gray-50/20 ${
+                        draggedOverId === currentSection.id ? "border-blue-600 bg-blue-50/30" : "border-gray-200 hover:border-blue-600"
+                      }`}
+                    >
+                      <input
+                        id={`sect_file_${currentSection.id}`}
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        onChange={(e) => processFiles(currentSection.id, e.target.files)}
+                        className="hidden"
+                      />
+                      <UploadCloud className="w-7 h-7 text-gray-400 mb-1.5" />
+                      <p className="text-xs font-bold text-gray-700">
+                        Drag & drop layouts, or <span className="text-blue-600 hover:underline">browse</span>
+                      </p>
+                      <p className="text-[10px] text-gray-400 mt-0.5">PNG, JPG up to 1.5MB</p>
                     </div>
                   )}
                 </div>
-              )}
-
-              {/* View B: Selecting a section layout template to add */}
-              {sectionWorkspaceView === "select" && (
-                <div className="space-y-6 pt-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-extrabold uppercase text-gray-400 tracking-wider">Select a layout template</span>
-                    <button
-                      onClick={() => setSectionWorkspaceView("list")}
-                      className="text-xs font-bold text-gray-500 hover:text-[#0F172A] cursor-pointer"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {SECTION_TEMPLATES.map((tmpl) => (
-                      <button
-                        key={tmpl.type}
-                        onClick={() => handleAddSectionTemplate(tmpl)}
-                        className="flex flex-col items-start p-5 bg-white border border-gray-200 rounded-[20px] text-left hover:border-blue-600 hover:shadow-xs transition-all cursor-pointer group"
-                      >
-                        <h4 className="font-bold text-sm text-[#0F172A] mb-1 group-hover:text-blue-600">{tmpl.title}</h4>
-                        <p className="text-[10px] text-gray-400 leading-relaxed line-clamp-3">{tmpl.defaultDescription}</p>
-                      </button>
-                    ))}
-                    
-                    {/* Custom Outline Card */}
-                    <button
-                      onClick={handleAddCustomSection}
-                      className="flex flex-col items-start p-5 bg-white border border-dashed border-gray-300 rounded-[20px] text-left hover:border-blue-600 hover:shadow-xs transition-all cursor-pointer group"
-                    >
-                      <h4 className="font-bold text-sm text-blue-600 mb-1">Custom Section</h4>
-                      <p className="text-[10px] text-gray-400 leading-relaxed">Specify a completely custom structural section with unique goals or requirements.</p>
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* View C: Editing section details and uploading reference mockups */}
-              {sectionWorkspaceView === "edit" && editingSection && (
-                <div className="p-6 bg-gray-50/50 border border-gray-200 rounded-[24px] space-y-6 animate-in slide-in-from-bottom-3 duration-250 text-left">
-                  <div className="flex items-center justify-between border-b border-gray-200 pb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-extrabold uppercase text-gray-400 tracking-wider">Configure Section</span>
-                    </div>
-                    <button
-                      onClick={() => setSectionWorkspaceView("list")}
-                      className="text-xs font-bold text-gray-500 hover:text-[#0F172A] cursor-pointer"
-                    >
-                      Save & Back
-                    </button>
-                  </div>
-
-                  <div className="space-y-4">
-                    {/* Section Title Input */}
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Section Name</label>
-                      <input
-                        type="text"
-                        value={editingSection.title}
-                        onChange={(e) => handleSectionTitleChange(editingSection.id, e.target.value)}
-                        className="w-full text-sm font-bold text-[#0F172A] p-3 border border-gray-200 rounded-xl focus:border-blue-600 outline-none bg-white transition-all"
-                        placeholder="Enter section name"
-                      />
-                    </div>
-
-                    {/* Section Copy/Goal Details */}
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">What Copy / Layout goes here?</label>
-                      <textarea
-                        value={editingSection.description}
-                        onChange={(e) => handleSectionTextChange(editingSection.id, e.target.value)}
-                        rows={5}
-                        className="w-full text-sm text-[#0F172A] p-3.5 border border-gray-200 rounded-xl focus:border-blue-600 outline-none bg-white transition-all resize-y placeholder:text-gray-400"
-                        placeholder="Describe the content, copy points, buttons, images, or specific outline details for this section..."
-                      />
-                    </div>
-
-                    {/* Section Reference Images */}
-                    <div className="space-y-3">
-                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Reference Images / Mockups (Max 1.5MB)</label>
-                      
-                      {editingSection.images.length > 0 && (
-                        <div className="grid grid-cols-3 gap-3 mb-2">
-                          {editingSection.images.map(img => (
-                            <div key={img.id} className="relative rounded-xl border border-gray-200 overflow-hidden bg-gray-50 aspect-video shadow-xs animate-in zoom-in-95 duration-200 group">
-                              <img src={img.url} alt={img.name} className="w-full h-full object-cover" />
-                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-2">
-                                <button
-                                  onClick={() => removeImage(editingSection.id, img.id)}
-                                  className="p-1 text-white bg-red-600 hover:bg-red-700 rounded cursor-pointer"
-                                  title="Delete reference image"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      <div
-                        onDragOver={(e) => { e.preventDefault(); setDraggedOverId(editingSection.id); }}
-                        onDragLeave={() => setDraggedOverId(null)}
-                        onDrop={(e) => { e.preventDefault(); setDraggedOverId(null); processFiles(editingSection.id, e.dataTransfer.files); }}
-                        onClick={() => document.getElementById(`sect_file_${editingSection.id}`)?.click()}
-                        className={`border-2 border-dashed rounded-xl p-5 text-center flex flex-col items-center justify-center transition-all cursor-pointer bg-white ${
-                          draggedOverId === editingSection.id ? "border-blue-600 bg-blue-50/30" : "border-gray-200 hover:border-blue-600"
-                        }`}
-                      >
-                        <input
-                          id={`sect_file_${editingSection.id}`}
-                          type="file"
-                          multiple
-                          accept="image/*"
-                          onChange={(e) => processFiles(editingSection.id, e.target.files)}
-                          className="hidden"
-                        />
-                        <UploadCloud className="w-7 h-7 text-gray-400 mb-1.5" />
-                        <p className="text-xs font-bold text-gray-700">
-                          Drag & drop reference layouts, or <span className="text-blue-600 hover:underline">browse</span>
-                        </p>
-                        <p className="text-[10px] text-gray-400 mt-0.5">PNG, JPG up to 1.5MB</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
+              </div>
             </div>
           )}
 
           {/* STEP 4: General project details / instructions */}
-          {currentStep === 4 && (
+          {activeStep.type === "notes" && (
             <div className="space-y-8 animate-in fade-in duration-300 text-left">
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-650 bg-blue-50 px-2.5 py-1 rounded border border-blue-100 inline-block mb-3">
-                  Step 4: Context & Details
+                <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 block mb-2">
+                  Step {activeStep.id} / Context & Details
                 </span>
                 <h2 className="text-2xl md:text-3xl font-extrabold text-[#0F172A] tracking-tight">
                   Final details & notes
@@ -792,7 +1341,6 @@ function RouteComponent() {
               </div>
 
               <div className="space-y-5 pt-4">
-                {/* Target Audience */}
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">
                     Target Audience / Core Users
@@ -803,14 +1351,13 @@ function RouteComponent() {
                     onChange={(e) => {
                       const newSettings = { ...brandSettings, targetAudience: e.target.value };
                       setBrandSettings(newSettings);
-                      saveProgress(newSettings, sections);
+                      saveProgress(newSettings, sections, isFinishedAdding);
                     }}
                     className="w-full text-sm text-[#0F172A] p-3 border border-gray-200 rounded-xl focus:border-blue-600 outline-none bg-gray-50/20 transition-all placeholder:text-gray-400"
                     placeholder="E.g., Young professionals, local foodies, corporate HR managers..."
                   />
                 </div>
 
-                {/* Reference Website links */}
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">
                     Reference / Competitor Website Links
@@ -821,14 +1368,13 @@ function RouteComponent() {
                     onChange={(e) => {
                       const newSettings = { ...brandSettings, referenceLinks: e.target.value };
                       setBrandSettings(newSettings);
-                      saveProgress(newSettings, sections);
+                      saveProgress(newSettings, sections, isFinishedAdding);
                     }}
                     className="w-full text-sm text-[#0F172A] p-3 border border-gray-200 rounded-xl focus:border-blue-600 outline-none bg-gray-50/20 transition-all placeholder:text-gray-400"
                     placeholder="E.g., https://competitor.com, https://inspiration.design..."
                   />
                 </div>
 
-                {/* General Project Instructions */}
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">
                     General Project Instructions & Notes
@@ -838,9 +1384,9 @@ function RouteComponent() {
                     onChange={(e) => {
                       const newSettings = { ...brandSettings, generalNotes: e.target.value };
                       setBrandSettings(newSettings);
-                      saveProgress(newSettings, sections);
+                      saveProgress(newSettings, sections, isFinishedAdding);
                     }}
-                    rows={4}
+                    rows={6}
                     placeholder="Add key objectives, font preferences, visual branding requirements, or any other final instruction details..."
                     className="w-full text-sm text-[#0F172A] p-3.5 border border-gray-200 rounded-xl focus:border-blue-600 bg-gray-50/20 outline-none transition-all resize-y placeholder:text-gray-400"
                   />
@@ -850,17 +1396,17 @@ function RouteComponent() {
           )}
 
           {/* STEP 5: Outline Review and Rearrange */}
-          {currentStep === 5 && (
+          {activeStep.type === "review" && (
             <div className="space-y-8 animate-in fade-in duration-300 text-left">
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-650 bg-blue-50 px-2.5 py-1 rounded border border-blue-100 inline-block mb-3">
-                  Step 5: Confirmation
+                <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 block mb-2">
+                  Step {activeStep.id} / Confirmation
                 </span>
                 <h2 className="text-2xl md:text-3xl font-extrabold text-[#0F172A] tracking-tight">
-                  Review & Reorder Sections
+                  Review & Rearrange Sections
                 </h2>
                 <p className="text-sm text-gray-500 mt-1">
-                  Verify your branding settings, rearrange section structure, and finalize your brief.
+                  Drag and drop your website sections to change the order they will appear to your users.
                 </p>
               </div>
 
@@ -874,67 +1420,180 @@ function RouteComponent() {
                 </div>
               ) : (
                 <div className="space-y-6 pt-2">
-                  
-                  {/* Colors & Logo Metadata Summary box */}
-                  <div className="p-5 border border-gray-150 rounded-[20px] bg-gray-50/30 grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Palette</span>
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full border border-gray-300" style={{ backgroundColor: brandSettings.primaryColor }} />
-                        <div className="w-6 h-6 rounded-full border border-gray-300" style={{ backgroundColor: brandSettings.secondaryColor }} />
-                        <span className="text-xs font-bold text-gray-500 uppercase">{brandSettings.primaryColor} / {brandSettings.secondaryColor}</span>
+                  <div className="grid grid-cols-2 gap-4">
+                    <button
+                      onClick={() => handleGoToStep(1)}
+                      className="p-5 border border-gray-150 rounded-[20px] bg-gray-50/30 text-left hover:bg-gray-50 hover:border-blue-200 hover:shadow-xs transition-all cursor-pointer group flex flex-col justify-between"
+                    >
+                      <div className="space-y-2">
+                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block group-hover:text-blue-500 transition-colors">Palette</span>
+                        <div className="flex items-center gap-2">
+                          <div className="size-6 aspect-square rounded-full border border-gray-300" style={{ backgroundColor: brandSettings.primaryColor }} />
+                          <div className="size-6 aspect-square rounded-full border border-gray-300" style={{ backgroundColor: brandSettings.secondaryColor }} />
+                          <span className="text-xs font-bold text-gray-550 uppercase">{brandSettings.primaryColor} / {brandSettings.secondaryColor}</span>
+                        </div>
                       </div>
-                    </div>
+                    </button>
 
-                    <div className="space-y-2">
-                      <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Brand Logo / Concept</span>
-                      <span className="text-xs font-semibold text-gray-700 line-clamp-2">
-                        {brandSettings.logos.length > 0
-                          ? `Uploaded ${brandSettings.logos.length} logo file(s)`
-                          : brandSettings.logoDescription || "No logo concept specified"}
-                      </span>
-                    </div>
+                    <button
+                      onClick={() => handleGoToStep(2)}
+                      className="p-5 border border-gray-150 rounded-[20px] bg-gray-50/30 text-left hover:bg-gray-50 hover:border-blue-200 hover:shadow-xs transition-all cursor-pointer group flex flex-col justify-between"
+                    >
+                      <div className="space-y-2.5 w-full">
+                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block group-hover:text-blue-500 transition-colors">Brand Logo / Concept</span>
+                        <div className="flex items-center gap-2 min-w-0">
+                          {brandSettings.logos.length > 0 ? (
+                            <div className="flex items-center gap-2">
+                              <div className="flex -space-x-1.5">
+                                {brandSettings.logos.map((logo) => (
+                                  <img
+                                    key={logo.id}
+                                    src={logo.url}
+                                    alt="Logo preview"
+                                    className="w-7 h-7 rounded-lg object-contain border border-gray-250 bg-white p-0.5 shadow-xs shrink-0"
+                                  />
+                                ))}
+                              </div>
+                              <span className="text-xs font-bold text-gray-700">
+                                {brandSettings.logos.length} logo file(s)
+                              </span>
+                            </div>
+                          ) : brandSettings.logoDescription ? (
+                            <p className="text-xs font-medium text-gray-700 italic border-l-2 border-blue-500 pl-2 line-clamp-2 leading-relaxed">
+                              "{brandSettings.logoDescription}"
+                            </p>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold text-amber-600 bg-amber-50 border border-amber-100">
+                              <AlertTriangle className="w-3 h-3" />
+                              <span>No logo or concept specified</span>
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </button>
                   </div>
 
-                  {/* Dynamic sections rearrange container */}
                   <div className="space-y-4">
-                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block border-b border-gray-100 pb-1.5">
-                      Rearrange Section Order
-                    </span>
+                    <div className="flex items-center justify-between border-b border-gray-100 pb-2">
+                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">
+                        Website Sections ({sections.length} / {limits.maxWebsiteSections})
+                      </span>
+                      
+                      {sections.length < limits.maxWebsiteSections && (
+                        <button
+                          onClick={handleTriggerAddSectionFromReview}
+                          className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-lg border border-blue-100"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Add Section</span>
+                        </button>
+                      )}
+                    </div>
 
                     {sections.length === 0 ? (
                       <p className="text-xs text-gray-400 italic">No sections have been defined in this blueprint.</p>
                     ) : (
-                      <div className="space-y-2.5">
-                        {sections.map((section, idx) => (
-                          <div
-                            key={section.id}
-                            className="flex items-center justify-between p-3.5 bg-white border border-gray-200 rounded-xl shadow-xs"
-                          >
-                            <div className="flex items-center gap-3">
-                              <span className="text-xs font-extrabold text-gray-300">{(idx + 1).toString().padStart(2, "0")}</span>
-                              <span className="font-bold text-xs text-[#0F172A]">{section.title}</span>
+                      <div className="space-y-3">
+                        {sections.map((section, idx) => {
+                          // Find template description if applicable
+                          const templateInfo = SECTION_TEMPLATES.find(t => t.type === section.type);
+                          const subtitle = templateInfo ? templateInfo.defaultDescription : "Custom structural website section.";
+
+                          return (
+                            <div
+                              key={section.id}
+                              data-section-index={idx}
+                              draggable
+                              onDragStart={(e) => {
+                                setDraggedSectionIndex(idx);
+                                e.dataTransfer.effectAllowed = "move";
+                              }}
+                              onDragOver={(e) => {
+                                e.preventDefault();
+                              }}
+                              onDragEnter={(e) => {
+                                e.preventDefault();
+                                setDraggedOverCardIndex(idx);
+                              }}
+                              onDragLeave={() => setDraggedOverCardIndex(null)}
+                              onDrop={(e) => {
+                                e.preventDefault();
+                                handleCardDrop(idx);
+                                setDraggedOverCardIndex(null);
+                              }}
+                              onDragEnd={() => {
+                                setDraggedSectionIndex(null);
+                                setDraggedOverCardIndex(null);
+                              }}
+                              onClick={(e) => {
+                                if (draggedSectionIndex !== null) return;
+                                const target = e.target as HTMLElement;
+                                if (target.closest("button") || target.closest(".cursor-grab")) return;
+                                handleGoToStep(3 + idx);
+                              }}
+                              className={`relative flex items-center justify-between p-4 rounded-2xl transition-all duration-200 select-none cursor-pointer ${
+                                draggedSectionIndex === idx
+                                  ? "opacity-40 border border-dashed border-blue-400 bg-blue-50/10 shadow-none scale-[0.98]"
+                                  : draggedOverCardIndex === idx && draggedSectionIndex !== null
+                                  ? `${
+                                      draggedSectionIndex < idx ? "-translate-y-2" : "translate-y-2"
+                                    } bg-blue-50/5 border border-blue-500 shadow-md`
+                                  : "bg-white border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300 translate-y-0"
+                              }`}
+                            >
+                              {/* Drag insertion indicator line */}
+                              {draggedSectionIndex !== null && draggedOverCardIndex === idx && draggedSectionIndex !== idx && (
+                                <div
+                                  className={`absolute left-4 right-4 h-0.5 bg-blue-600 rounded-full z-20 pointer-events-none animate-pulse ${
+                                    draggedSectionIndex < idx ? "bottom-[-8px]" : "top-[-8px]"
+                                  }`}
+                                />
+                              )}
+                              <div className={`flex items-center gap-3.5 min-w-0 flex-1 ${draggedSectionIndex !== null ? "pointer-events-none" : ""}`}>
+                                <div
+                                  onTouchStart={(e) => handleTouchStart(idx, e)}
+                                  onTouchMove={handleTouchMove}
+                                  onTouchEnd={handleTouchEnd}
+                                  className="p-1 cursor-grab active:cursor-grabbing hover:bg-gray-50 rounded shrink-0 pointer-events-auto"
+                                >
+                                  <GripVertical className="text-gray-300 w-4 h-4 hover:text-gray-400 transition-colors" />
+                                </div>
+                                <div className="min-w-0 text-left">
+                                  <h4 className="font-bold text-sm text-[#0F172A] truncate">{section.title}</h4>
+                                  <p className="text-[11px] text-gray-400 truncate mt-0.5 max-w-md">{subtitle}</p>
+                                </div>
+                              </div>
+                              
+                              <div className={`flex items-center gap-4 shrink-0 pl-4 ${draggedSectionIndex !== null ? "pointer-events-none" : ""}`}>
+                                <button
+                                  onClick={() => handleGoToStep(3 + idx)}
+                                  className="text-xs font-bold text-blue-650 hover:underline cursor-pointer pointer-events-auto"
+                                >
+                                  Edit
+                                </button>
+ 
+                                <div className="flex items-center gap-0.5 border border-gray-150 rounded-lg p-0.5 bg-gray-50/50 pointer-events-auto">
+                                  <button
+                                    onClick={() => moveSection(idx, "up")}
+                                    disabled={idx === 0}
+                                    className="p-1 hover:bg-gray-105 rounded disabled:opacity-20 text-gray-500 disabled:cursor-not-allowed cursor-pointer"
+                                    title="Move Up"
+                                  >
+                                    <ChevronUp className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => moveSection(idx, "down")}
+                                    disabled={idx === sections.length - 1}
+                                    className="p-1 hover:bg-gray-105 rounded disabled:opacity-20 text-gray-500 disabled:cursor-not-allowed cursor-pointer"
+                                    title="Move Down"
+                                  >
+                                    <ChevronDown className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-1">
-                              <button
-                                onClick={() => moveSection(idx, "up")}
-                                disabled={idx === 0}
-                                className="p-1 hover:bg-gray-150 rounded disabled:opacity-20 text-gray-500 disabled:cursor-not-allowed cursor-pointer"
-                                title="Move Up"
-                              >
-                                <ChevronUp className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => moveSection(idx, "down")}
-                                disabled={idx === sections.length - 1}
-                                className="p-1 hover:bg-gray-150 rounded disabled:opacity-20 text-gray-500 disabled:cursor-not-allowed cursor-pointer"
-                                title="Move Down"
-                              >
-                                <ChevronDown className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -947,26 +1606,70 @@ function RouteComponent() {
 
         {/* Footer Navigation Buttons */}
         {!isSubmitSuccess && (
-          <div className="border-t border-gray-100 bg-white px-6 md:px-12 py-5 max-w-3xl w-full mx-auto flex items-center justify-between shrink-0">
-            <button
-              onClick={handlePrevStep}
-              disabled={currentStep === 1}
-              className="px-5 py-2.5 text-xs font-bold text-gray-500 hover:text-[#0F172A] disabled:opacity-20 transition-all cursor-pointer disabled:cursor-not-allowed"
-            >
-              Previous Step
-            </button>
-
-            {currentStep === 5 ? (
+          <div className="border-t border-gray-100 bg-white px-4 sm:px-6 md:px-12 py-4 sm:py-5 max-w-3xl w-full mx-auto flex items-center justify-between gap-2 shrink-0">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <button
-                onClick={handleSubmitBrief}
-                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded-xl shadow-xs cursor-pointer transition-all active:scale-95"
+                onClick={handlePrevStep}
+                disabled={currentStep === 1}
+                className="px-2.5 sm:px-4 py-2.5 text-[10px] sm:text-xs font-bold text-gray-500 hover:text-[#0F172A] disabled:opacity-20 transition-all cursor-pointer disabled:cursor-not-allowed whitespace-nowrap"
+              >
+                <span className="hidden sm:inline">Previous Step</span>
+                <span className="sm:hidden">Previous</span>
+              </button>
+
+              {/* Finished Adding Sections button available during section building */}
+              {(activeStep.type === "edit-section" || activeStep.type === "select-section") && (
+                <button
+                  onClick={handleFinishAddingSections}
+                  className="px-2.5 sm:px-4 py-2.5 text-[10px] sm:text-xs font-bold text-amber-600 hover:text-amber-700 bg-amber-50 rounded-xl border border-amber-100 transition-all cursor-pointer whitespace-nowrap"
+                >
+                  <span className="hidden sm:inline">Finished Adding Sections</span>
+                  <span className="sm:hidden">Finish Adding</span>
+                </button>
+              )}
+            </div>
+
+            {/* Draft Saving Status Indicator */}
+            <div className="flex items-center gap-1.5 text-gray-400 select-none mx-2">
+              {draftSaveStatus === "saving" && (
+                <>
+                  <div className="w-2.5 h-2.5 rounded-full border border-blue-200 border-t-blue-600 animate-spin" />
+                  <span className="text-[10px] font-medium text-gray-400">Saving draft...</span>
+                </>
+              )}
+              {draftSaveStatus === "saved" && (
+                <>
+                  <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
+                  <span className="text-[10px] font-semibold text-emerald-600">Draft saved</span>
+                </>
+              )}
+              {draftSaveStatus === "error" && (
+                <>
+                  <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
+                  <span className="text-[10px] font-semibold text-red-500">Save failed</span>
+                </>
+              )}
+            </div>
+
+            {currentStep === dynamicSteps.length ? (
+              <button
+                onClick={() => {
+                  const errors = validateBrief();
+                  if (errors.length > 0) {
+                    setValidationErrors(errors);
+                    setShowValidationModal(true);
+                  } else {
+                    setShowSubmitConfirm(true);
+                  }
+                }}
+                className="px-4 sm:px-6 py-2.5 sm:py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-[10px] sm:text-xs rounded-xl shadow-xs cursor-pointer transition-all active:scale-95 whitespace-nowrap"
               >
                 Submit Brief
               </button>
             ) : (
               <button
                 onClick={handleNextStep}
-                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+                className="px-4 sm:px-6 py-2.5 sm:py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-[10px] sm:text-xs rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 whitespace-nowrap"
               >
                 <span>Next Step</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -975,6 +1678,84 @@ function RouteComponent() {
           </div>
         )}
       </main>
+
+      {/* 4. Submission Confirmation Modal */}
+      {showSubmitConfirm && (
+        <div className="fixed inset-0 bg-[#0F172A]/40 backdrop-blur-xs flex items-center justify-center z-50 animate-in fade-in duration-200">
+          <div className="bg-white p-6 rounded-[24px] max-w-sm w-full mx-4 shadow-xl border border-gray-150 text-center animate-in zoom-in-95 duration-200">
+            <div className="w-12 h-12 rounded-full bg-red-50 text-red-600 flex items-center justify-center mx-auto mb-4 animate-pulse">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <h3 className="text-lg font-extrabold text-[#0F172A] tracking-tight">Submit & Lock Brief?</h3>
+            <p className="text-xs text-gray-500 mt-2 leading-relaxed">
+              This action is irreversible. Once submitted, your brief is locked for production and cannot be modified. Please confirm all details are correct.
+            </p>
+            <div className="flex items-center gap-3 mt-6">
+              <button
+                onClick={() => setShowSubmitConfirm(false)}
+                className="flex-1 py-2.5 text-xs font-bold text-gray-500 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer bg-white"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowSubmitConfirm(false);
+                  handleSubmitBrief();
+                }}
+                className="flex-1 py-2.5 text-xs font-extrabold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors cursor-pointer"
+              >
+                Yes, Submit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* 5. Mobile Drag Floating Preview */}
+      {draggedSectionIndex !== null && touchPosition && (
+        <div 
+          className="fixed pointer-events-none z-50 bg-white/95 border border-blue-500 rounded-2xl shadow-lg px-4 py-3 flex items-center gap-3 opacity-90 transition-all transform scale-[1.02] max-w-xs truncate"
+          style={{
+            left: `${touchPosition.x - 120}px`,
+            top: `${touchPosition.y - 65}px`,
+          }}
+        >
+          <GripVertical className="text-blue-500 w-4 h-4 shrink-0" />
+          <span className="font-extrabold text-xs text-[#0F172A] truncate">
+            {sections[draggedSectionIndex]?.title || "Moving section..."}
+          </span>
+        </div>
+      )}
+
+      {/* 6. Validation Errors Modal */}
+      {showValidationModal && (
+        <div className="fixed inset-0 bg-[#0F172A]/40 backdrop-blur-xs flex items-center justify-center z-55 animate-in fade-in duration-200">
+          <div className="bg-white p-6 rounded-[24px] max-w-md w-full mx-4 shadow-xl border border-gray-150 text-left animate-in zoom-in-95 duration-200">
+            <div className="w-12 h-12 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mb-4">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <h3 className="text-lg font-extrabold text-[#0F172A] tracking-tight">Missing Information</h3>
+            <p className="text-xs text-gray-500 mt-1.5 leading-relaxed">
+              Please resolve the following required items before submitting your blueprint brief:
+            </p>
+            <div className="mt-4 max-h-[200px] overflow-y-auto pr-1 space-y-2 border-y border-gray-100 py-3">
+              {validationErrors.map((err, i) => (
+                <div key={i} className="flex items-start gap-2 text-xs font-semibold text-gray-700 leading-relaxed">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
+                  <span>{err}</span>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-end mt-5">
+              <button
+                onClick={() => setShowValidationModal(false)}
+                className="px-5 py-2.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors cursor-pointer"
+              >
+                Go Back & Fix
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

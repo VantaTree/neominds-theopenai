@@ -91,4 +91,33 @@ export const AddOns = [
   "seven",
 ];
 
+export interface PlanLimits {
+  maxWebsiteSections: number;
+  maxImagesPerSection: number;
+  eligibilityForCustomSection: boolean;
+}
+
+export const PLAN_LIMITS: Record<string, PlanLimits> = {
+  Basic: {
+    maxWebsiteSections: 5,
+    maxImagesPerSection: 1,
+    eligibilityForCustomSection: false
+  },
+  Plus: {
+    maxWebsiteSections: 8,
+    maxImagesPerSection: 3,
+    eligibilityForCustomSection: false
+  },
+  Pro: {
+    maxWebsiteSections: 16,
+    maxImagesPerSection: 5,
+    eligibilityForCustomSection: true
+  },
+  Customize: {
+    maxWebsiteSections: 16,
+    maxImagesPerSection: 5,
+    eligibilityForCustomSection: true
+  }
+};
+
 export default PLANS;
