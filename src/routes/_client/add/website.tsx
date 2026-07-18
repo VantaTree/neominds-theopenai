@@ -341,7 +341,11 @@ function RouteComponent() {
             domain: "Website",
             services: ["Website Development"],
             status: "User Draft",
-            assignee: "Admin",
+            assignee: "Admin Reviewer",
+            assets: [
+              ...brandSettings.logos.map(img => img.url),
+              ...sections.flatMap(section => section.images.map(img => img.url))
+            ],
             data: {
               primaryColor: updatedBrand.primaryColor,
               secondaryColor: updatedBrand.secondaryColor,
@@ -400,7 +404,11 @@ function RouteComponent() {
           domain: "Website",
           services: ["Website Development"],
           status: "User Draft",
-          assignee: "Admin",
+          assignee: "Admin Reviewer",
+          assets: [
+            ...brandSettings.logos.map(img => img.url),
+            ...sections.flatMap(section => section.images.map(img => img.url))
+          ],
           data: {
             primaryColor: updatedBrand.primaryColor,
             secondaryColor: updatedBrand.secondaryColor,
@@ -436,7 +444,11 @@ function RouteComponent() {
             domain: "Website",
             services: ["Website Development"],
             status: "User Draft",
-            assignee: "Admin",
+            assignee: "Admin Reviewer",
+            assets: [
+              ...brandSettings.logos.map(img => img.url),
+              ...sections.flatMap(section => section.images.map(img => img.url))
+            ],
             data: {
               primaryColor: brandSettingsRef.current.primaryColor,
               secondaryColor: brandSettingsRef.current.secondaryColor,
@@ -923,7 +935,11 @@ function RouteComponent() {
           domain: "Website",
           services: ["Website Development"],
           status: "Requested",
-          assignee: "Admin",
+          assignee: "Admin Reviewer",
+          assets: [
+            ...brandSettings.logos.map(img => img.url),
+            ...sections.flatMap(section => section.images.map(img => img.url))
+          ],
           data: {
             primaryColor: brandSettings.primaryColor,
             secondaryColor: brandSettings.secondaryColor,
