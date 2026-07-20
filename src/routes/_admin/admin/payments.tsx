@@ -72,7 +72,7 @@ function EntityAvatar({
   size = 32,
   isBusiness = false,
 }: {
-  imageUrl?: string;
+  imageUrl?: string | null;
   name: string;
   size?: number;
   isBusiness?: boolean;
@@ -262,6 +262,24 @@ function PaymentsPage() {
       count: filtered.length,
     };
   }, [resolvedPayments, kpiPeriod]);
+
+  // Calculate ARPU (Average Revenue Per User) and Average Value Per Business (LTV)
+  const arpu = useMemo(() => {
+    const revenueInPeriod = firstRowMetrics.totalRevenue;
+    const totalBusinessesCount = businesses.length || 1;
+    const arpuInPeriod = revenueInPeriod / totalBusinessesCount;
+
+    const totalLifetimePaid = resolvedPayments
+      .filter((p) => p.status === "Paid")
+      .reduce((sum, p) => sum + p.amount, 0);
+    const averageLtv = totalLifetimePaid / totalBusinessesCount;
+
+    return {
+      arpuInPeriod,
+      averageLtv,
+      totalBusinessesCount,
+    };
+  }, [firstRowMetrics.totalRevenue, resolvedPayments, businesses.length]);
 
   // Second Row KPIs (Business Owner Portfolio Metrics)
   const secondRowMetrics = useMemo(() => {
@@ -579,7 +597,7 @@ function PaymentsPage() {
           <div className="flex items-center gap-2">
             <Coins className="text-[#3525cd]" size={18} />
             <h2 className="text-sm font-bold uppercase tracking-wider text-gray-600">
-              Revenue Analytics
+              Revenue & Unit Economics
             </h2>
           </div>
           <div className="flex items-center gap-2">
@@ -597,7 +615,7 @@ function PaymentsPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all">
             <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
               Total Revenue
@@ -629,32 +647,38 @@ function PaymentsPage() {
             </p>
           </div>
 
-          <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all">
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-              Refunded Volume
-            </p>
-            <div className="flex items-baseline gap-2 mt-2">
-              <span className="text-2xl font-bold text-red-500">
-                {formatCurrency(firstRowMetrics.refundedRevenue)}
-              </span>
+          <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between h-full relative overflow-hidden">
+            <div>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                ARPU / LTV (Value per Business)
+              </p>
+              <div className="flex items-baseline gap-2 mt-2">
+                <span className="text-2xl font-bold text-gray-800">
+                  {formatCurrency(arpu.arpuInPeriod)}
+                </span>
+                <span className="text-[10px] text-gray-400 font-medium">
+                  Average spend in range
+                </span>
+              </div>
             </div>
-            <p className="text-[10px] text-gray-400 mt-2">
-              Reversed or failed transactions
-            </p>
-          </div>
-
-          <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all">
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-              Avg Ticket / Transaction
-            </p>
-            <div className="flex items-baseline gap-2 mt-2">
-              <span className="text-2xl font-bold text-gray-800">
-                {formatCurrency(firstRowMetrics.avgTicket)}
-              </span>
+            <div className="border-t border-gray-100 pt-3 mt-3 flex justify-between items-center text-xs">
+              <div>
+                <span className="text-[9px] text-gray-400 font-bold block uppercase tracking-wider">
+                  Lifetime Value (LTV)
+                </span>
+                <span className="font-bold text-indigo-600">
+                  {formatCurrency(arpu.averageLtv)}
+                </span>
+              </div>
+              <div className="text-right">
+                <span className="text-[9px] text-gray-400 font-bold block uppercase tracking-wider">
+                  Businesses
+                </span>
+                <span className="font-semibold text-gray-700">
+                  {arpu.totalBusinessesCount} active
+                </span>
+              </div>
             </div>
-            <p className="text-[10px] text-gray-400 mt-2">
-              Across {firstRowMetrics.count} operations
-            </p>
           </div>
         </div>
       </div>
@@ -664,11 +688,11 @@ function PaymentsPage() {
         <div className="flex items-center gap-2">
           <Building2 className="text-[#3525cd]" size={18} />
           <h2 className="text-sm font-bold uppercase tracking-wider text-gray-600">
-            Portfolio Health
+            Portfolio Size & Billing Health
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
             <div>
               <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
@@ -717,23 +741,6 @@ function PaymentsPage() {
             </div>
             <div className="w-12 h-12 bg-red-50 text-red-500 rounded-xl flex items-center justify-center">
               <AlertTriangle size={24} />
-            </div>
-          </div>
-
-          <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
-            <div>
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-                Average LTV
-              </p>
-              <h3 className="text-2xl font-bold text-indigo-700 mt-2">
-                {formatCurrency(secondRowMetrics.avgLtv)}
-              </h3>
-              <p className="text-[10px] text-gray-400 mt-1">
-                Average value per client
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-purple-50 text-indigo-700 rounded-xl flex items-center justify-center">
-              <Users2 size={24} />
             </div>
           </div>
         </div>
