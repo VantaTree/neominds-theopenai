@@ -708,381 +708,25 @@ function UsersPage() {
         </div>
 
         {/* Expand/Collapse All triggers */}
-        {!selectedUser && (
-          <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-wider text-mm-gray self-start md:self-center">
-            <button
-              onClick={expandAll}
-              className="hover:text-mm-orange transition-colors cursor-pointer"
-            >
-              Expand All
-            </button>
-            <span className="text-mm-border">|</span>
-            <button
-              onClick={collapseAll}
-              className="hover:text-mm-orange transition-colors cursor-pointer"
-            >
-              Collapse All
-            </button>
-          </div>
-        )}
+        <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-wider text-mm-gray self-start md:self-center">
+          <button
+            onClick={expandAll}
+            className="hover:text-mm-orange transition-colors cursor-pointer"
+          >
+            Expand All
+          </button>
+          <span className="text-mm-border">|</span>
+          <button
+            onClick={collapseAll}
+            className="hover:text-mm-orange transition-colors cursor-pointer"
+          >
+            Collapse All
+          </button>
+        </div>
       </div>
 
-      {/* ── USER DETAIL FULL-WIDTH INLINE VIEW ── */}
-      {selectedUser ? (
-        <div className="bg-white border border-mm-border rounded-[24px] shadow-[0_2px_12px_rgba(0,0,0,0.02)] overflow-hidden">
-          {/* Header */}
-          <div
-            className="p-6 border-b"
-            style={{
-              borderColor: "var(--color-mm-border)",
-              background: "white",
-            }}
-          >
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-4">
-                {selectedUser.image &&
-                selectedUser.image.trim() !== "" &&
-                selectedUser.image !== "undefined" &&
-                selectedUser.image !== "null" ? (
-                  <img
-                    src={selectedUser.image}
-                    alt={selectedUser.name}
-                    className="rounded-full object-cover aspect-square shrink-0"
-                    style={{ width: 72, height: 72 }}
-                  />
-                ) : (
-                  <Avatar name={selectedUser.name} size={72} />
-                )}
-                <div>
-                  <h2
-                    className="text-2xl font-bold"
-                    style={{ color: "var(--color-mm-dark)" }}
-                  >
-                    {selectedUser.name}
-                  </h2>
-                  <div
-                    className="text-sm mt-1"
-                    style={{ color: "var(--color-mm-gray)" }}
-                  >
-                    {selectedUser.business}
-                  </div>
-                  <div className="mt-2 flex items-center gap-3">
-                    <StatusBadge status={selectedUser.status} />
-                    <PlanBadge plan={selectedUser.plan.replace(" Plan", "")} />
-                  </div>
-                </div>
-              </div>
-              <button
-                onClick={() => setSelectedUser(null)}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold hover:opacity-80 transition-opacity"
-                style={{
-                  background: "white",
-                  border: "1px solid var(--color-mm-border)",
-                  color: "var(--color-mm-gray)",
-                }}
-              >
-                <ArrowLeft size={16} /> Back to Users
-              </button>
-            </div>
-          </div>
-
-          {/* Tabs */}
-          <div
-            className="flex items-center px-6 pt-4 gap-8 border-b"
-            style={{ borderColor: "var(--color-mm-border)" }}
-          >
-            {["Profile", "Reports & Audits", "Account"].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className="pb-3 text-sm font-semibold transition-colors cursor-pointer"
-                style={{
-                  color:
-                    activeTab === tab
-                      ? "var(--color-mm-orange)"
-                      : "var(--color-mm-gray)",
-                  borderBottom:
-                    activeTab === tab
-                      ? "2px solid var(--color-mm-orange)"
-                      : "2px solid transparent",
-                }}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
-
-          {/* Tab Content */}
-          <div className="p-8">
-            {activeTab === "Profile" && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Contact Information */}
-                <div>
-                  <h3
-                    className="text-base font-semibold mb-4"
-                    style={{ color: "var(--color-mm-gray)" }}
-                  >
-                    Contact Information
-                  </h3>
-                  <div className="space-y-4">
-                    <div
-                      className="flex items-center gap-4 p-4 rounded-xl border"
-                      style={{
-                        borderColor: "var(--color-mm-border)",
-                        background: "white",
-                      }}
-                    >
-                      <div
-                        className="w-9 h-9 rounded-lg flex items-center justify-center animate-pulse"
-                        style={{ background: "rgba(224, 86, 36, 0.1)" }}
-                      >
-                        <Mail
-                          size={18}
-                          style={{ color: "var(--color-mm-orange)" }}
-                        />
-                      </div>
-                      <div>
-                        <div
-                          className="text-xs font-semibold mb-0.5"
-                          style={{ color: "var(--color-mm-gray)" }}
-                        >
-                          Email Address
-                        </div>
-                        <div
-                          className="text-sm font-semibold"
-                          style={{ color: "var(--color-mm-dark)" }}
-                        >
-                          {selectedUser.email}
-                        </div>
-                      </div>
-                    </div>
-                    <div
-                      className="flex items-center gap-4 p-4 rounded-xl border"
-                      style={{
-                        borderColor: "var(--color-mm-border)",
-                        background: "white",
-                      }}
-                    >
-                      <div
-                        className="w-9 h-9 rounded-lg flex items-center justify-center"
-                        style={{ background: "rgba(224, 86, 36, 0.1)" }}
-                      >
-                        <Phone
-                          size={18}
-                          style={{ color: "var(--color-mm-orange)" }}
-                        />
-                      </div>
-                      <div>
-                        <div
-                          className="text-xs font-semibold mb-0.5"
-                          style={{ color: "var(--color-mm-gray)" }}
-                        >
-                          Phone Number
-                        </div>
-                        <div
-                          className="text-sm font-semibold"
-                          style={{ color: "var(--color-mm-dark)" }}
-                        >
-                          {selectedUser.phone || "N/A"}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Plan Details */}
-                <div>
-                  <h3
-                    className="text-base font-semibold mb-4"
-                    style={{ color: "var(--color-mm-gray)" }}
-                  >
-                    Plan Details
-                  </h3>
-                  <div
-                    className="p-5 rounded-xl border"
-                    style={{
-                      borderColor: "var(--color-mm-border)",
-                      background: "white",
-                    }}
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <span
-                        className="font-semibold"
-                        style={{ color: "var(--color-mm-dark)" }}
-                      >
-                        Current Plan
-                      </span>
-                      <PlanBadge
-                        plan={selectedUser.plan.replace(" Plan", "")}
-                      />
-                    </div>
-                    <div
-                      className="h-px my-3"
-                      style={{ background: "var(--color-mm-border)" }}
-                    />
-                    <div className="flex items-center justify-between text-sm">
-                      <span style={{ color: "var(--color-mm-gray)" }}>
-                        Member Since
-                      </span>
-                      <span
-                        className="font-semibold"
-                        style={{ color: "var(--color-mm-dark)" }}
-                      >
-                        {selectedUser.joinedOn}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm mt-2">
-                      <span style={{ color: "var(--color-mm-gray)" }}>
-                        Account Status
-                      </span>
-                      <StatusBadge status={selectedUser.status} />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === "Reports & Audits" && (
-              <div className="space-y-4 max-w-2xl">
-                <div
-                  className="p-5 rounded-xl border flex items-center justify-between"
-                  style={{
-                    borderColor: "var(--color-mm-border)",
-                    background: "white",
-                  }}
-                >
-                  <div className="flex items-center gap-4">
-                    <div
-                      className="w-10 h-10 rounded-lg flex items-center justify-center"
-                      style={{ background: "rgba(224, 86, 36, 0.1)" }}
-                    >
-                      <FileText
-                        size={20}
-                        style={{ color: "var(--color-mm-orange)" }}
-                      />
-                    </div>
-                    <div>
-                      <div
-                        className="font-semibold text-sm"
-                        style={{ color: "var(--color-mm-dark)" }}
-                      >
-                        Q2 Marketing Audit
-                      </div>
-                      <div
-                        className="text-xs mt-0.5"
-                        style={{ color: "var(--color-mm-gray)" }}
-                      >
-                        May 10, 2024 · PDF Report
-                      </div>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => handleViewDocument("Q2 Marketing Audit")}
-                    className="px-4 py-1.5 rounded-lg text-sm font-semibold hover:opacity-80 transition-opacity cursor-pointer animate-pulse"
-                    style={{
-                      background: "rgba(224, 86, 36, 0.1)",
-                      border: "1px solid var(--color-mm-orange)",
-                      color: "var(--color-mm-orange)",
-                    }}
-                  >
-                    View
-                  </button>
-                </div>
-                <div
-                  className="p-5 rounded-xl border flex items-center justify-between"
-                  style={{
-                    borderColor: "var(--color-mm-border)",
-                    background: "white",
-                  }}
-                >
-                  <div className="flex items-center gap-4">
-                    <div
-                      className="w-10 h-10 rounded-lg flex items-center justify-center"
-                      style={{ background: "rgba(224, 86, 36, 0.1)" }}
-                    >
-                      <FileText
-                        size={20}
-                        style={{ color: "var(--color-mm-orange)" }}
-                      />
-                    </div>
-                    <div>
-                      <div
-                        className="font-semibold text-sm"
-                        style={{ color: "var(--color-mm-dark)" }}
-                      >
-                        SEO Performance Report
-                      </div>
-                      <div
-                        className="text-xs mt-0.5"
-                        style={{ color: "var(--color-mm-gray)" }}
-                      >
-                        Apr 28, 2024 · PDF Report
-                      </div>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => handleViewDocument("SEO Performance Report")}
-                    className="px-4 py-1.5 rounded-lg text-sm font-semibold hover:opacity-80 transition-opacity cursor-pointer"
-                    style={{
-                      background: "rgba(224, 86, 36, 0.1)",
-                      border: "1px solid var(--color-mm-orange)",
-                      color: "var(--color-mm-orange)",
-                    }}
-                  >
-                    View
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {activeTab === "Account" && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">
-                <button
-                  onClick={() => handleResetPassword()}
-                  className="w-full text-left p-5 rounded-xl border hover:opacity-80 transition-opacity cursor-pointer"
-                  style={{
-                    borderColor: "var(--color-mm-border)",
-                    background: "white",
-                    color: "var(--color-mm-gray)",
-                    fontWeight: 600,
-                  }}
-                >
-                  Reset Password
-                </button>
-                <button
-                  onClick={handleSuspendUser}
-                  className="w-full text-left p-5 rounded-xl border hover:opacity-80 transition-opacity cursor-pointer"
-                  style={{
-                    borderColor:
-                      selectedUser.status === "Inactive" ||
-                      selectedUser.status === "Suspended"
-                        ? "var(--color-mm-green)"
-                        : "var(--color-mm-red)",
-                    background:
-                      selectedUser.status === "Inactive" ||
-                      selectedUser.status === "Suspended"
-                        ? "rgba(92, 177, 62, 0.1)"
-                        : "rgba(224, 86, 36, 0.1)",
-                    color:
-                      selectedUser.status === "Inactive" ||
-                      selectedUser.status === "Suspended"
-                        ? "var(--color-mm-green)"
-                        : "var(--color-mm-red)",
-                    fontWeight: 600,
-                  }}
-                >
-                  {selectedUser.status === "Inactive" ||
-                  selectedUser.status === "Suspended"
-                    ? "Reactivate Account"
-                    : "Suspend Account"}
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      ) : (
-        /* ── USERS TABLE VIEW ── */
-        <>
+      {/* ── USERS TABLE VIEW ── */}
+      <>
           {/* Role Tab Selector */}
           <div
             className="flex border-b mb-6 gap-6"
@@ -1582,25 +1226,11 @@ function UsersPage() {
                             >
                               <div className="flex items-center gap-3">
                                 <button
-                                  onClick={() => {
-                                    setSelectedUser(u);
-                                    setActiveTab("Profile");
-                                  }}
-                                  className="hover:text-mm-orange transition-colors cursor-pointer"
-                                >
-                                  <Eye
-                                    size={16}
-                                    style={{ color: "var(--color-mm-gray)" }}
-                                  />
-                                </button>
-                                <button
                                   onClick={() => handleEditClick(u)}
-                                  className="hover:text-mm-orange transition-colors cursor-pointer"
+                                  className="p-1.5 rounded-lg text-mm-gray hover:text-mm-orange hover:bg-mm-orange/15 transition-all duration-200 active:scale-90 cursor-pointer inline-flex items-center justify-center"
+                                  title="Edit User"
                                 >
-                                  <Edit2
-                                    size={16}
-                                    style={{ color: "var(--color-mm-gray)" }}
-                                  />
+                                  <Edit2 size={16} />
                                 </button>
                                 <div className="relative inline-block actions-dropdown-container">
                                   <button
@@ -1622,7 +1252,7 @@ function UsersPage() {
                                         openDropdownId === u.id ? null : u.id,
                                       );
                                     }}
-                                    className="p-1 rounded-lg hover:bg-mm-subtle transition-colors cursor-pointer text-mm-gray hover:text-mm-dark flex items-center justify-center"
+                                    className="p-1.5 rounded-lg hover:bg-mm-subtle/80 transition-all duration-200 active:scale-90 cursor-pointer text-mm-gray hover:text-mm-dark flex items-center justify-center"
                                     title="More Actions"
                                   >
                                     <MoreVertical size={16} />
@@ -1812,59 +1442,36 @@ function UsersPage() {
                                                             : b.userId?.id || "",
                                                         business: b.id,
                                                       }}
-                                                      className="hover:text-mm-orange transition-colors cursor-pointer inline-flex items-center"
+                                                      className="p-1.5 rounded-lg text-mm-gray hover:text-mm-orange hover:bg-mm-orange/15 transition-all duration-200 active:scale-90 cursor-pointer inline-flex items-center justify-center"
                                                       title="Chat"
                                                     >
-                                                      <MessageSquare
-                                                        size={14}
-                                                        style={{
-                                                          color:
-                                                            "var(--color-mm-gray)",
-                                                        }}
-                                                      />
+                                                      <MessageSquare size={14} />
                                                     </Link>
                                                     <button
                                                       onClick={() =>
                                                         handleEditBusinessClick(b)
                                                       }
-                                                      className="hover:text-mm-orange transition-colors cursor-pointer inline-flex items-center"
+                                                      className="p-1.5 rounded-lg text-mm-gray hover:text-mm-orange hover:bg-mm-orange/15 transition-all duration-200 active:scale-90 cursor-pointer inline-flex items-center justify-center"
+                                                      title="Edit Business"
                                                     >
-                                                      <Edit2
-                                                        size={14}
-                                                        style={{
-                                                          color:
-                                                            "var(--color-mm-gray)",
-                                                        }}
-                                                      />
+                                                      <Edit2 size={14} />
                                                     </button>
                                                     {report && (
                                                       <Link
                                                         to="/admin/reports/$id"
                                                         params={{ id: report.id }}
-                                                        className="hover:text-mm-orange transition-colors cursor-pointer inline-flex items-center"
+                                                        className="p-1.5 rounded-lg text-mm-gray hover:text-mm-green hover:bg-mm-green/15 transition-all duration-200 active:scale-90 cursor-pointer inline-flex items-center justify-center"
                                                         title="View Report"
                                                       >
-                                                        <FileText
-                                                          size={14}
-                                                          style={{
-                                                            color:
-                                                              "var(--color-mm-gray)",
-                                                          }}
-                                                        />
+                                                        <FileText size={14} />
                                                       </Link>
                                                     )}
                                                     <button
                                                       onClick={() => setBusinessToDelete(b)}
-                                                      className="hover:text-mm-red transition-colors cursor-pointer inline-flex items-center"
+                                                      className="p-1.5 rounded-lg text-mm-gray hover:text-mm-red hover:bg-mm-red/15 transition-all duration-200 active:scale-90 cursor-pointer inline-flex items-center justify-center"
                                                       title="Delete Business"
                                                     >
-                                                      <Trash2
-                                                        size={14}
-                                                        style={{
-                                                          color:
-                                                            "var(--color-mm-gray)",
-                                                        }}
-                                                      />
+                                                      <Trash2 size={14} />
                                                     </button>
                                                   </div>
                                                 </td>
@@ -1991,7 +1598,6 @@ function UsersPage() {
             </div>
           </div>
         </>
-      )}
 
       {/* ── EDIT USER MODAL ── */}
       {editingUser && (
