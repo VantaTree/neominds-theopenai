@@ -244,36 +244,25 @@ function RouteComponent() {
       );
     }
 
-    if (isMobile) {
-      return (
-        <div className="h-dvh w-screen bg-[#F9FAFC] flex flex-col font-sans relative overflow-hidden">
-          <ClientNav />
-          <div className="h-16 shrink-0" />
+    // Unify mobile and desktop layouts to prevent unmounting/remounting of ClientNav
+    const containerClasses = isMobile
+      ? "h-dvh w-screen bg-[#F9FAFC] flex flex-col font-sans relative overflow-hidden"
+      : `${isChatRoute ? "h-screen overflow-hidden" : "min-h-screen"} bg-[#F9FAFC] flex flex-col font-sans`;
 
-          <main className="flex-1 w-full flex flex-col overflow-y-auto pb-20">
-            <PageTransitionWrapper>
-              <Outlet />
-            </PageTransitionWrapper>
-          </main>
-
-          <ClientBottomLinks />
-        </div>
-      );
-    }
+    const mainClasses = isMobile
+      ? "flex-1 w-full flex flex-col overflow-y-auto pb-20"
+      : `flex-1 w-full flex flex-col ${isChatRoute ? "overflow-hidden" : ""}`;
 
     return (
-      <div
-        className={`${isChatRoute ? "h-screen overflow-hidden" : "min-h-screen"} bg-[#F9FAFC] flex flex-col font-sans`}
-      >
+      <div className={containerClasses}>
         <ClientNav />
         <div className="h-16 shrink-0" />
-        <main
-          className={`flex-1 w-full flex flex-col ${isChatRoute ? "overflow-hidden" : ""}`}
-        >
+        <main className={mainClasses}>
           <PageTransitionWrapper>
             <Outlet />
           </PageTransitionWrapper>
         </main>
+        {isMobile && <ClientBottomLinks />}
       </div>
     );
   };

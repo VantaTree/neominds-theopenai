@@ -1,10 +1,10 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Home, Folder, Building2, Crown, Settings, ChevronDown, LogOut, User, MessageCircle, Plus } from "lucide-react";
 import { useBusiness } from "@/hooks/use-business";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import { getClientStreamCredentialsFn } from "@/lib/server-functions";
+import { useStreamConnection, getCachedClientStreamCredentials } from "@/lib/stream-connection";
 
 export default function ClientNav() {
   const navigate = useNavigate();
@@ -18,59 +18,66 @@ export default function ClientNav() {
   const mobileBusinessDropdownRef = useRef<HTMLDivElement>(null);
   
   const [unreadChatCount, setUnreadChatCount] = useState(0);
+  const [creds, setCreds] = useState<{ apiKey: string; uid: string; name: string; token: string } | null>(null);
 
   useEffect(() => {
-    let active = true;
-    let client: any = null;
-
-    async function checkUnread() {
-      const businessId = activeBusiness?.id;
-      if (!businessId) {
-        setUnreadChatCount(0);
-        return;
-      }
-
-      try {
-        const creds = await getClientStreamCredentialsFn({ data: businessId });
-        if (!active) return;
-        const { StreamChat } = await import("stream-chat");
-        client = StreamChat.getInstance(creds.apiKey);
-        const userState = await client.connectUser(
-          { id: creds.uid, name: creds.name },
-          creds.token
-        );
-        if (!active) return;
-        setUnreadChatCount(userState.me.total_unread_count || 0);
-
-        // Listen for new messages / read receipts globally to update count in real-time
-        client.on((event: any) => {
-          if (!active) return;
-          if (
-            event.type === "message.new" ||
-            event.type === "message.read" ||
-            event.type === "notification.message_new" ||
-            event.type === "notification.mark_read"
-          ) {
-            setUnreadChatCount(client.user?.total_unread_count || 0);
-          }
-        });
-      } catch (err) {
-        // Silent error
-        if (active) {
-          setUnreadChatCount(0);
-        }
-      }
+    const businessId = activeBusiness?.id;
+    if (!businessId) {
+      setCreds(null);
+      return;
     }
 
-    checkUnread();
+    let active = true;
+    getCachedClientStreamCredentials(businessId)
+      .then((res) => {
+        if (active) {
+          setCreds(res);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch stream credentials for navbar:", err);
+        if (active) {
+          setCreds(null);
+        }
+      });
 
     return () => {
       active = false;
-      if (client) {
-        client.disconnectUser();
-      }
     };
   }, [activeBusiness?.id]);
+
+  const connectionOptions = useMemo(() => {
+    if (!creds) return null;
+    return {
+      apiKey: creds.apiKey,
+      user: { id: creds.uid, name: creds.name },
+      token: creds.token,
+    };
+  }, [creds]);
+
+  const { client } = useStreamConnection(connectionOptions);
+
+  useEffect(() => {
+    if (!client) {
+      setUnreadChatCount(0);
+      return;
+    }
+
+    setUnreadChatCount((client.user as any)?.total_unread_count || 0);
+
+    const handleEvent = (event: any) => {
+      if (event.total_unread_count !== undefined) {
+        setUnreadChatCount(event.total_unread_count);
+      } else {
+        setUnreadChatCount((client.user as any)?.total_unread_count || 0);
+      }
+    };
+
+    client.on(handleEvent);
+    return () => {
+      client.off(handleEvent);
+    };
+  }, [client]);
 
   const [userProfile, setUserProfile] = useState({
     name: "John Doe",

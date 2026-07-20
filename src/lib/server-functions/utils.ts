@@ -24,6 +24,10 @@ export const testFirestoreConnectionFn = createServerFn({ method: "POST" })
     }
   });
 
+// Keep a simple server-side in-memory cache of user IDs that have been upserted to Stream Chat
+// to avoid making slow API calls to Stream Chat on every credentials fetch.
+const upsertedUsersCache = new Set<string>();
+
 export const getStreamCredentialsFn = createServerFn({ method: "GET" })
   .middleware([adminMiddleware])
   .handler(async () => {
@@ -37,11 +41,14 @@ export const getStreamCredentialsFn = createServerFn({ method: "GET" })
     const { StreamChat: NodeStreamChat } = await import("stream-chat");
     const serverClient = NodeStreamChat.getInstance(apiKey, apiSecret);
 
-    await serverClient.upsertUser({
-      id: "admin",
-      role: "admin",
-      name: "Admin Manager",
-    } as any);
+    if (!upsertedUsersCache.has("admin")) {
+      await serverClient.upsertUser({
+        id: "admin",
+        role: "admin",
+        name: "Admin Manager",
+      } as any);
+      upsertedUsersCache.add("admin");
+    }
 
     const token = serverClient.createToken("admin");
 
@@ -68,19 +75,32 @@ export const getClientStreamCredentialsFn = createServerFn({ method: "GET" })
     const { StreamChat: NodeStreamChat } = await import("stream-chat");
     const serverClient = NodeStreamChat.getInstance(apiKey, apiSecret);
     
-    await serverClient.upsertUsers([
-      {
-        id: uid,
-        role: "user",
-        name: name,
-        email: email,
-      },
-      {
-        id: "admin",
-        role: "admin",
-        name: "Admin Manager",
+    const needsUpsertUser = !upsertedUsersCache.has(uid);
+    const needsUpsertAdmin = !upsertedUsersCache.has("admin");
+
+    if (needsUpsertUser || needsUpsertAdmin) {
+      const usersToUpsert = [];
+      if (needsUpsertUser) {
+        usersToUpsert.push({
+          id: uid,
+          role: "user",
+          name: name,
+          email: email,
+        });
       }
-    ] as any);
+      if (needsUpsertAdmin) {
+        usersToUpsert.push({
+          id: "admin",
+          role: "admin",
+          name: "Admin Manager",
+        });
+      }
+      
+      await serverClient.upsertUsers(usersToUpsert as any);
+      
+      if (needsUpsertUser) upsertedUsersCache.add(uid);
+      if (needsUpsertAdmin) upsertedUsersCache.add("admin");
+    }
 
     const token = serverClient.createToken(uid);
 

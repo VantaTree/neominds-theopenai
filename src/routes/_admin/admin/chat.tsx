@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { StreamChat } from "stream-chat";
 import { z } from "zod";
+import { useStreamConnection, getCachedAdminStreamCredentials } from "@/lib/stream-connection";
 import {
   Search,
   Plus,
@@ -23,7 +24,6 @@ import {
 import {
   getUsersFn,
   getBusinessesFn,
-  getStreamCredentialsFn,
 } from "@/lib/server-functions";
 import type { User, Business } from "@/lib/schemas";
 import { getStreamChannelId } from "@/lib/utils";
@@ -990,7 +990,44 @@ function ChatRouteComponent() {
     }
   }, [activeUserId, activeBusinessId, activeDomain]);
 
-  const [chatClient, setChatClient] = useState<StreamChat | null>(null);
+  const [creds, setCreds] = useState<{ apiKey: string; token: string } | null>(null);
+  const [credsLoading, setCredsLoading] = useState(true);
+
+  useEffect(() => {
+    let isSubscribed = true;
+    setCredsLoading(true);
+    getCachedAdminStreamCredentials()
+      .then((res: any) => {
+        if (isSubscribed) {
+          setCreds(res);
+        }
+      })
+      .catch((err: any) => {
+        console.error("Failed to fetch admin Stream credentials:", err);
+        if (isSubscribed) {
+          setCreds(null);
+        }
+      })
+      .finally(() => {
+        if (isSubscribed) {
+          setCredsLoading(false);
+        }
+      });
+    return () => {
+      isSubscribed = false;
+    };
+  }, []);
+
+  const connectionOptions = useMemo(() => {
+    if (!creds) return null;
+    return {
+      apiKey: creds.apiKey,
+      user: { id: "admin", name: "Admin Manager" },
+      token: creds.token,
+    };
+  }, [creds]);
+
+  const { client: chatClient } = useStreamConnection(connectionOptions);
   const [channels, setChannels] = useState<any[]>([]);
   const [isChatListLoading, setIsChatListLoading] = useState(true);
   const [isChatLoading, setIsChatLoading] = useState(false);
@@ -1042,40 +1079,7 @@ function ChatRouteComponent() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Fetch Stream credentials and initialize connection
-  useEffect(() => {
-    let clientInstance: StreamChat | null = null;
-    let isSubscribed = true;
-
-    async function initStream() {
-      try {
-        const { apiKey, token } = await getStreamCredentialsFn();
-        if (!isSubscribed) return;
-
-        clientInstance = StreamChat.getInstance(apiKey);
-
-        await clientInstance.connectUser(
-          { id: "admin", name: "Admin Manager" },
-          token,
-        );
-
-        if (isSubscribed) {
-          setChatClient(clientInstance);
-        }
-      } catch (err) {
-        console.error("Failed to initialize Stream Chat client:", err);
-      }
-    }
-
-    initStream();
-
-    return () => {
-      isSubscribed = false;
-      if (clientInstance) {
-        clientInstance.disconnectUser();
-      }
-    };
-  }, []);
+  // Stream connection is managed via useStreamConnection hook above
 
   // Fetch / sync recent channels from Stream
   const refreshChannels = async () => {
@@ -1167,20 +1171,25 @@ function ChatRouteComponent() {
       businessName: bName,
     } as any);
 
+    let isSubscribed = true;
     let unsubscribe: any = null;
 
     async function watchChannel() {
       try {
         const state = await channel.watch();
+        if (!isSubscribed) return;
+
         setActiveChannel(channel);
         setMessages(state.messages || []);
         setIsChatLoading(false);
 
         // Mark read immediately
         await channel.markRead();
+        if (!isSubscribed) return;
 
         // Refresh sidebar channel list
         await refreshChannels();
+        if (!isSubscribed) return;
 
         // Listen for new messages
         const listener = channel.on("message.new", (event: any) => {
@@ -1221,13 +1230,16 @@ function ChatRouteComponent() {
         };
       } catch (err) {
         console.error("Error watching channel:", err);
-        setIsChatLoading(false);
+        if (isSubscribed) {
+          setIsChatLoading(false);
+        }
       }
     }
 
     watchChannel();
 
     return () => {
+      isSubscribed = false;
       if (unsubscribe) unsubscribe();
     };
   }, [chatClient, activeUserId, activeBusinessId, activeDomain]);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
 import {
   LayoutDashboard,
@@ -13,7 +13,7 @@ import {
   Menu,
   MessageSquare,
 } from "lucide-react";
-import { getStreamCredentialsFn } from "@/lib/server-functions";
+import { useStreamConnection, getCachedAdminStreamCredentials } from "@/lib/stream-connection";
 
 export default function AdminAside() {
   const [isOpen, setIsOpen] = useState(false);
@@ -21,50 +21,60 @@ export default function AdminAside() {
   const location = useLocation();
   const currentPath = location.pathname;
   const [unreadChatCount, setUnreadChatCount] = useState(0);
+  const [creds, setCreds] = useState<{ apiKey: string; token: string } | null>(null);
 
   useEffect(() => {
     let active = true;
-    let client: any = null;
-
-    async function checkUnread() {
-      try {
-        const creds = await getStreamCredentialsFn();
-        if (!active) return;
-        const { StreamChat } = await import("stream-chat");
-        client = StreamChat.getInstance(creds.apiKey);
-        const userState = await client.connectUser(
-          { id: "admin", name: "Admin Manager" },
-          creds.token,
-        );
-        if (!active) return;
-        setUnreadChatCount(userState.me.total_unread_count || 0);
-
-        // Listen for new messages / read receipts globally to update count in real-time
-        client.on((event: any) => {
-          if (!active) return;
-          if (
-            event.type === "message.new" ||
-            event.type === "message.read" ||
-            event.type === "notification.message_new" ||
-            event.type === "notification.mark_read"
-          ) {
-            setUnreadChatCount(client.user?.total_unread_count || 0);
-          }
-        });
-      } catch (err) {
-        // Silent error
-      }
-    }
-
-    checkUnread();
+    getCachedAdminStreamCredentials()
+      .then((res) => {
+        if (active) {
+          setCreds(res);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch stream credentials for admin aside:", err);
+        if (active) {
+          setCreds(null);
+        }
+      });
 
     return () => {
       active = false;
-      if (client) {
-        client.disconnectUser();
-      }
     };
   }, []);
+
+  const connectionOptions = useMemo(() => {
+    if (!creds) return null;
+    return {
+      apiKey: creds.apiKey,
+      user: { id: "admin", name: "Admin Manager" },
+      token: creds.token,
+    };
+  }, [creds]);
+
+  const { client } = useStreamConnection(connectionOptions);
+
+  useEffect(() => {
+    if (!client) {
+      setUnreadChatCount(0);
+      return;
+    }
+
+    setUnreadChatCount((client.user as any)?.total_unread_count || 0);
+
+    const handleEvent = (event: any) => {
+      if (event.total_unread_count !== undefined) {
+        setUnreadChatCount(event.total_unread_count);
+      } else {
+        setUnreadChatCount((client.user as any)?.total_unread_count || 0);
+      }
+    };
+
+    client.on(handleEvent);
+    return () => {
+      client.off(handleEvent);
+    };
+  }, [client]);
 
   const menuItems = [
     {

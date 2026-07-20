@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { createFileRoute, Outlet, useNavigate, useParams, useLocation } from "@tanstack/react-router";
 import ChatNav from "../../../components/client/ChatNav";
 import { StreamChat } from "stream-chat";
-import { getClientStreamCredentialsFn } from "@/lib/server-functions";
 import { useBusiness } from "@/hooks/use-business";
+import { useStreamConnection, getCachedClientStreamCredentials } from "@/lib/stream-connection";
 
 export const Route = createFileRoute("/_client/chat")({
   component: RouteComponent,
@@ -27,55 +27,56 @@ function RouteComponent() {
   const domain = pathParts[2] || "";
   const navigate = useNavigate();
   const { activeBusiness } = useBusiness();
-  const [chatClient, setChatClient] = useState<StreamChat | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [creds, setCreds] = useState<{ apiKey: string; uid: string; name: string; token: string } | null>(null);
+  const [credsLoading, setCredsLoading] = useState(true);
 
   const businessId = activeBusiness?.id || "";
 
   useEffect(() => {
-    let clientInstance: StreamChat | null = null;
-    let isSubscribed = true;
-
-    async function initStream() {
-      if (!businessId) {
-        setLoading(false);
-        return;
-      }
-      try {
-        setLoading(true);
-        const creds = await getClientStreamCredentialsFn({ data: businessId });
-        if (!isSubscribed) return;
-
-        clientInstance = StreamChat.getInstance(creds.apiKey);
-        await clientInstance.connectUser(
-          { id: creds.uid, name: creds.name },
-          creds.token
-        );
-        
-        if (isSubscribed) {
-          setChatClient(clientInstance);
-        }
-      } catch (err) {
-        console.error("Failed to initialize Stream client:", err);
-        if (isSubscribed) {
-          setChatClient(null);
-        }
-      } finally {
-        if (isSubscribed) {
-          setLoading(false);
-        }
-      }
+    if (!businessId) {
+      setCreds(null);
+      setCredsLoading(false);
+      return;
     }
 
-    initStream();
+    let isSubscribed = true;
+    setCredsLoading(true);
+
+    getCachedClientStreamCredentials(businessId)
+      .then((res) => {
+        if (isSubscribed) {
+          setCreds(res);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch client Stream credentials:", err);
+        if (isSubscribed) {
+          setCreds(null);
+        }
+      })
+      .finally(() => {
+        if (isSubscribed) {
+          setCredsLoading(false);
+        }
+      });
 
     return () => {
       isSubscribed = false;
-      if (clientInstance) {
-        clientInstance.disconnectUser();
-      }
     };
   }, [businessId]);
+
+  const connectionOptions = useMemo(() => {
+    if (!creds) return null;
+    return {
+      apiKey: creds.apiKey,
+      user: { id: creds.uid, name: creds.name },
+      token: creds.token,
+    };
+  }, [creds]);
+
+  const { client: chatClient, loading: connectionLoading } = useStreamConnection(connectionOptions);
+
+  const loading = credsLoading || connectionLoading;
 
   const handleSelectChat = (id: string) => {
     navigate({

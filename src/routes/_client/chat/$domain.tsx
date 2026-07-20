@@ -311,16 +311,20 @@ function RouteComponent() {
       businessName: activeBusiness.businessName,
     } as any);
 
+    let isSubscribed = true;
     let unsubscribe: any = null;
 
     async function watchChannel() {
       try {
         const state = await channel.watch();
+        if (!isSubscribed) return;
+
         setActiveChannel(channel);
         setMessages(state.messages || []);
 
         // Mark read immediately
         await channel.markRead();
+        if (!isSubscribed) return;
 
         // Listen for new messages
         const listener = channel.on("message.new", (event: any) => {
@@ -364,6 +368,7 @@ function RouteComponent() {
     watchChannel();
 
     return () => {
+      isSubscribed = false;
       if (unsubscribe) unsubscribe();
     };
   }, [chatClient, activeBusiness?.id, activeChatKey]);
