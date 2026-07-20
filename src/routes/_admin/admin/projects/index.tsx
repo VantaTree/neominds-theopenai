@@ -837,6 +837,27 @@ function ProjectsPage() {
     getFilteredProjectsForBusiness,
   ]);
 
+  const totalProjectsCount = useMemo(() => {
+    const includeCompleted = statusFilter === "Completed" || showCompleted;
+    return projectList.filter((p) => {
+      const status =
+        p.status ||
+        (p.progress === 100
+          ? "Completed"
+          : p.progress === 0
+            ? "Pending"
+            : "In Progress");
+
+      if (status === "User Draft") return false;
+
+      const isCompleted = status === "Completed" || p.progress === 100;
+      if (isCompleted) {
+        return includeCompleted;
+      }
+      return true;
+    }).length;
+  }, [projectList, statusFilter, showCompleted]);
+
   const renderProjectsTable = (projectsList: Project[]) => {
     return (
       <div className="bg-white border border-mm-border rounded-[24px] shadow-[0_2px_12px_rgba(0,0,0,0.02)] overflow-hidden">
@@ -1318,12 +1339,22 @@ function ProjectsPage() {
       <div className="flex-1 p-6 md:p-8 lg:p-10 space-y-6 overflow-y-scroll min-w-0">
         <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
           <div>
-            <h1
-              className="text-2xl font-bold"
-              style={{ color: "var(--color-mm-dark)" }}
-            >
-              Projects
-            </h1>
+            <div className="flex items-center gap-3">
+              <h1
+                className="text-2xl font-bold"
+                style={{ color: "var(--color-mm-dark)" }}
+              >
+                Projects
+              </h1>
+              <div className="flex items-center gap-2 mt-1 select-none">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-mm-subtle text-mm-gray/80 border border-mm-border/50">
+                  {businesses.length} {businesses.length === 1 ? "Business" : "Businesses"}
+                </span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-mm-orange/10 text-mm-orange border border-mm-orange/10">
+                  {totalProjectsCount} {totalProjectsCount === 1 ? "Project" : "Projects"}
+                </span>
+              </div>
+            </div>
             <p className="text-xs text-mm-gray mt-1 font-medium">
               Showing projects for{" "}
               {selectedBiz?.businessName || "selected business"}
