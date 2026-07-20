@@ -40,10 +40,10 @@ import { Route as ClientAddReelRouteImport } from './routes/_client/add/reel'
 import { Route as ClientAddPostRouteImport } from './routes/_client/add/post'
 import { Route as AdminAdminUsersRouteImport } from './routes/_admin/admin/users'
 import { Route as AdminAdminTemplatesRouteImport } from './routes/_admin/admin/templates'
-import { Route as AdminAdminSupportRouteImport } from './routes/_admin/admin/support'
 import { Route as AdminAdminSettingsRouteImport } from './routes/_admin/admin/settings'
 import { Route as AdminAdminPaymentsRouteImport } from './routes/_admin/admin/payments'
 import { Route as AdminAdminChatRouteImport } from './routes/_admin/admin/chat'
+import { Route as AdminAdminAuditRouteImport } from './routes/_admin/admin/audit'
 import { Route as AdminAdminReportsIndexRouteImport } from './routes/_admin/admin/reports/index'
 import { Route as AdminAdminProjectsIndexRouteImport } from './routes/_admin/admin/projects/index'
 import { Route as AdminAdminBlogsIndexRouteImport } from './routes/_admin/admin/blogs/index'
@@ -204,11 +204,6 @@ const AdminAdminTemplatesRoute = AdminAdminTemplatesRouteImport.update({
   path: '/admin/templates',
   getParentRoute: () => AdminRouteRoute,
 } as any)
-const AdminAdminSupportRoute = AdminAdminSupportRouteImport.update({
-  id: '/admin/support',
-  path: '/admin/support',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
 const AdminAdminSettingsRoute = AdminAdminSettingsRouteImport.update({
   id: '/admin/settings',
   path: '/admin/settings',
@@ -222,6 +217,11 @@ const AdminAdminPaymentsRoute = AdminAdminPaymentsRouteImport.update({
 const AdminAdminChatRoute = AdminAdminChatRouteImport.update({
   id: '/admin/chat',
   path: '/admin/chat',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminAdminAuditRoute = AdminAdminAuditRouteImport.update({
+  id: '/admin/audit',
+  path: '/admin/audit',
   getParentRoute: () => AdminRouteRoute,
 } as any)
 const AdminAdminReportsIndexRoute = AdminAdminReportsIndexRouteImport.update({
@@ -276,10 +276,10 @@ export interface FileRoutesByFullPath {
   '/blogs/$slug': typeof BlogsSlugRoute
   '/oauth/callback': typeof OauthCallbackRoute
   '/blogs/': typeof BlogsIndexRoute
+  '/admin/audit': typeof AdminAdminAuditRoute
   '/admin/chat': typeof AdminAdminChatRoute
   '/admin/payments': typeof AdminAdminPaymentsRoute
   '/admin/settings': typeof AdminAdminSettingsRoute
-  '/admin/support': typeof AdminAdminSupportRoute
   '/admin/templates': typeof AdminAdminTemplatesRoute
   '/admin/users': typeof AdminAdminUsersRoute
   '/add/post': typeof ClientAddPostRoute
@@ -314,10 +314,10 @@ export interface FileRoutesByTo {
   '/blogs/$slug': typeof BlogsSlugRoute
   '/oauth/callback': typeof OauthCallbackRoute
   '/blogs': typeof BlogsIndexRoute
+  '/admin/audit': typeof AdminAdminAuditRoute
   '/admin/chat': typeof AdminAdminChatRoute
   '/admin/payments': typeof AdminAdminPaymentsRoute
   '/admin/settings': typeof AdminAdminSettingsRoute
-  '/admin/support': typeof AdminAdminSupportRoute
   '/admin/templates': typeof AdminAdminTemplatesRoute
   '/admin/users': typeof AdminAdminUsersRoute
   '/add/post': typeof ClientAddPostRoute
@@ -358,10 +358,10 @@ export interface FileRoutesById {
   '/blogs/$slug': typeof BlogsSlugRoute
   '/oauth/callback': typeof OauthCallbackRoute
   '/blogs/': typeof BlogsIndexRoute
+  '/_admin/admin/audit': typeof AdminAdminAuditRoute
   '/_admin/admin/chat': typeof AdminAdminChatRoute
   '/_admin/admin/payments': typeof AdminAdminPaymentsRoute
   '/_admin/admin/settings': typeof AdminAdminSettingsRoute
-  '/_admin/admin/support': typeof AdminAdminSupportRoute
   '/_admin/admin/templates': typeof AdminAdminTemplatesRoute
   '/_admin/admin/users': typeof AdminAdminUsersRoute
   '/_client/add/post': typeof ClientAddPostRoute
@@ -401,10 +401,10 @@ export interface FileRouteTypes {
     | '/blogs/$slug'
     | '/oauth/callback'
     | '/blogs/'
+    | '/admin/audit'
     | '/admin/chat'
     | '/admin/payments'
     | '/admin/settings'
-    | '/admin/support'
     | '/admin/templates'
     | '/admin/users'
     | '/add/post'
@@ -439,10 +439,10 @@ export interface FileRouteTypes {
     | '/blogs/$slug'
     | '/oauth/callback'
     | '/blogs'
+    | '/admin/audit'
     | '/admin/chat'
     | '/admin/payments'
     | '/admin/settings'
-    | '/admin/support'
     | '/admin/templates'
     | '/admin/users'
     | '/add/post'
@@ -482,10 +482,10 @@ export interface FileRouteTypes {
     | '/blogs/$slug'
     | '/oauth/callback'
     | '/blogs/'
+    | '/_admin/admin/audit'
     | '/_admin/admin/chat'
     | '/_admin/admin/payments'
     | '/_admin/admin/settings'
-    | '/_admin/admin/support'
     | '/_admin/admin/templates'
     | '/_admin/admin/users'
     | '/_client/add/post'
@@ -736,13 +736,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdminTemplatesRouteImport
       parentRoute: typeof AdminRouteRoute
     }
-    '/_admin/admin/support': {
-      id: '/_admin/admin/support'
-      path: '/admin/support'
-      fullPath: '/admin/support'
-      preLoaderRoute: typeof AdminAdminSupportRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
     '/_admin/admin/settings': {
       id: '/_admin/admin/settings'
       path: '/admin/settings'
@@ -762,6 +755,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/chat'
       fullPath: '/admin/chat'
       preLoaderRoute: typeof AdminAdminChatRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/_admin/admin/audit': {
+      id: '/_admin/admin/audit'
+      path: '/admin/audit'
+      fullPath: '/admin/audit'
+      preLoaderRoute: typeof AdminAdminAuditRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     '/_admin/admin/reports/': {
@@ -810,10 +810,10 @@ declare module '@tanstack/react-router' {
 }
 
 interface AdminRouteRouteChildren {
+  AdminAdminAuditRoute: typeof AdminAdminAuditRoute
   AdminAdminChatRoute: typeof AdminAdminChatRoute
   AdminAdminPaymentsRoute: typeof AdminAdminPaymentsRoute
   AdminAdminSettingsRoute: typeof AdminAdminSettingsRoute
-  AdminAdminSupportRoute: typeof AdminAdminSupportRoute
   AdminAdminTemplatesRoute: typeof AdminAdminTemplatesRoute
   AdminAdminUsersRoute: typeof AdminAdminUsersRoute
   AdminAdminIndexRoute: typeof AdminAdminIndexRoute
@@ -826,10 +826,10 @@ interface AdminRouteRouteChildren {
 }
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
+  AdminAdminAuditRoute: AdminAdminAuditRoute,
   AdminAdminChatRoute: AdminAdminChatRoute,
   AdminAdminPaymentsRoute: AdminAdminPaymentsRoute,
   AdminAdminSettingsRoute: AdminAdminSettingsRoute,
-  AdminAdminSupportRoute: AdminAdminSupportRoute,
   AdminAdminTemplatesRoute: AdminAdminTemplatesRoute,
   AdminAdminUsersRoute: AdminAdminUsersRoute,
   AdminAdminIndexRoute: AdminAdminIndexRoute,

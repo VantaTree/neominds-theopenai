@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect, useMemo } from "react";
-import { Shield, Search, RefreshCw, SearchX, ChevronDown, Clock, Loader2 } from "lucide-react";
+import { Shield, Search, RefreshCw, SearchX, ChevronDown, Clock, Loader2, X } from "lucide-react";
 import type { AuditLog } from "@/lib/schemas";
 import { getAuditLogFn } from "@/lib/server-functions";
 
-export const Route = createFileRoute("/_admin/admin/support")({
+export const Route = createFileRoute("/_admin/admin/audit")({
   head: () => ({ meta: [{ title: "Audit Log — GrowConsult AI" }] }),
   component: AuditLogPage,
 });
@@ -25,6 +25,7 @@ function AuditLogPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [actionFilter, setActionFilter] = useState("All Actions");
   const [isActionOpen, setIsActionOpen] = useState(false);
+  const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
 
   const loadLogs = async () => {
     setIsLoading(true);
@@ -165,7 +166,11 @@ function AuditLogPage() {
                 filtered.map(log => {
                   const colors = ACTION_COLORS[log.action] || { bg: "rgba(109, 76, 65, 0.1)", text: "var(--color-mm-gray)" };
                   return (
-                    <tr key={log.id} className="border-b border-mm-border/40 hover:bg-mm-subtle/10 transition-colors">
+                    <tr
+                      key={log.id}
+                      onClick={() => setSelectedLog(log)}
+                      className="border-b border-mm-border/40 hover:bg-mm-subtle/10 transition-colors cursor-pointer"
+                    >
                       <td className="px-4 py-4 text-xs whitespace-nowrap text-mm-gray font-semibold">
                         <div className="flex items-center gap-1.5">
                           <Clock size={11} className="text-mm-gray/60" />
@@ -195,6 +200,132 @@ function AuditLogPage() {
           </table>
         </div>
       </div>
+
+      {/* Sidebar Details Drawer */}
+      {selectedLog && (
+        <>
+          <style>{`
+            @keyframes slideInRight {
+              from { transform: translateX(100%); }
+              to { transform: translateX(0); }
+            }
+            .animate-slide-in-right {
+              animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            }
+          `}</style>
+
+          {/* Backdrop blur overlay */}
+          <div
+            className="fixed inset-0 bg-mm-dark/20 backdrop-blur-sm z-90 transition-opacity"
+            onClick={() => setSelectedLog(null)}
+          />
+
+          {/* Right Sidebar Container */}
+          <div className="fixed right-0 top-0 bottom-0 w-full sm:w-[480px] bg-white border-l border-mm-border shadow-2xl z-100 flex flex-col h-full animate-slide-in-right select-text">
+            {/* Header */}
+            <div className="p-6 border-b border-mm-border/60 flex items-center justify-between bg-mm-subtle/10 select-none">
+              <div className="flex items-center gap-2">
+                <Shield className="text-mm-orange" size={18} />
+                <h3 className="font-extrabold text-sm text-mm-dark uppercase tracking-wider">
+                  Event Details
+                </h3>
+              </div>
+              <button
+                onClick={() => setSelectedLog(null)}
+                className="w-8 h-8 rounded-full flex items-center justify-center bg-mm-subtle/50 hover:bg-mm-subtle text-mm-dark/70 hover:text-mm-dark transition-all cursor-pointer"
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            {/* Content (Scrollable) */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {/* Event Summary Card */}
+              <div className="bg-mm-subtle/20 border border-mm-border/60 rounded-2xl p-5 space-y-4">
+                <div className="flex justify-between items-start gap-4">
+                  <div>
+                    <span
+                      className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider inline-block"
+                      style={{
+                        background: (ACTION_COLORS[selectedLog.action] || { bg: "rgba(109, 76, 65, 0.1)", text: "var(--color-mm-gray)" }).bg,
+                        color: (ACTION_COLORS[selectedLog.action] || { bg: "rgba(109, 76, 65, 0.1)", text: "var(--color-mm-gray)" }).text
+                      }}
+                    >
+                      {formatAction(selectedLog.action)}
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-mm-gray font-semibold flex items-center gap-1">
+                    <Clock size={11} className="text-mm-gray/60" />
+                    {formatDate(selectedLog.timestamp)}
+                  </div>
+                </div>
+
+                <div className="border-t border-mm-border/40 pt-3 flex justify-between items-center text-xs">
+                  <div>
+                    <span className="text-[9px] text-mm-gray font-bold block uppercase tracking-wider">
+                      Performed By
+                    </span>
+                    <span className="font-extrabold text-mm-dark">
+                      {selectedLog.userName || "Admin"}
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[9px] text-mm-gray font-bold block uppercase tracking-wider">
+                      User ID
+                    </span>
+                    <span className="font-mono text-[10px] text-mm-gray block select-all">
+                      {selectedLog.uid}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Payload Details */}
+              <div className="space-y-3">
+                <h4 className="text-[10px] font-bold uppercase tracking-wider text-mm-gray">
+                  Event Data Payload
+                </h4>
+                <div className="bg-mm-subtle/10 border border-mm-border rounded-2xl p-4 overflow-x-auto font-mono text-xs text-mm-dark max-h-[300px] scrollbar-thin">
+                  <pre className="whitespace-pre-wrap break-all leading-relaxed">
+                    {JSON.stringify(selectedLog.payload, null, 2)}
+                  </pre>
+                </div>
+              </div>
+
+              {/* Metadata Details */}
+              {selectedLog.payload && Object.keys(selectedLog.payload).length > 0 && (
+                <div className="space-y-3">
+                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-mm-gray">
+                    Payload Key-Value Breakdown
+                  </h4>
+                  <div className="border border-mm-border rounded-2xl overflow-hidden divide-y divide-mm-border/60 bg-white">
+                    {Object.entries(selectedLog.payload).map(([key, val]) => (
+                      <div key={key} className="p-3.5 flex justify-between gap-4 text-xs hover:bg-mm-subtle/10 transition-colors">
+                        <span className="font-semibold text-mm-gray capitalize shrink-0">
+                          {key.replace(/([A-Z])/g, " $1").replace(/_/g, " ").trim()}
+                        </span>
+                        <span className="font-mono text-mm-dark text-right break-all select-all max-w-[240px]">
+                          {typeof val === "object" ? JSON.stringify(val) : String(val)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-mm-border/60 bg-mm-subtle/10 flex justify-end select-none">
+              <button
+                onClick={() => setSelectedLog(null)}
+                className="px-5 py-2.5 rounded-xl text-xs font-extrabold bg-mm-dark hover:bg-mm-dark/90 text-white transition-all cursor-pointer"
+              >
+                Close Details
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
