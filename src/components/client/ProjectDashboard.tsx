@@ -16,6 +16,9 @@ import {
   AlertCircle,
   Eye,
   X,
+  Activity,
+  FileEdit,
+  History as HistoryIcon,
 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { Link } from "@tanstack/react-router";
@@ -106,10 +109,10 @@ export function ProjectDashboard({
   const drawerProjectTheme = CATEGORY_THEMES[drawerProjectThemeKey];
 
   // Filters state
-  const [statusFilter, setStatusFilter] = useState<string>("All");
   const [priorityFilter, setPriorityFilter] = useState<string>("All");
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [dateFilter, setDateFilter] = useState<string>("All Time");
+  const [projectTab, setProjectTab] = useState<"Active" | "Requests" | "Drafts" | "History">("Active");
 
   const domainProjects = projects.filter((p) => p.domain === activeTab);
 
@@ -120,11 +123,11 @@ export function ProjectDashboard({
 
   // Reset local filters, drawer, and builder when tab changes
   useEffect(() => {
-    setStatusFilter("All");
     setPriorityFilter("All");
     setSelectedServices([]);
     setDateFilter("All Time");
     setActiveDrawerProject(null);
+    setProjectTab("Active");
   }, [activeTab]);
 
   // Date range checking helpers
@@ -153,7 +156,6 @@ export function ProjectDashboard({
 
   // Filter projects list
   const filteredProjects = domainProjects.filter((project) => {
-    if (statusFilter !== "All" && project.status !== statusFilter) return false;
     if (priorityFilter !== "All" && project.priority !== priorityFilter) return false;
     if (selectedServices.length > 0) {
       const matchesAll = selectedServices.every((service) =>
@@ -190,15 +192,21 @@ export function ProjectDashboard({
   };
 
   // Calculate overall metrics
-  const totalTasksCount = filteredProjects.length;
-  const averageProgress = filteredProjects.length > 0
-    ? Math.round(filteredProjects.reduce((sum, p) => sum + p.progress, 0) / filteredProjects.length)
+  const activeProjectsCount = domainProjects.filter(
+    (p) => p.status === "In Progress" || p.status === "Pending" || p.status === "On Hold"
+  ).length;
+  const completedProjectsCount = domainProjects.filter(
+    (p) => p.status === "Completed"
+  ).length;
+  const inProgressProjectsCount = domainProjects.filter(
+    (p) => p.status === "In Progress"
+  ).length;
+  const progressEligibleProjects = domainProjects.filter(
+    (p) => p.status !== "User Draft" && p.status !== "Requested"
+  );
+  const overallProgressVal = progressEligibleProjects.length > 0
+    ? Math.round(progressEligibleProjects.reduce((sum, p) => sum + p.progress, 0) / progressEligibleProjects.length)
     : 0;
-
-  const kpiChartData = [
-    { name: "Completed", value: averageProgress },
-    { name: "Remaining", value: 100 - averageProgress },
-  ];
 
   // Resolve overall status badge for category
   const getOverallStatus = () => {
@@ -304,25 +312,6 @@ export function ProjectDashboard({
   const renderFilterBar = () => (
     <div className="bg-white border border-[#E2E6EE] rounded-[24px] p-5 shadow-[0_4px_20px_rgba(0,0,0,0.01)] flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-4 text-xs">
-        {/* Status Select */}
-        <div className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 shrink-0">
-          <span className="font-semibold text-mm-gray">Status:</span>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="bg-transparent font-bold text-mm-dark outline-none cursor-pointer"
-          >
-            <option value="All">All Statuses</option>
-            <option value="In Progress">In Progress</option>
-            <option value="Completed">Completed</option>
-            <option value="Pending">Pending</option>
-            <option value="On Hold">On Hold</option>
-            <option value="Cancelled">Cancelled</option>
-            <option value="User Draft">User Draft</option>
-            <option value="Requested">Requested</option>
-          </select>
-        </div>
-
         {/* Priority Select */}
         <div className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 shrink-0">
           <span className="font-semibold text-mm-gray">Priority:</span>
@@ -387,24 +376,223 @@ export function ProjectDashboard({
     </div>
   );
 
-  const renderProjectsContent = () => {
-    if (filteredProjects.length === 0) {
-      return (
-        <div className="space-y-6">
-          {renderFilterBar()}
-          <div className="bg-white border border-[#E2E6EE] rounded-[32px] p-8 text-center min-h-[220px] flex flex-col items-center justify-center">
-            <AlertCircle className="w-8 h-8 text-mm-gray mb-3" />
-            <h4 className="text-sm font-bold text-mm-dark mb-1">No Projects Match Selected Filters</h4>
-            <p className="text-xs text-mm-gray max-w-xs">
-              Try updating or clearing your status, priority, services, or timeline filters.
-            </p>
-          </div>
-        </div>
-      );
-    }
+  const renderProjectsTimeline = (projectsList: Project[]) => {
+    const sorted = [...projectsList].sort((a, b) => {
+      const dateA = parseDate(a.startDate || a.createdAt)?.getTime() || 0;
+      const dateB = parseDate(b.startDate || b.createdAt)?.getTime() || 0;
+      return dateA - dateB;
+    });
 
     return (
-      <div className="space-y-8">
+      <div className="relative pl-12 space-y-8 py-2 pt-4">
+        {/* Left timeline connecting track */}
+        <div className="absolute left-[15px] top-6 bottom-6 w-0.5 bg-gray-100 rounded-full" />
+
+        {sorted.map((project) => {
+          const isCompleted = project.status === "Completed";
+          const isInProgress = project.status === "In Progress";
+
+          const startDate = parseDate(project.startDate);
+          const deadline = parseDate(project.deadline);
+
+          const dateStr =
+            startDate && deadline
+              ? `${startDate.toLocaleDateString("en-US", { month: "short", day: "2-digit" })} - ${deadline.toLocaleDateString("en-US", { month: "short", day: "2-digit" })}`
+              : "";
+
+          const projectDomain = project.domain;
+          const projectThemeKey =
+            projectDomain === "Website"
+              ? "seo"
+              : projectDomain === "Marketing"
+                ? "marketing"
+                : projectDomain === "Automation"
+                  ? "automation"
+                  : "report";
+          const projectTheme = CATEGORY_THEMES[projectThemeKey];
+
+          return (
+            <div key={project.id} className="relative flex items-start gap-4">
+              {/* Left indicator node */}
+              <div className="absolute left-[-48px] top-1.5 flex items-center justify-center z-10">
+                {isCompleted ? (
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-white bg-green-500 border-2 border-white shadow-xs">
+                    <Check className="w-4 h-4 stroke-3" />
+                  </div>
+                ) : isInProgress ? (
+                  <div
+                    className="w-8 h-8 rounded-full flex items-center justify-center border-2 border-white shadow-xs shrink-0 relative"
+                    style={{ backgroundColor: `${projectTheme.primary}1A` }}
+                  >
+                    <div
+                      className="absolute inset-0 rounded-full animate-ping"
+                      style={{ backgroundColor: `${projectTheme.primary}26` }}
+                    />
+                    <div
+                      className="w-3.5 h-3.5 rounded-full"
+                      style={{ backgroundColor: projectTheme.primary }}
+                    />
+                  </div>
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center border-2 border-white shadow-xs">
+                    <div className="w-3 h-3 rounded-full border-2 border-gray-300 bg-white" />
+                  </div>
+                )}
+              </div>
+
+              {/* Task item card container */}
+              <div
+                style={{ "--hover-color": projectTheme.primary } as React.CSSProperties}
+                className="cursor-pointer flex-1 flex flex-col lg:flex-row gap-6 bg-white p-4 sm:p-5 rounded-2xl border border-mm-border hover:border-(--hover-color) hover:shadow-[0_6px_20px_rgba(0,0,0,0.035)] hover:-translate-y-0.5 transition-all duration-300 group"
+                onClick={() => setActiveDrawerProject(project)}
+              >
+                {/* Main Info */}
+                <div
+                  className="flex-1 text-left flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                      {dateStr && (
+                        <span className="text-[10px] font-black text-mm-gray tracking-wider uppercase bg-gray-100 px-2.5 py-0.5 rounded-md">
+                          {dateStr}
+                        </span>
+                      )}
+                      <span
+                        className={`text-[9px] font-black tracking-wider uppercase px-2.5 py-0.5 rounded-md ${
+                          isCompleted
+                            ? "bg-green-50 text-green-600 border border-green-100"
+                            : isInProgress
+                              ? `${projectTheme.badgeClass} animate-pulse`
+                              : "bg-gray-50 text-gray-500 border border-gray-100"
+                        }`}
+                      >
+                        {isInProgress ? "Current Task" : project.status}
+                      </span>
+                    </div>
+
+                    <h4 className="text-base font-extrabold text-mm-dark group-hover:text-(--hover-color) transition-colors duration-300">
+                      {project.name}
+                    </h4>
+
+                    <p className="text-xs text-mm-gray mt-1.5 max-w-2xl leading-relaxed">
+                      {project.description || "No project description provided."}
+                    </p>
+                  </div>
+
+                  {isInProgress && (
+                    <div className="mt-4 max-w-md space-y-1.5">
+                      <div className="flex justify-between items-center text-[10px] text-mm-gray">
+                        <span>Progress</span>
+                        <span className="font-bold" style={{ color: projectTheme.primary }}>
+                          {project.progress}%
+                        </span>
+                      </div>
+                      <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-300"
+                          style={{
+                            width: `${project.progress}%`,
+                            backgroundColor: projectTheme.primary,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Right part: Scrollable activity log (Desktop only) */}
+                <div className="hidden lg:block lg:w-80 shrink-0 border-l border-mm-border/80 pl-6 self-stretch">
+                  <span className="text-[10px] font-extrabold text-mm-gray uppercase tracking-wider block mb-2.5">
+                    Activity Log
+                  </span>
+                  {project.updates && project.updates.length > 0 ? (
+                    <div className="space-y-3 overflow-y-auto max-h-[110px] pr-1.5 scrollbar-none">
+                      {project.updates.map((update, idx) => {
+                        const uDate = parseDate(update.timestamp);
+                        return (
+                          <div key={idx} className="border-l border-gray-200 pl-3 py-0.5 relative">
+                            <div className="absolute left-[-4.5px] top-1.5 h-2 w-2 rounded-full bg-gray-300" />
+                            <div className="flex justify-between items-baseline mb-0.5">
+                              <span className="text-[10px] font-bold text-mm-dark">
+                                {update.designation || "System Update"}
+                              </span>
+                              {uDate && (
+                                <span className="text-[9px] text-mm-gray/80">
+                                  {uDate.toLocaleDateString(undefined, {
+                                    month: "short",
+                                    day: "numeric",
+                                  })}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-mm-gray leading-normal line-clamp-2">
+                              {update.message}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="h-[100px] flex items-center justify-center bg-gray-50/50 border border-dashed border-gray-200/80 rounded-xl px-4 text-center">
+                      <p className="text-[11px] text-mm-gray/80 italic">No recent activity logged</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const renderProjectsContent = () => {
+    const subTabs = [
+      {
+        id: "Active",
+        label: "Active",
+        count: filteredProjects.filter(
+          (p) => p.status === "In Progress" || p.status === "Pending" || p.status === "On Hold"
+        ).length,
+      },
+      {
+        id: "Requests",
+        label: "Requests",
+        count: filteredProjects.filter((p) => p.status === "Requested").length,
+      },
+      {
+        id: "Drafts",
+        label: "Drafts",
+        count: filteredProjects.filter((p) => p.status === "User Draft").length,
+      },
+      {
+        id: "History",
+        label: "History",
+        count: filteredProjects.filter(
+          (p) => p.status === "Completed" || p.status === "Cancelled"
+        ).length,
+      },
+    ] as const;
+
+    const currentTabProjects = (() => {
+      if (projectTab === "Active") {
+        return filteredProjects.filter(
+          (p) => p.status === "In Progress" || p.status === "Pending" || p.status === "On Hold"
+        );
+      }
+      if (projectTab === "Requests") {
+        return filteredProjects.filter((p) => p.status === "Requested");
+      }
+      if (projectTab === "Drafts") {
+        return filteredProjects.filter((p) => p.status === "User Draft");
+      }
+      return filteredProjects.filter(
+        (p) => p.status === "Completed" || p.status === "Cancelled"
+      );
+    })();
+
+    return (
+      <div className="space-y-8 animate-in fade-in duration-300">
         {/* Header Title with Status */}
         <div className="flex items-center gap-4">
           <ProjectLogo category={getLogoCategory(activeTab)} size="md" />
@@ -421,33 +609,58 @@ export function ProjectDashboard({
         </div>
 
         {/* KPI Cards Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          {/* Total Tasks Card */}
-          <div className="bg-white border border-[#E2E6EE] rounded-[24px] p-6 flex items-center justify-between shadow-xs">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          {/* Active Projects Card */}
+          <div className="bg-white border border-[#E2E6EE] rounded-[24px] p-5 flex items-center justify-between shadow-xs hover:shadow-md transition-all duration-300">
             <div className="space-y-1">
-              <p className="text-xs font-bold text-mm-gray uppercase tracking-wider">Total Tasks</p>
-              <h4 className="text-3xl font-black text-mm-dark">{totalTasksCount}</h4>
+              <p className="text-[10px] font-bold text-mm-gray uppercase tracking-wider">Active Projects</p>
+              <h4 className="text-3xl font-black text-mm-dark">{activeProjectsCount}</h4>
             </div>
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${theme.iconBoxClass}`}>
-              <ListTodo className="w-6 h-6" />
+            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center bg-blue-50 border border-blue-100 text-blue-600`}>
+              <ListTodo className="w-5.5 h-5.5" />
+            </div>
+          </div>
+
+          {/* Completed Projects Card */}
+          <div className="bg-white border border-[#E2E6EE] rounded-[24px] p-5 flex items-center justify-between shadow-xs hover:shadow-md transition-all duration-300">
+            <div className="space-y-1">
+              <p className="text-[10px] font-bold text-mm-gray uppercase tracking-wider">Completed</p>
+              <h4 className="text-3xl font-black text-mm-dark">{completedProjectsCount}</h4>
+            </div>
+            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center bg-green-50 border border-green-100 text-green-600`}>
+              <CheckCircle2 className="w-5.5 h-5.5" />
+            </div>
+          </div>
+
+          {/* In Progress Projects Card */}
+          <div className="bg-white border border-[#E2E6EE] rounded-[24px] p-5 flex items-center justify-between shadow-xs hover:shadow-md transition-all duration-300">
+            <div className="space-y-1">
+              <p className="text-[10px] font-bold text-mm-gray uppercase tracking-wider">In Progress</p>
+              <h4 className="text-3xl font-black text-mm-dark">{inProgressProjectsCount}</h4>
+            </div>
+            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center bg-orange-50 border border-orange-100 text-orange-600`}>
+              <Activity className="w-5.5 h-5.5 animate-pulse" />
             </div>
           </div>
 
           {/* Overall Progress Card */}
-          <div className="bg-white border border-[#E2E6EE] rounded-[24px] p-6 flex items-center justify-between shadow-xs">
+          <div className="bg-white border border-[#E2E6EE] rounded-[24px] p-5 flex items-center justify-between shadow-xs hover:shadow-md transition-all duration-300">
             <div className="space-y-1">
-              <p className="text-xs font-bold text-mm-gray uppercase tracking-wider">Overall Progress</p>
-              <h4 className="text-3xl font-black text-mm-dark">{averageProgress}%</h4>
+              <p className="text-[10px] font-bold text-mm-gray uppercase tracking-wider">Overall Progress</p>
+              <h4 className="text-3xl font-black text-mm-dark">{overallProgressVal}%</h4>
             </div>
-            <div className="relative w-16 h-16 shrink-0">
+            <div className="relative w-14 h-14 shrink-0">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={kpiChartData}
+                    data={[
+                      { name: "Progress", value: overallProgressVal },
+                      { name: "Remaining", value: 100 - overallProgressVal },
+                    ]}
                     cx="50%"
                     cy="50%"
-                    innerRadius={20}
-                    outerRadius={26}
+                    innerRadius={18}
+                    outerRadius={24}
                     startAngle={90}
                     endAngle={-270}
                     dataKey="value"
@@ -458,8 +671,8 @@ export function ProjectDashboard({
                 </PieChart>
               </ResponsiveContainer>
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-[10px] font-black text-mm-dark">
-                  {averageProgress}%
+                <span className="text-[9px] font-black text-mm-dark">
+                  {overallProgressVal}%
                 </span>
               </div>
             </div>
@@ -469,172 +682,52 @@ export function ProjectDashboard({
         {/* Filter controls */}
         {renderFilterBar()}
 
-        {/* Timeline Panel */}
+        {/* Project Tabs & Content Panel */}
         <div className="bg-white border border-mm-border rounded-[32px] p-6 sm:p-8 shadow-xs space-y-6">
-          <h5 className="font-extrabold text-xs uppercase tracking-wider text-mm-gray flex items-center gap-2">
-            <CheckCircle2 className="w-4.5 h-4.5 text-mm-gray" />
-            Project Timeline
-          </h5>
+          <div className="flex flex-col gap-4">
+            <h5 className="font-extrabold text-xs uppercase tracking-wider text-mm-gray flex items-center gap-2">
+              <CheckCircle2 className="w-4.5 h-4.5 text-mm-gray" />
+              Project Hub
+            </h5>
 
-          <div className="relative pl-12 space-y-8 py-2">
-            {/* Left timeline connecting track */}
-            <div className="absolute left-[15px] top-6 bottom-6 w-0.5 bg-gray-100 rounded-full" />
-
-            {sortedProjects.map((project) => {
-              const isCompleted = project.status === "Completed";
-              const isInProgress = project.status === "In Progress";
-
-              const startDate = parseDate(project.startDate);
-              const deadline = parseDate(project.deadline);
-
-              const dateStr =
-                startDate && deadline
-                  ? `${startDate.toLocaleDateString("en-US", { month: "short", day: "2-digit" })} - ${deadline.toLocaleDateString("en-US", { month: "short", day: "2-digit" })}`
-                  : "";
-
-              const projectDomain = project.domain;
-              const projectThemeKey =
-                projectDomain === "Website"
-                  ? "seo"
-                  : projectDomain === "Marketing"
-                    ? "marketing"
-                    : projectDomain === "Automation"
-                      ? "automation"
-                      : "report";
-              const projectTheme = CATEGORY_THEMES[projectThemeKey];
-
-              return (
-                <div key={project.id} className="relative flex items-start gap-4">
-                  {/* Left indicator node */}
-                  <div className="absolute left-[-48px] top-1.5 flex items-center justify-center z-10">
-                    {isCompleted ? (
-                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-white bg-green-500 border-2 border-white shadow-xs">
-                        <Check className="w-4 h-4 stroke-3" />
-                      </div>
-                    ) : isInProgress ? (
-                      <div
-                        className="w-8 h-8 rounded-full flex items-center justify-center border-2 border-white shadow-xs shrink-0 relative"
-                        style={{ backgroundColor: `${projectTheme.primary}1A` }}
-                      >
-                        <div
-                          className="absolute inset-0 rounded-full animate-ping"
-                          style={{ backgroundColor: `${projectTheme.primary}26` }}
-                        />
-                        <div
-                          className="w-3.5 h-3.5 rounded-full"
-                          style={{ backgroundColor: projectTheme.primary }}
-                        />
-                      </div>
-                    ) : (
-                      <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center border-2 border-white shadow-xs">
-                        <div className="w-3 h-3 rounded-full border-2 border-gray-300 bg-white" />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Task item card container */}
-                  <div
-                    style={{ "--hover-color": projectTheme.primary } as React.CSSProperties}
-                    className="cursor-pointer flex-1 flex flex-col lg:flex-row gap-6 bg-white p-4 sm:p-5 rounded-2xl border border-mm-border hover:border-(--hover-color) hover:shadow-[0_6px_20px_rgba(0,0,0,0.035)] hover:-translate-y-0.5 transition-all duration-300 group"
-                    onClick={() => setActiveDrawerProject(project)}
+            {/* Sub Tabs Switcher */}
+            <div className="flex flex-wrap gap-2 border-b border-gray-100 pb-4">
+              {subTabs.map((tab) => {
+                const isSubActive = projectTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setProjectTab(tab.id)}
+                    className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl transition-all duration-200 cursor-pointer active:scale-95 border ${
+                      isSubActive
+                        ? `bg-mm-dark text-white border-mm-dark shadow-xs`
+                        : `bg-white text-mm-gray border-gray-200 hover:border-gray-300 hover:text-mm-dark`
+                    }`}
                   >
-                    {/* Main Info */}
-                    <div
-                      className="flex-1 text-left flex flex-col justify-between"
+                    <span>{tab.label}</span>
+                    <span
+                      className={`inline-flex items-center justify-center px-1.5 py-0.5 rounded-full text-[9px] font-black ${
+                        isSubActive
+                          ? "bg-white/20 text-white"
+                          : "bg-gray-100 text-mm-gray"
+                      }`}
                     >
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                          {dateStr && (
-                            <span className="text-[10px] font-black text-mm-gray tracking-wider uppercase bg-gray-100 px-2.5 py-0.5 rounded-md">
-                              {dateStr}
-                            </span>
-                          )}
-                          <span
-                            className={`text-[9px] font-black tracking-wider uppercase px-2.5 py-0.5 rounded-md ${
-                              isCompleted
-                                ? "bg-green-50 text-green-600 border border-green-100"
-                                : isInProgress
-                                  ? `${projectTheme.badgeClass} animate-pulse`
-                                  : "bg-gray-50 text-gray-500 border border-gray-100"
-                            }`}
-                          >
-                            {isInProgress ? "Current Task" : project.status}
-                          </span>
-                        </div>
-
-                        <h4 className="text-base font-extrabold text-mm-dark group-hover:text-(--hover-color) transition-colors duration-300">
-                          {project.name}
-                        </h4>
-
-                        <p className="text-xs text-mm-gray mt-1.5 max-w-2xl leading-relaxed">
-                          {project.description || "No project description provided."}
-                        </p>
-                      </div>
-
-                      {isInProgress && (
-                        <div className="mt-4 max-w-md space-y-1.5">
-                          <div className="flex justify-between items-center text-[10px] text-mm-gray">
-                            <span>Progress</span>
-                            <span className="font-bold" style={{ color: projectTheme.primary }}>
-                              {project.progress}%
-                            </span>
-                          </div>
-                          <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
-                            <div
-                              className="h-full rounded-full transition-all duration-300"
-                              style={{
-                                width: `${project.progress}%`,
-                                backgroundColor: projectTheme.primary,
-                              }}
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Right part: Scrollable activity log (Desktop only) */}
-                    <div className="hidden lg:block lg:w-80 shrink-0 border-l border-mm-border/80 pl-6 self-stretch">
-                      <span className="text-[10px] font-extrabold text-mm-gray uppercase tracking-wider block mb-2.5">
-                        Activity Log
-                      </span>
-                      {project.updates && project.updates.length > 0 ? (
-                        <div className="space-y-3 overflow-y-auto max-h-[110px] pr-1.5 scrollbar-none">
-                          {project.updates.map((update, idx) => {
-                            const uDate = parseDate(update.timestamp);
-                            return (
-                              <div key={idx} className="border-l border-gray-200 pl-3 py-0.5 relative">
-                                <div className="absolute left-[-4.5px] top-1.5 h-2 w-2 rounded-full bg-gray-300" />
-                                <div className="flex justify-between items-baseline mb-0.5">
-                                  <span className="text-[10px] font-bold text-mm-dark">
-                                    {update.designation || "System Update"}
-                                  </span>
-                                  {uDate && (
-                                    <span className="text-[9px] text-mm-gray/80">
-                                      {uDate.toLocaleDateString(undefined, {
-                                        month: "short",
-                                        day: "numeric",
-                                      })}
-                                    </span>
-                                  )}
-                                </div>
-                                <p className="text-[11px] text-mm-gray leading-normal line-clamp-2">
-                                  {update.message}
-                                </p>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <div className="h-[100px] flex items-center justify-center bg-gray-50/50 border border-dashed border-gray-200/80 rounded-xl px-4 text-center">
-                          <p className="text-[11px] text-mm-gray/80 italic">No recent activity logged</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+                      {tab.count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
+
+          {/* Tab Contents */}
+          {currentTabProjects.length === 0 ? (
+            <div className="text-center py-12 bg-gray-50 border border-gray-100 border-dashed rounded-2xl">
+              <p className="text-sm text-mm-gray italic">No {projectTab.toLowerCase()} projects found with the current filters.</p>
+            </div>
+          ) : (
+            renderProjectsTimeline(currentTabProjects)
+          )}
         </div>
       </div>
     );
