@@ -41,6 +41,7 @@ import { Route as ClientAddPostRouteImport } from './routes/_client/add/post'
 import { Route as AdminAdminUsersRouteImport } from './routes/_admin/admin/users'
 import { Route as AdminAdminTemplatesRouteImport } from './routes/_admin/admin/templates'
 import { Route as AdminAdminSettingsRouteImport } from './routes/_admin/admin/settings'
+import { Route as AdminAdminScheduleRouteImport } from './routes/_admin/admin/schedule'
 import { Route as AdminAdminPaymentsRouteImport } from './routes/_admin/admin/payments'
 import { Route as AdminAdminChatRouteImport } from './routes/_admin/admin/chat'
 import { Route as AdminAdminAuditRouteImport } from './routes/_admin/admin/audit'
@@ -209,6 +210,11 @@ const AdminAdminSettingsRoute = AdminAdminSettingsRouteImport.update({
   path: '/admin/settings',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const AdminAdminScheduleRoute = AdminAdminScheduleRouteImport.update({
+  id: '/admin/schedule',
+  path: '/admin/schedule',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const AdminAdminPaymentsRoute = AdminAdminPaymentsRouteImport.update({
   id: '/admin/payments',
   path: '/admin/payments',
@@ -279,6 +285,7 @@ export interface FileRoutesByFullPath {
   '/admin/audit': typeof AdminAdminAuditRoute
   '/admin/chat': typeof AdminAdminChatRoute
   '/admin/payments': typeof AdminAdminPaymentsRoute
+  '/admin/schedule': typeof AdminAdminScheduleRoute
   '/admin/settings': typeof AdminAdminSettingsRoute
   '/admin/templates': typeof AdminAdminTemplatesRoute
   '/admin/users': typeof AdminAdminUsersRoute
@@ -317,6 +324,7 @@ export interface FileRoutesByTo {
   '/admin/audit': typeof AdminAdminAuditRoute
   '/admin/chat': typeof AdminAdminChatRoute
   '/admin/payments': typeof AdminAdminPaymentsRoute
+  '/admin/schedule': typeof AdminAdminScheduleRoute
   '/admin/settings': typeof AdminAdminSettingsRoute
   '/admin/templates': typeof AdminAdminTemplatesRoute
   '/admin/users': typeof AdminAdminUsersRoute
@@ -361,6 +369,7 @@ export interface FileRoutesById {
   '/_admin/admin/audit': typeof AdminAdminAuditRoute
   '/_admin/admin/chat': typeof AdminAdminChatRoute
   '/_admin/admin/payments': typeof AdminAdminPaymentsRoute
+  '/_admin/admin/schedule': typeof AdminAdminScheduleRoute
   '/_admin/admin/settings': typeof AdminAdminSettingsRoute
   '/_admin/admin/templates': typeof AdminAdminTemplatesRoute
   '/_admin/admin/users': typeof AdminAdminUsersRoute
@@ -404,6 +413,7 @@ export interface FileRouteTypes {
     | '/admin/audit'
     | '/admin/chat'
     | '/admin/payments'
+    | '/admin/schedule'
     | '/admin/settings'
     | '/admin/templates'
     | '/admin/users'
@@ -442,6 +452,7 @@ export interface FileRouteTypes {
     | '/admin/audit'
     | '/admin/chat'
     | '/admin/payments'
+    | '/admin/schedule'
     | '/admin/settings'
     | '/admin/templates'
     | '/admin/users'
@@ -485,6 +496,7 @@ export interface FileRouteTypes {
     | '/_admin/admin/audit'
     | '/_admin/admin/chat'
     | '/_admin/admin/payments'
+    | '/_admin/admin/schedule'
     | '/_admin/admin/settings'
     | '/_admin/admin/templates'
     | '/_admin/admin/users'
@@ -743,6 +755,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdminSettingsRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/_admin/admin/schedule': {
+      id: '/_admin/admin/schedule'
+      path: '/admin/schedule'
+      fullPath: '/admin/schedule'
+      preLoaderRoute: typeof AdminAdminScheduleRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/_admin/admin/payments': {
       id: '/_admin/admin/payments'
       path: '/admin/payments'
@@ -813,6 +832,7 @@ interface AdminRouteRouteChildren {
   AdminAdminAuditRoute: typeof AdminAdminAuditRoute
   AdminAdminChatRoute: typeof AdminAdminChatRoute
   AdminAdminPaymentsRoute: typeof AdminAdminPaymentsRoute
+  AdminAdminScheduleRoute: typeof AdminAdminScheduleRoute
   AdminAdminSettingsRoute: typeof AdminAdminSettingsRoute
   AdminAdminTemplatesRoute: typeof AdminAdminTemplatesRoute
   AdminAdminUsersRoute: typeof AdminAdminUsersRoute
@@ -829,6 +849,7 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminAdminAuditRoute: AdminAdminAuditRoute,
   AdminAdminChatRoute: AdminAdminChatRoute,
   AdminAdminPaymentsRoute: AdminAdminPaymentsRoute,
+  AdminAdminScheduleRoute: AdminAdminScheduleRoute,
   AdminAdminSettingsRoute: AdminAdminSettingsRoute,
   AdminAdminTemplatesRoute: AdminAdminTemplatesRoute,
   AdminAdminUsersRoute: AdminAdminUsersRoute,

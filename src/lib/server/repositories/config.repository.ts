@@ -1,5 +1,5 @@
 import { adminDb } from "@/lib/firebase-admin.server";
-import { type AdminConfig } from "@/lib/schemas";
+import { type AdminConfig, SchedulingConfigurationSchema, type SchedulingConfiguration } from "@/lib/schemas";
 
 export interface NotificationSettings {
   emailNotif: boolean;
@@ -13,6 +13,24 @@ const DEFAULT_ADMIN_CONFIG: AdminConfig = {
   featureFlags: { aiReports: true, payments: true, auditLog: true },
   welcomeMessage:
     "Welcome to GrowConsult AI! Your AI-powered business growth platform.",
+  updatedAt: Date.now(),
+};
+
+const DEFAULT_SCHEDULING_CONFIG: SchedulingConfiguration = {
+  dailyCapacity: 8,
+  taskEffort: {
+    post: 0.5,
+    reel: 1.7,
+  },
+  capacityUtilization: 0.8,
+  minimumLeadTime: 2,
+  confidenceBuffer: 1,
+  revisionMultiplier: 1.2,
+  workingDays: [1, 2, 3, 4, 5, 6],
+  holidays: [],
+  includeOnHold: true,
+  roundUpPartialDays: true,
+  skipWeekends: true,
   updatedAt: Date.now(),
 };
 
@@ -53,5 +71,22 @@ export class ConfigRepository {
     const withTs = { ...config, updatedAt: Date.now() };
     await this.db.collection("adminSettings").doc("config").set(withTs, { merge: true });
   }
+
+  async findSchedulingConfiguration(): Promise<SchedulingConfiguration> {
+    const snap = await this.db.collection("adminSettings").doc("scheduling").get();
+    if (snap.exists) {
+      const parsed = SchedulingConfigurationSchema.safeParse(snap.data());
+      if (parsed.success) {
+        return parsed.data;
+      }
+    }
+    return DEFAULT_SCHEDULING_CONFIG;
+  }
+
+  async saveSchedulingConfiguration(config: SchedulingConfiguration): Promise<void> {
+    const validated = SchedulingConfigurationSchema.parse(config);
+    const withTs = { ...validated, updatedAt: Date.now() };
+    await this.db.collection("adminSettings").doc("scheduling").set(withTs, { merge: true });
+  }
 }
-export { DEFAULT_ADMIN_CONFIG };
+export { DEFAULT_ADMIN_CONFIG, DEFAULT_SCHEDULING_CONFIG };

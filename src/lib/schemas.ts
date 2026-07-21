@@ -64,6 +64,8 @@ export {
   type Profile,
   AdminConfigSchema,
   type AdminConfig,
+  SchedulingConfigurationSchema,
+  type SchedulingConfiguration,
 } from "./schemas/db/config";
 
 export {

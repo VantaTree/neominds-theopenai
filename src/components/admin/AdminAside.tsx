@@ -12,6 +12,7 @@ import {
   X,
   Menu,
   MessageSquare,
+  Calendar,
 } from "lucide-react";
 import { useStreamConnection, getCachedAdminStreamCredentials } from "@/lib/stream-connection";
 
@@ -94,6 +95,12 @@ export default function AdminAside() {
       href: "/admin/projects",
       isRealRoute: true,
       Icon: FolderKanban,
+    },
+    {
+      name: "Schedule",
+      href: "/admin/schedule",
+      isRealRoute: true,
+      Icon: Calendar,
     },
     {
       name: "Payments",

@@ -91,3 +91,11 @@ export {
   activatePlusPlatformFn,
 } from "./server-functions/integrations";
 
+export {
+  getSchedulingConfigurationFn,
+  updateSchedulingConfigurationFn,
+  getProductionCalendarFn,
+  calculateEarliestProductionDateFn,
+} from "./server-functions/scheduling";
+
+

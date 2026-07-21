@@ -19,6 +19,7 @@ import type {
   Plan,
   AdminConfig,
   Blog,
+  SchedulingConfiguration,
 } from "./schemas";
 import type { NotificationSettings } from "./server/repositories/config.repository";
 
@@ -52,6 +53,7 @@ export const getProjects = () => projectRepo.getProjects();
 export const saveProject = (project: Project) => projectRepo.saveProject(project);
 export const deleteProject = (projectId: string) => projectRepo.deleteProject(projectId);
 export const getProjectsByBusiness = (businessId: string) => projectRepo.getProjectsByBusiness(businessId);
+export const findEligibleTasks = (includeOnHold: boolean) => projectRepo.findEligibleTasks(includeOnHold);
 
 // ==================== PAYMENTS ====================
 export const getPayments = () => paymentRepo.getPayments();
@@ -94,6 +96,8 @@ export const getAuditLog = (limitCount = 100) => auditRepo.getAuditLog(limitCoun
 // ==================== ADMIN CONFIG ====================
 export const getAdminConfig = () => configRepo.getAdminConfig();
 export const saveAdminConfig = (config: AdminConfig) => configRepo.saveAdminConfig(config);
+export const findSchedulingConfiguration = () => configRepo.findSchedulingConfiguration();
+export const saveSchedulingConfiguration = (config: SchedulingConfiguration) => configRepo.saveSchedulingConfiguration(config);
 
 // ==================== BLOGS ====================
 export const fetchBlogs = (onlyPublished = false) => blogRepo.fetchBlogs(onlyPublished);

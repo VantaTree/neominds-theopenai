@@ -46,4 +46,13 @@ export class ProjectRepository {
 
     return Array.from(map.values());
   }
+
+  async findEligibleTasks(includeOnHold: boolean): Promise<Project[]> {
+    const statuses = ["Pending", "In Progress"];
+    if (includeOnHold) {
+      statuses.push("On Hold");
+    }
+    const snap = await this.collection.where("status", "in", statuses).get();
+    return snap.docs.map((d) => d.data());
+  }
 }
