@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import {
   Calendar,
@@ -14,6 +14,8 @@ import {
   Layers,
   Sparkles,
   Info,
+  ExternalLink,
+  MoreVertical,
 } from "lucide-react";
 import {
   getSchedulingConfigurationFn,
@@ -23,6 +25,12 @@ import {
 import { type CalendarDayOutput } from "@/lib/server/services/scheduling.service";
 import { type SchedulingConfiguration, type ProjectPriority, type ProjectStatus } from "@/lib/schemas";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 
 export const Route = createFileRoute("/_admin/admin/schedule")({
   head: () => ({ meta: [{ title: "Production Schedule — Admin Dashboard" }] }),
@@ -369,6 +377,39 @@ function ScheduleAdminPage() {
                                   <div>Est. Start: {formatDisplayDate(task.predictedStart)}</div>
                                   <div>Completion: {formatDisplayDate(task.predictedCompletion)}</div>
                                 </div>
+
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <button
+                                      onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                                      className="p-1 hover:bg-slate-100 rounded-lg text-mm-gray hover:text-mm-dark transition-all cursor-pointer"
+                                    >
+                                      <MoreVertical size={16} />
+                                    </button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end" className="bg-white border border-mm-border text-xs text-mm-dark w-40 p-1 shadow-md rounded-xl">
+                                    <DropdownMenuItem
+                                      onClick={(e: React.MouseEvent) => {
+                                        e.stopPropagation();
+                                        setSelectedTask(task);
+                                      }}
+                                      className="cursor-pointer font-bold py-2 px-3 hover:bg-slate-50 flex items-center gap-2 rounded-lg"
+                                    >
+                                      <Layers size={14} className="text-mm-gray" /> Quick View
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem asChild>
+                                      <Link
+                                        to="/admin/projects/$id"
+                                        params={{ id: task.projectId }}
+                                        search={{ edit: false }}
+                                        onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                                        className="cursor-pointer font-bold py-2 px-3 hover:bg-slate-50 flex items-center gap-2 rounded-lg w-full text-left"
+                                      >
+                                        <ExternalLink size={14} className="text-mm-gray" /> View Project
+                                      </Link>
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                               </div>
                             </div>
                           ))}
@@ -522,7 +563,7 @@ function ScheduleAdminPage() {
                   >
                     <div
                       className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all shadow-sm ${
-                        config.roundUpPartialDays ? "left-[22px]" : "left-0.5"
+                        config.roundUpPartialDays ? "left-5.5" : "left-0.5"
                       }`}
                     />
                   </button>
@@ -543,7 +584,7 @@ function ScheduleAdminPage() {
                   >
                     <div
                       className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all shadow-sm ${
-                        config.includeOnHold ? "left-[22px]" : "left-0.5"
+                        config.includeOnHold ? "left-5.5" : "left-0.5"
                       }`}
                     />
                   </button>
@@ -564,7 +605,7 @@ function ScheduleAdminPage() {
                   >
                     <div
                       className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all shadow-sm ${
-                        config.skipWeekends ? "left-[22px]" : "left-0.5"
+                        config.skipWeekends ? "left-5.5" : "left-0.5"
                       }`}
                     />
                   </button>
@@ -753,6 +794,18 @@ function ScheduleAdminPage() {
                 <span>
                   The timeline dates represent the deterministic queue output based on date created, priority ranking, and current resource constraints.
                 </span>
+              </div>
+
+              {/* Action Button */}
+              <div className="pt-4 border-t border-mm-border/60">
+                <Link
+                  to="/admin/projects/$id"
+                  params={{ id: selectedTask.projectId }}
+                  search={{ edit: false }}
+                  className="w-full flex items-center justify-center gap-2 py-3 bg-mm-dark hover:bg-mm-dark/95 text-white font-extrabold text-xs rounded-xl shadow-sm transition-all cursor-pointer text-center"
+                >
+                  <ExternalLink size={14} /> View Project Details
+                </Link>
               </div>
             </div>
           </SheetContent>
