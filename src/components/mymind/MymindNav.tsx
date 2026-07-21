@@ -10,7 +10,7 @@ const NAV_LINKS = [
   { label: "Why", dot: "#FF9224", href: "/why" },
   { label: "How", dot: "#FFE926", href: "/how" },
   { label: "About Us", dot: "#FF7DD3", href: "#" },
-  { label: "Pricing", dot: "#5CB13E", href: "/plans" },
+  { label: "Pricing", dot: "#5CB13E", href: "#pricing" },
 ];
 
 export function MymindNav() {
