@@ -16,6 +16,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { toast } from "sonner";
+import Calendar from "@/components/Calendar";
 import {
   PlusIcon,
   Trash2Icon,
@@ -39,6 +40,7 @@ function RouteComponent() {
   const [describeText, setDescribeText] = useState("");
   const [showOverlay, setShowOverlay] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
+  const [showCalendarModal, setShowCalendarModal] = useState(false);
 
   const hasContent = images.length > 0 || description || describeText;
 
@@ -276,18 +278,36 @@ function RouteComponent() {
               </div>
             </div>
 
-            {/* Instagram Top Navigation Bar */}
-            <div className="flex justify-between items-center px-4 py-2 border-b border-gray-100 bg-white shrink-0">
-              <span className="font-serif italic font-semibold text-xl tracking-tight select-none">
-                Instagram
-              </span>
-              <div className="text-zinc-900 flex items-center justify-center p-1">
-                <Send className="w-5 h-5 -rotate-12 translate-y-[-2px] translate-x-[2px] pointer-events-none" />
+            {showCalendarModal ? (
+              <div className="flex-1 min-h-0 bg-white flex flex-col overflow-hidden animate-in fade-in duration-200">
+                <Calendar
+                  role="client"
+                  onClose={() => setShowCalendarModal(false)}
+                  onConfirmSchedule={(selectedDate, time, title) => {
+                    toast.success(
+                      `Post scheduled for ${selectedDate.toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                      })} at ${time}!`
+                    );
+                    setShowCalendarModal(false);
+                  }}
+                />
               </div>
-            </div>
+            ) : (
+              <>
+                {/* Instagram Top Navigation Bar */}
+                <div className="flex justify-between items-center px-4 py-2 border-b border-gray-100 bg-white shrink-0">
+                  <span className="font-serif italic font-semibold text-xl tracking-tight select-none">
+                    Instagram
+                  </span>
+                  <div className="text-zinc-900 flex items-center justify-center p-1">
+                    <Send className="w-5 h-5 -rotate-12 translate-y-[-2px] translate-x-[2px] pointer-events-none" />
+                  </div>
+                </div>
 
-            {/* Main Instagram Feed Content Scroll Area */}
-            <div className="flex-1 min-h-0 overflow-y-auto bg-white scrollbar-none">
+                {/* Main Instagram Feed Content Scroll Area */}
+                <div className="flex-1 min-h-0 overflow-y-auto bg-white scrollbar-none">
               {/* Post Header */}
               <div className="flex justify-between items-center px-3 py-2 shrink-0">
                 <div className="flex items-center gap-2">
@@ -552,6 +572,13 @@ function RouteComponent() {
                   }
                 `}</style>
                 <div className="font-bold mb-1">1,234 likes</div>
+                <button
+                  type="button"
+                  onClick={() => setShowCalendarModal(true)}
+                  className="text-blue-600 font-bold text-[12px] hover:underline cursor-pointer block mb-1.5 transition-colors"
+                >
+                  Select your date
+                </button>
                 <div className="flex flex-col gap-0.5">
                   <span className="font-bold">yourusername</span>
 
@@ -663,8 +690,8 @@ function RouteComponent() {
                     </button>
                     <button
                       onClick={() => {
-                        toast.success("Design submitted successfully!");
                         setShowSaveModal(false);
+                        setShowCalendarModal(true);
                       }}
                       className="w-full py-3 bg-mm-orange text-white hover:bg-mm-orange/95 font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer active:scale-98"
                     >
@@ -681,6 +708,8 @@ function RouteComponent() {
                   </button>
                 </div>
               </div>
+            )}
+              </>
             )}
           </div>
         </div>

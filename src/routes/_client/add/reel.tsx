@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
+import Calendar from "@/components/Calendar";
 
 export const Route = createFileRoute("/_client/add/reel")({
   component: RouteComponent,
@@ -42,6 +43,7 @@ function RouteComponent() {
   const [showOverlay, setShowOverlay] = useState(false);
   const [showCaptionDrawer, setShowCaptionDrawer] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
+  const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [showDoubleTapHeart, setShowDoubleTapHeart] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
 
@@ -187,6 +189,25 @@ function RouteComponent() {
                 </div>
               </div>
             </div>
+
+            {showCalendarModal ? (
+              <div className="flex-1 min-h-0 bg-white flex flex-col overflow-hidden z-30 animate-in fade-in duration-200">
+                <Calendar
+                  role="client"
+                  onClose={() => setShowCalendarModal(false)}
+                  onConfirmSchedule={(selectedDate, time, title) => {
+                    toast.success(
+                      `Reel scheduled for ${selectedDate.toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                      })} at ${time}!`
+                    );
+                    setShowCalendarModal(false);
+                  }}
+                />
+              </div>
+            ) : (
+              <>
 
             {/* Main Content Area */}
             <div className="flex-1 relative w-full overflow-hidden flex flex-col justify-center">
@@ -366,7 +387,6 @@ function RouteComponent() {
 
                     {/* Reels Controls & Description Bottom Section */}
                     <div className="w-full flex items-end justify-between gap-4 mt-auto">
-
                       {/* Left: User Info & Caption (Matching Screenshot) */}
                       <div className={`flex-1 flex flex-col items-start gap-2 pointer-events-auto pr-4 ${video ? "text-white drop-shadow-[0_1.5px_4px_rgba(0,0,0,0.8)]" : "text-zinc-900"
                         }`}>
@@ -392,6 +412,7 @@ function RouteComponent() {
                                   e.stopPropagation();
                                   toast.success("Followed apache_insaan");
                                 }}
+
                                 className={`px-2 py-0.5 border rounded-md text-[9px] font-bold transition-all cursor-pointer active:scale-95 ${video
                                   ? "border-white/40 hover:border-white hover:bg-white/10"
                                   : "border-zinc-300 hover:border-zinc-400 hover:bg-zinc-100 text-zinc-800"
@@ -400,20 +421,21 @@ function RouteComponent() {
                                 Follow
                               </button>
                             </div>
-
-                            {/* Music Tag below username */}
-                            <div className={`flex items-center gap-1 text-[8.5px] font-semibold overflow-hidden max-w-[130px] mt-0.5 select-none ${video ? "text-zinc-300" : "text-zinc-500"
-                              }`}>
-                              <Music className="w-2.5 h-2.5 shrink-0" />
-                              <div className="whitespace-nowrap overflow-hidden">
-                                <span className="inline-block animate-[marquee_12s_linear_infinite]">
-                                  Original Audio • apache_insaan • Original Audio
-                                </span>
-                              </div>
-                            </div>
                           </div>
                         </div>
 
+                        {/* Blue Select Your Date Button */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowCalendarModal(true);
+                          }}
+                          className={`text-[11px] font-bold block mt-1.5 transition-colors cursor-pointer hover:underline ${video ? "text-sky-300 drop-shadow-sm" : "text-blue-600"}`}
+                        >
+                          Select your date
+                        </button>
+                        
                         {/* Caption Text (Click to open Drawer) */}
                         <div
                           onClick={openCaptionDrawer}
@@ -429,6 +451,7 @@ function RouteComponent() {
                             </span>
                           )}
                         </div>
+
                       </div>
 
                       {/* Right: Vertical Overlay Actions Sidebar */}
@@ -512,16 +535,6 @@ function RouteComponent() {
                         >
                           <MoreVertical className="w-6 h-6 stroke-[2]" />
                         </button>
-
-                        {/* Spin Disk Icon */}
-                        <div className={`w-6 h-6 rounded-full border overflow-hidden flex items-center justify-center p-[1px] animate-[spin_5s_linear_infinite] mt-1 shadow-sm shrink-0 ${video ? "border-white/30 bg-black/40" : "border-zinc-300 bg-zinc-200"
-                          }`}>
-                          <img
-                            src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=50&h=50&q=80"
-                            alt="audio disk"
-                            className="w-full h-full rounded-full object-cover"
-                          />
-                        </div>
                       </div>
                     </div>
                   </div>
@@ -716,8 +729,8 @@ function RouteComponent() {
                     </button>
                     <button
                       onClick={() => {
-                        toast.success("Reel submitted successfully!");
                         setShowSaveModal(false);
+                        setShowCalendarModal(true);
                       }}
                       className="w-full py-3 bg-mm-orange text-white hover:bg-mm-orange/95 font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer"
                     >
@@ -733,6 +746,8 @@ function RouteComponent() {
                   </button>
                 </div>
               </div>
+            )}
+              </>
             )}
           </div>
         </div>
