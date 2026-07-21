@@ -290,13 +290,12 @@ function RouteComponent() {
     // Debounced background save to Firestore via clientSaveProjectFn
     if (!projectId || !activeBusiness?.id) return;
 
-    setDraftSaveStatus("saving");
-
     if (saveTimeoutId) {
       clearTimeout(saveTimeoutId);
     }
 
     const newTimeout = setTimeout(async () => {
+      setDraftSaveStatus("saving");
       try {
         await clientSaveProjectFn({
           data: {
@@ -308,8 +307,8 @@ function RouteComponent() {
             status: "User Draft",
             assignee: "Admin Reviewer",
             assets: [
-              ...brandSettings.logos.map(img => img.url),
-              ...sections.flatMap(section => section.images.map(img => img.url))
+              ...updatedBrand.logos.map(img => img.url),
+              ...updatedSections.flatMap(section => section.images.map(img => img.url))
             ],
             data: {
               primaryColor: updatedBrand.primaryColor,
@@ -332,7 +331,7 @@ function RouteComponent() {
         console.error("Failed to auto-save project progress to server:", err);
         setDraftSaveStatus("error");
       }
-    }, 30000);
+    }, 3000);
 
     setSaveTimeoutId(newTimeout);
   };
@@ -363,8 +362,8 @@ function RouteComponent() {
           status: "User Draft",
           assignee: "Admin Reviewer",
           assets: [
-            ...brandSettings.logos.map(img => img.url),
-            ...sections.flatMap(section => section.images.map(img => img.url))
+            ...updatedBrand.logos.map(img => img.url),
+            ...updatedSections.flatMap(section => section.images.map(img => img.url))
           ],
           data: {
             primaryColor: updatedBrand.primaryColor,
@@ -1195,16 +1194,35 @@ function RouteComponent() {
                     <p className="hidden md:block text-[10px] text-gray-400 leading-relaxed">Specify a completely custom structural section with unique goals.</p>
                   </button>
                 )}
-                {SECTION_TEMPLATES.map((tmpl) => (
-                  <button
-                    key={tmpl.type}
-                    onClick={() => handleAddSectionTemplate(tmpl)}
-                    className="flex flex-col items-start p-5 bg-white border border-gray-200 rounded-[20px] text-left hover:border-blue-600 hover:shadow-xs transition-all cursor-pointer group"
-                  >
-                    <h4 className="font-bold text-sm text-[#0F172A] mb-1 group-hover:text-blue-600">{tmpl.title}</h4>
-                    <p className="hidden md:block text-[10px] text-gray-400 leading-relaxed line-clamp-3">{tmpl.defaultDescription}</p>
-                  </button>
-                ))}
+                {SECTION_TEMPLATES.map((tmpl) => {
+                  const isAdded = sections.some((s) => s.type === tmpl.type);
+                  return (
+                    <button
+                      key={tmpl.type}
+                      onClick={() => !isAdded && handleAddSectionTemplate(tmpl)}
+                      disabled={isAdded}
+                      className={`flex flex-col items-start p-5 rounded-[20px] text-left transition-all ${
+                        isAdded
+                          ? "bg-gray-50 border border-gray-200 opacity-60 cursor-not-allowed"
+                          : "bg-white border border-gray-200 hover:border-blue-600 hover:shadow-xs cursor-pointer group"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between w-full mb-1">
+                        <h4 className={`font-bold text-sm ${isAdded ? "text-gray-400" : "text-[#0F172A] group-hover:text-blue-600"}`}>
+                          {tmpl.title}
+                        </h4>
+                        {isAdded && (
+                          <span className="text-[9px] font-black uppercase bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded-md">
+                            Added
+                          </span>
+                        )}
+                      </div>
+                      <p className="hidden md:block text-[10px] text-gray-400 leading-relaxed line-clamp-3">
+                        {tmpl.defaultDescription}
+                      </p>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
