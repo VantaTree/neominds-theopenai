@@ -75,7 +75,9 @@ export class SchedulingService {
 
     // 2. Check if skipWeekends is enabled
     if (config.skipWeekends && (dayOfWeek === 0 || dayOfWeek === 6)) {
-      return false;
+      if (!config.workingDays || !config.workingDays.includes(dayOfWeek)) {
+        return false;
+      }
     }
 
     // 3. Check custom working days array if defined
