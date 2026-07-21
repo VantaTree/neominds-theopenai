@@ -1,5 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
+import {
   Search,
   Plus,
   Eye,
@@ -969,92 +975,64 @@ function ProjectsPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="relative inline-block actions-dropdown-container">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const rect =
-                              e.currentTarget.getBoundingClientRect();
-                            const dropdownHeight = 180;
-                            const dropdownWidth = 160;
-                            let top = rect.bottom;
-                            if (top + dropdownHeight > window.innerHeight) {
-                              top = rect.top - dropdownHeight - 8;
-                            }
-                            let left = rect.right - dropdownWidth;
-                            if (left < 8) {
-                              left = 8;
-                            }
-                            setDropdownCoords({ top, left });
-                            setOpenDropdownId(
-                              openDropdownId === p.id ? null : p.id,
-                            );
-                          }}
-                          className="p-1.5 rounded-lg hover:bg-mm-subtle transition-colors cursor-pointer text-mm-gray hover:text-mm-dark flex items-center justify-center"
-                          title="Actions"
-                        >
-                          <MoreVertical size={16} />
-                        </button>
-                        {openDropdownId === p.id &&
-                          dropdownCoords && (
-                            <div
-                              className="fixed mt-1 w-40 bg-white border border-mm-border rounded-xl shadow-lg py-1.5 z-50 animate-in fade-in slide-in-from-top-1 duration-150"
-                              style={{
-                                boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
-                                top: `${dropdownCoords.top}px`,
-                                left: `${dropdownCoords.left}px`,
-                              }}
+                      <DropdownMenu modal={false}>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                            className="p-1.5 rounded-lg hover:bg-mm-subtle transition-colors cursor-pointer text-mm-gray hover:text-mm-dark flex items-center justify-center"
+                            title="Actions"
+                          >
+                            <MoreVertical size={16} />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="bg-white border border-mm-border text-xs text-mm-dark w-40 p-1 shadow-md rounded-xl">
+                          <DropdownMenuItem asChild>
+                            <Link
+                              to="/admin/projects/$id"
+                              params={{ id: p.id }}
+                              search={{ edit: false }}
+                              className="cursor-pointer font-bold py-2 px-3 hover:bg-slate-50 flex items-center gap-2 rounded-lg"
                             >
-                              <Link
-                                to="/admin/projects/$id"
-                                params={{ id: p.id }}
-                                search={{ edit: false }}
-                                onClick={() => setOpenDropdownId(null)}
-                                className="flex items-center gap-2 px-3 py-2 text-xs text-mm-gray hover:text-mm-dark hover:bg-mm-subtle transition-colors"
-                              >
-                                <Eye size={14} />
-                                <span>View Project</span>
-                              </Link>
-                              <Link
-                                to="/admin/projects/$id"
-                                params={{ id: p.id }}
-                                search={{ edit: true }}
-                                onClick={() => setOpenDropdownId(null)}
-                                className="flex items-center gap-2 px-3 py-2 text-xs text-mm-gray hover:text-mm-dark hover:bg-mm-subtle transition-colors"
-                              >
-                                <Edit2 size={14} />
-                                <span>Edit Project</span>
-                              </Link>
-                              <Link
-                                to="/admin/chat"
-                                search={{
-                                  user: userIdStr || "",
-                                  business:
-                                    (typeof p.businessId === "string"
-                                      ? p.businessId
-                                      : biz?.id) || "",
-                                  domain: p.domain,
-                                }}
-                                onClick={() => setOpenDropdownId(null)}
-                                className="flex items-center gap-2 px-3 py-2 text-xs text-mm-orange hover:bg-mm-orange/5 transition-colors"
-                              >
-                                <MessageSquare size={14} />
-                                <span>Open Chat</span>
-                              </Link>
-                              <hr className="border-t border-mm-border my-1" />
-                              <button
-                                onClick={() => {
-                                  setConfirmDelete(p);
-                                  setOpenDropdownId(null);
-                                }}
-                                className="flex items-center gap-2 w-full text-left px-3 py-2 text-xs text-mm-red hover:bg-mm-red/5 transition-colors cursor-pointer"
-                              >
-                                <Trash2 size={14} />
-                                <span>Delete Project</span>
-                              </button>
-                            </div>
-                          )}
-                      </div>
+                              <Eye size={14} className="text-mm-gray" /> View Project
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link
+                              to="/admin/projects/$id"
+                              params={{ id: p.id }}
+                              search={{ edit: true }}
+                              className="cursor-pointer font-bold py-2 px-3 hover:bg-slate-50 flex items-center gap-2 rounded-lg"
+                            >
+                              <Edit2 size={14} className="text-mm-gray" /> Edit Project
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link
+                              to="/admin/chat"
+                              search={{
+                                user: userIdStr || "",
+                                business:
+                                  (typeof p.businessId === "string"
+                                    ? p.businessId
+                                    : biz?.id) || "",
+                                domain: p.domain,
+                              }}
+                              className="cursor-pointer font-bold py-2 px-3 hover:bg-slate-50 flex items-center gap-2 rounded-lg text-mm-orange"
+                            >
+                              <MessageSquare size={14} /> Open Chat
+                            </Link>
+                          </DropdownMenuItem>
+                          <hr className="border-t border-mm-border my-1" />
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setConfirmDelete(p);
+                            }}
+                            className="cursor-pointer font-bold py-2 px-3 hover:bg-slate-50 flex items-center gap-2 rounded-lg text-mm-red"
+                          >
+                            <Trash2 size={14} /> Delete Project
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </td>
                   </tr>
                 );

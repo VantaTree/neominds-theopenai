@@ -378,7 +378,7 @@ function ScheduleAdminPage() {
                                   <div>Completion: {formatDisplayDate(task.predictedCompletion)}</div>
                                 </div>
 
-                                <DropdownMenu>
+                                <DropdownMenu modal={false}>
                                   <DropdownMenuTrigger asChild>
                                     <button
                                       onClick={(e: React.MouseEvent) => e.stopPropagation()}
