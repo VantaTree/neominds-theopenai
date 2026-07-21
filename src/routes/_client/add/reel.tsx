@@ -24,6 +24,7 @@ import {
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import Calendar from "@/components/Calendar";
+import SubmitConfirmModal from "@/components/SubmitConfirmModal";
 
 export const Route = createFileRoute("/_client/add/reel")({
   component: RouteComponent,
@@ -698,55 +699,20 @@ function RouteComponent() {
               <div className="w-28 h-1 rounded-full bg-zinc-900/40" />
             </div>
 
-            {/* Save Panel Modal Overlay */}
-            {showSaveModal && (
-              <div
-                onClick={() => setShowSaveModal(false)}
-                className="absolute inset-0 bg-black/45 backdrop-blur-[12px] z-50 flex flex-col justify-end p-4 rounded-[36px] transition-all duration-300 cursor-pointer"
-              >
-                <div
-                  onClick={(e) => e.stopPropagation()}
-                  className="bg-white rounded-3xl p-5 shadow-2xl flex flex-col gap-4 cursor-default animate-in slide-in-from-bottom duration-300"
-                >
-                  <div className="w-12 h-1 bg-gray-200 rounded-full mx-auto mb-1" />
-
-                  <div className="text-center">
-                    <h3 className="font-bold text-[14px] text-[#0F172A]">Save Options</h3>
-                    <p className="text-[10px] text-gray-500 mt-1 leading-normal">
-                      Choose how you want to save your Reel design instructions.
-                    </p>
-                  </div>
-
-                  <div className="flex flex-col gap-2.5 mt-2">
-                    <button
-                      onClick={() => {
-                        toast.success("Reel saved as Draft!");
-                        setShowSaveModal(false);
-                      }}
-                      className="w-full py-3 bg-gray-50 hover:bg-gray-100 text-zinc-800 font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer border border-zinc-100"
-                    >
-                      Save as Draft
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowSaveModal(false);
-                        setShowCalendarModal(true);
-                      }}
-                      className="w-full py-3 bg-mm-orange text-white hover:bg-mm-orange/95 font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer"
-                    >
-                      Save & Submit
-                    </button>
-                  </div>
-
-                  <button
-                    onClick={() => setShowSaveModal(false)}
-                    className="w-full py-2 text-center text-xs font-semibold text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
+            {/* Submit Confirmation Modal Component */}
+            <SubmitConfirmModal
+              isOpen={showSaveModal}
+              title="Submit & Lock Reel Brief?"
+              description="This action is irreversible. Once submitted, your brief is locked for production and scheduling. Please confirm all details are correct."
+              confirmText="Yes, Submit"
+              cancelText="Cancel"
+              containerMode="absolute"
+              onConfirm={() => {
+                setShowSaveModal(false);
+                setShowCalendarModal(true);
+              }}
+              onCancel={() => setShowSaveModal(false)}
+            />
               </>
             )}
           </div>

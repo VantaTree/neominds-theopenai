@@ -17,10 +17,24 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import Calendar from "@/components/Calendar";
+import SubmitConfirmModal from "@/components/SubmitConfirmModal";
 import {
   PlusIcon,
   Trash2Icon,
 } from "@animateicons/react/lucide";
+
+const TOUR_STEPS = [
+  "reference",
+  "describe",
+  "overlay_add",
+  "overlay_describe",
+  "overlay_remove",
+  "select_date",
+  "description",
+  "save_button",
+] as const;
+
+type TourStep = (typeof TOUR_STEPS)[number];
 
 export const Route = createFileRoute("/_client/add/post")({
   component: RouteComponent,
@@ -41,6 +55,29 @@ function RouteComponent() {
   const [showOverlay, setShowOverlay] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showCalendarModal, setShowCalendarModal] = useState(false);
+  const [tourStep, setTourStep] = useState<TourStep | null>(null);
+
+  useEffect(() => {
+    const hasSeen = localStorage.getItem("has_seen_post_onboarding_v2");
+    if (!hasSeen) {
+      setTourStep("reference");
+    }
+  }, []);
+
+  const nextTourStep = () => {
+    if (!tourStep) return;
+    const currIdx = TOUR_STEPS.indexOf(tourStep);
+    if (currIdx < TOUR_STEPS.length - 1) {
+      setTourStep(TOUR_STEPS[currIdx + 1]);
+    } else {
+      dismissTour();
+    }
+  };
+
+  const dismissTour = () => {
+    setTourStep(null);
+    localStorage.setItem("has_seen_post_onboarding_v2", "true");
+  };
 
   const hasContent = images.length > 0 || description || describeText;
 
@@ -136,6 +173,10 @@ function RouteComponent() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
+      if (images.length + files.length > 5) {
+        toast.error("Maximum 5 images allowed per post.");
+        return;
+      }
       const validFiles: File[] = [];
       const exceededFiles: string[] = [];
 
@@ -277,6 +318,79 @@ function RouteComponent() {
                 </div>
               </div>
             </div>
+
+            {/* Onboarding Tooltip Spotlight Overlay */}
+            {tourStep && !showCalendarModal && (
+              <div
+                onClick={nextTourStep}
+                className="absolute inset-0 bg-black/65 backdrop-blur-[2px] z-50 flex flex-col justify-between p-4 rounded-[36px] transition-all duration-300 cursor-pointer animate-in fade-in duration-200 select-none"
+              >
+                {/* Step Progress Top Header */}
+                <div className="flex justify-between items-center text-white pt-6 px-1 z-10">
+                  <span className="text-[10px] font-bold bg-white/20 px-2.5 py-1 rounded-full border border-white/20">
+                    Step {TOUR_STEPS.indexOf(tourStep) + 1} of {TOUR_STEPS.length}
+                  </span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      dismissTour();
+                    }}
+                    className="text-[10px] font-semibold text-zinc-300 hover:text-white underline cursor-pointer"
+                  >
+                    Skip Tour
+                  </button>
+                </div>
+
+                {/* Tooltip Content Card */}
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  className="bg-white rounded-2xl p-4 shadow-2xl border border-zinc-200 text-zinc-900 z-10 animate-in slide-in-from-bottom duration-300 relative my-auto mx-1"
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-2 h-2 rounded-full bg-mm-orange animate-ping" />
+                    <h4 className="text-xs font-bold text-zinc-900">
+                      {tourStep === "reference" && "1. Upload Reference Images"}
+                      {tourStep === "describe" && "2. Write Design Details"}
+                      {tourStep === "overlay_add" && "3. Add More Images (+)"}
+                      {tourStep === "overlay_describe" && "4. Image Instructions"}
+                      {tourStep === "overlay_remove" && "5. Remove Current Image"}
+                      {tourStep === "select_date" && "6. Schedule Publishing Date"}
+                      {tourStep === "description" && "7. Description & #Hashtags"}
+                      {tourStep === "save_button" && "8. Save Draft / Submit"}
+                    </h4>
+                  </div>
+
+                  <p className="text-[11px] text-zinc-600 leading-snug">
+                    {tourStep === "reference" &&
+                      "Tap the 'Reference' card to upload images for your post (Maximum 5 images allowed per post)."}
+                    {tourStep === "describe" &&
+                      "Or tap 'Describe' to type out specific design details of what you need created."}
+                    {tourStep === "overlay_add" &&
+                      "Tap the (+) icon on an uploaded image to add up to 5 images to your post carousel."}
+                    {tourStep === "overlay_describe" &&
+                      "Tap the Document icon to add specific design notes for this image."}
+                    {tourStep === "overlay_remove" &&
+                      "Tap the Trash icon to remove the current image."}
+                    {tourStep === "select_date" &&
+                      "Click the blue 'Select your date' link below likes to pick your publishing date on the Calendar."}
+                    {tourStep === "description" &&
+                      "Type your post caption below — hashtags starting with # (e.g. #design) will automatically highlight in blue!"}
+                    {tourStep === "save_button" &&
+                      "Click the Save icon in the bottom bar to save your draft or submit your post design!"}
+                  </p>
+
+                  <div className="flex justify-between items-center mt-3 pt-2.5 border-t border-zinc-100">
+                    <span className="text-[9px] text-zinc-400 font-medium">Tap anywhere on screen to continue</span>
+                    <button
+                      onClick={nextTourStep}
+                      className="px-3 py-1.5 bg-mm-orange text-white text-[11px] font-bold rounded-xl shadow-xs hover:bg-mm-orange/95 cursor-pointer active:scale-95 transition-all"
+                    >
+                      {TOUR_STEPS.indexOf(tourStep) === TOUR_STEPS.length - 1 ? "Got it!" : "Next Step"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {showCalendarModal ? (
               <div className="flex-1 min-h-0 bg-white flex flex-col overflow-hidden animate-in fade-in duration-200">
@@ -655,60 +769,20 @@ function RouteComponent() {
               <div className="w-28 h-1 bg-zinc-900/40 rounded-full" />
             </div>
 
-            {/* Save Panel Modal Overlay */}
-            {showSaveModal && (
-              <div
-                onClick={() => setShowSaveModal(false)}
-                className="absolute inset-0 bg-black/35 backdrop-blur-[12px] z-40 flex flex-col justify-end p-4 rounded-[36px] transition-all duration-300 cursor-pointer animate-in fade-in duration-300"
-              >
-                {/* Modal Sheet Content */}
-                <div
-                  onClick={(e) => e.stopPropagation()}
-                  className="bg-white rounded-3xl p-5 shadow-2xl flex flex-col gap-4 animate-in slide-in-from-bottom duration-300 cursor-default"
-                >
-                  {/* Pull indicator */}
-                  <div className="w-12 h-1 bg-gray-200 rounded-full mx-auto mb-1" />
-
-                  {/* Header Title */}
-                  <div className="text-center">
-                    <h3 className="font-bold text-[14px] text-[#0F172A]">Save Options</h3>
-                    <p className="text-[10px] text-gray-500 mt-1 leading-normal">
-                      Choose how you want to save your Instagram post design.
-                    </p>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex flex-col gap-2.5 mt-2">
-                    <button
-                      onClick={() => {
-                        toast.success("Design saved as Draft!");
-                        setShowSaveModal(false);
-                      }}
-                      className="w-full py-3 bg-gray-50 hover:bg-gray-100 text-zinc-800 font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer active:scale-98 border border-zinc-100"
-                    >
-                      Save as Draft
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowSaveModal(false);
-                        setShowCalendarModal(true);
-                      }}
-                      className="w-full py-3 bg-mm-orange text-white hover:bg-mm-orange/95 font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer active:scale-98"
-                    >
-                      Save & Submit
-                    </button>
-                  </div>
-
-                  {/* Cancel Button */}
-                  <button
-                    onClick={() => setShowSaveModal(false)}
-                    className="w-full py-2 text-center text-xs font-semibold text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
+            {/* Submit Confirmation Modal Component */}
+            <SubmitConfirmModal
+              isOpen={showSaveModal}
+              title="Submit & Lock Post Design?"
+              description="This action is irreversible. Once submitted, your post design is locked for production and scheduling. Please confirm all details are correct."
+              confirmText="Yes, Submit"
+              cancelText="Cancel"
+              containerMode="absolute"
+              onConfirm={() => {
+                setShowSaveModal(false);
+                setShowCalendarModal(true);
+              }}
+              onCancel={() => setShowSaveModal(false)}
+            />
               </>
             )}
           </div>
