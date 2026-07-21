@@ -18,6 +18,8 @@ import {
   GripVertical
 } from "lucide-react";
 
+import { SubmitConfirmModal } from "@/components/SubmitConfirmModal";
+
 export const Route = createFileRoute("/_client/add/website")({
   component: RouteComponent,
 });
@@ -1697,37 +1699,19 @@ function RouteComponent() {
         )}
       </main>
 
-      {/* 4. Submission Confirmation Modal */}
-      {showSubmitConfirm && (
-        <div className="fixed inset-0 bg-[#0F172A]/40 backdrop-blur-xs flex items-center justify-center z-50 animate-in fade-in duration-200">
-          <div className="bg-white p-6 rounded-[24px] max-w-sm w-full mx-4 shadow-xl border border-gray-150 text-center animate-in zoom-in-95 duration-200">
-            <div className="w-12 h-12 rounded-full bg-red-50 text-red-600 flex items-center justify-center mx-auto mb-4 animate-pulse">
-              <AlertTriangle className="w-6 h-6" />
-            </div>
-            <h3 className="text-lg font-extrabold text-[#0F172A] tracking-tight">Submit & Lock Brief?</h3>
-            <p className="text-xs text-gray-500 mt-2 leading-relaxed">
-              This action is irreversible. Once submitted, your brief is locked for production and cannot be modified. Please confirm all details are correct.
-            </p>
-            <div className="flex items-center gap-3 mt-6">
-              <button
-                onClick={() => setShowSubmitConfirm(false)}
-                className="flex-1 py-2.5 text-xs font-bold text-gray-500 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer bg-white"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  setShowSubmitConfirm(false);
-                  handleSubmitBrief();
-                }}
-                className="flex-1 py-2.5 text-xs font-extrabold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors cursor-pointer"
-              >
-                Yes, Submit
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* 4. Submission Confirmation Modal Component */}
+      <SubmitConfirmModal
+        isOpen={showSubmitConfirm}
+        title="Submit & Lock Brief?"
+        description="This action is irreversible. Once submitted, your brief is locked for production and cannot be modified. Please confirm all details are correct."
+        confirmText="Yes, Submit"
+        cancelText="Cancel"
+        onConfirm={() => {
+          setShowSubmitConfirm(false);
+          handleSubmitBrief();
+        }}
+        onCancel={() => setShowSubmitConfirm(false)}
+      />
       {/* 5. Mobile Drag Floating Preview */}
       {draggedSectionIndex !== null && touchPosition && (
         <div 
